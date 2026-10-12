@@ -4,35 +4,35 @@
 
 :root {
   /* Cores de Papel & Tinta */
-  --bg-page: #FBF9F5;
-  --bg-surface: #FFFFFF;
-  --bg-contrast: #F2ECE1;
-  --bg-card: #FFFFFF;
-  
-  --text-main: #1C1E21;
-  --text-muted: #575E66;
-  --text-soft: #7C848E;
-  
-  --border-light: #E7E1D7;
-  --border-strong: #D2C8BA;
+  --bg-page: #fbf9f5;
+  --bg-surface: #ffffff;
+  --bg-contrast: #f2ece1;
+  --bg-card: #ffffff;
+
+  --text-main: #1c1e21;
+  --text-muted: #575e66;
+  --text-soft: #7c848e;
+
+  --border-light: #e7e1d7;
+  --border-strong: #d2c8ba;
 
   /* Cores Cívicas de Destaque */
-  --civic-forest: #184E38;
-  --civic-forest-hover: #123C2B;
-  --civic-forest-light: #EAF3EE;
+  --civic-forest: #184e38;
+  --civic-forest-hover: #123c2b;
+  --civic-forest-light: #eaf3ee;
 
-  --civic-terracotta: #B95328;
-  --civic-terracotta-light: #FBEFEA;
+  --civic-terracotta: #b95328;
+  --civic-terracotta-light: #fbefea;
 
-  --prop-a-color: #246B4E;
-  --prop-a-bg: #E8F5EE;
-  
-  --prop-b-color: #B4621A;
-  --prop-b-bg: #FEF4EA;
+  --prop-a-color: #246b4e;
+  --prop-a-bg: #e8f5ee;
+
+  --prop-b-color: #b4621a;
+  --prop-b-bg: #fef4ea;
 
   /* Tipografia */
-  --font-serif: 'Fraunces', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
 
   /* Espaçamento e Layout */
   --radius-sm: 6px;
@@ -50,7 +50,7 @@
 /* Ícones Material Symbols */
 .material-symbols-rounded,
 .material-symbols-outlined {
-  font-family: 'Material Symbols Rounded', sans-serif;
+  font-family: "Material Symbols Rounded", sans-serif;
   font-weight: normal;
   font-style: normal;
   font-size: 24px;
@@ -61,14 +61,14 @@
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
-  -webkit-font-feature-settings: 'liga';
+  -webkit-font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
   vertical-align: middle;
   font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
 }
 
 .btn-icon {
@@ -86,7 +86,9 @@
 }
 
 /* Reset Básico */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -117,7 +119,7 @@ body {
 /* Barra de Anúncio Superior */
 .announcement-bar {
   background-color: var(--civic-forest);
-  color: #F1F6F3;
+  color: #f1f6f3;
   font-size: 0.84rem;
   font-weight: 500;
   text-align: center;
@@ -136,15 +138,25 @@ body {
 
 .announcement-icon {
   font-size: 1.15rem;
-  color: #6EE7B7;
+  color: #6ee7b7;
   line-height: 1;
 }
 
-/* Seções Gerais */
+/* Seções Gerais & Alternância Automática de Contraste */
 .section-editorial {
   padding: 88px 0;
 }
 
+/* Seções Ímpares: Tom Claro Padrão da Página */
+main > section,
+main > section:nth-of-type(odd) {
+  background-color: var(--bg-page);
+  border-top: none;
+  border-bottom: none;
+}
+
+/* Seções Pares: Tom de Contraste Editorial com Bordas Suaves */
+main > section:nth-of-type(even),
 .section-contrast {
   background-color: var(--bg-contrast);
   border-top: 1px solid var(--border-light);
@@ -164,7 +176,7 @@ body {
 
 .section-tag {
   display: inline-block;
-  font-size: 0.82rem;
+  font-size: 1.3rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -205,7 +217,7 @@ body {
 
 .btn-primary {
   background-color: var(--civic-forest);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .btn-primary:hover {
@@ -219,7 +231,7 @@ body {
 }
 
 .btn-secondary:hover {
-  background-color: #DDEEE5;
+  background-color: #ddeee5;
 }
 
 .btn-outline {

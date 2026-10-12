@@ -1,0 +1,501 @@
+<!-- O Formato da Proposta: Editor Markdown, Comparador Diff & Chat IA -->
+<section id="propostas" class="section-editorial">
+  <div class="container">
+    <div class="section-header text-center">
+      <span class="section-tag">A Anatomia da Decisão</span>
+      <h2 class="section-title">
+        Propostas Claras, Validadas e Fáceis de Comparar
+      </h2>
+      <p class="section-subtitle">
+        Chega de reuniões arrastadas e textos burocráticos. No Sintetizando,
+        cada proposta é estruturada linha a linha em Markdown, possui regras e
+        validações automáticas, e pode ser contrastada em segundos.
+      </p>
+    </div>
+
+    <!-- Seletor de Abas dos 3 Recursos -->
+    <div
+      class="proposals-tabs-nav"
+      role="tablist"
+      aria-label="Recursos de Propostas"
+    >
+      <button
+        class="prop-tab-btn active"
+        role="tab"
+        aria-selected="true"
+        aria-controls="panel-form"
+        id="tab-form"
+        data-tab="form"
+      >
+        <span class="material-symbols-rounded tab-icon">edit_document</span>
+        <span class="tab-label-group">
+          <span class="tab-title">Proposta Estruturada</span>
+          <span class="tab-sub">Markdown flexível com validações</span>
+        </span>
+      </button>
+
+      <button
+        class="prop-tab-btn"
+        role="tab"
+        aria-selected="false"
+        aria-controls="panel-diff"
+        id="tab-diff"
+        data-tab="diff"
+      >
+        <span class="material-symbols-rounded tab-icon">difference</span>
+        <span class="tab-label-group">
+          <span class="tab-title">Comparador Visual</span>
+          <span class="tab-sub">Split-view minimalista entre propostas</span>
+        </span>
+      </button>
+
+      <button
+        class="prop-tab-btn"
+        role="tab"
+        aria-selected="false"
+        aria-controls="panel-chat"
+        id="tab-chat"
+        data-tab="chat"
+      >
+        <span class="material-symbols-rounded tab-icon">smart_toy</span>
+        <span class="tab-label-group">
+          <span class="tab-title">Chat & Assistente de IA</span>
+          <span class="tab-sub">Do diálogo ao rascunho oficial</span>
+        </span>
+      </button>
+    </div>
+
+    <!-- Container dos Painéis Interativos -->
+    <div class="proposals-panels-wrapper">
+      <!-- PAINEL 1: EDITOR DE PROPOSTAS EM MARKDOWN COM VALIDAÇÕES -->
+      <div
+        class="prop-panel active"
+        id="panel-form"
+        role="tabpanel"
+        aria-labelledby="tab-form"
+      >
+        <div class="panel-intro-bar">
+          <div class="panel-intro-text">
+            <h3 class="panel-intro-title">Clareza sem Burocracia</h3>
+            <p class="panel-intro-desc">
+              A separação por campos estruturados garante os requisitos mínimos
+              de cada decisão e permite evoluir o documento sem precisar
+              reescrevê-lo do zero.
+            </p>
+          </div>
+
+          <!-- Seletor com Botões Ultra-Curtos -->
+          <div class="template-selector-wrap">
+            <div
+              class="template-buttons"
+              role="group"
+              aria-label="Modelos de Proposta"
+            >
+              <button
+                class="btn-template btn-template-create"
+                data-template="criar"
+                aria-pressed="false"
+              >
+                <span class="material-symbols-rounded btn-icon-sm"
+                  >add_circle</span
+                >
+                Criar
+              </button>
+              <button
+                class="btn-template active"
+                data-template="exemplo1"
+                aria-pressed="true"
+              >
+                Exemplo 1
+              </button>
+              <button
+                class="btn-template"
+                data-template="exemplo2"
+                aria-pressed="false"
+              >
+                Exemplo 2
+              </button>
+              <button
+                class="btn-template"
+                data-template="exemplo3"
+                aria-pressed="false"
+              >
+                Exemplo 3
+              </button>
+              <button
+                class="btn-template"
+                data-template="exemplo4"
+                aria-pressed="false"
+              >
+                Exemplo 4
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card do Documento Estruturado -->
+        <div class="structured-doc-card" id="structured-doc-card">
+          <!-- Modo Criar: Barra de Blocos Inseríveis (exibida apenas quando 'Criar' estiver ativo) -->
+          <div
+            class="builder-blocks-bar"
+            id="builder-blocks-bar"
+            style="display: none"
+          >
+            <div class="builder-bar-header">
+              <span class="builder-bar-label">
+                <span class="material-symbols-rounded">playlist_add</span>
+                Clique para adicionar campos estruturados à proposta:
+              </span>
+              <button
+                class="btn-clear-builder"
+                id="btn-clear-builder"
+                title="Limpar proposta"
+              >
+                <span class="material-symbols-rounded">restart_alt</span> Limpar
+              </button>
+            </div>
+            <div class="builder-buttons-group">
+              <button class="btn-add-block" data-block="titulo">
+                <span class="material-symbols-rounded">title</span> Título
+              </button>
+              <button class="btn-add-block" data-block="texto">
+                <span class="material-symbols-rounded">notes</span> Texto
+              </button>
+              <button class="btn-add-block" data-block="data">
+                <span class="material-symbols-rounded">calendar_today</span>
+                Data
+              </button>
+              <button class="btn-add-block" data-block="moeda">
+                <span class="material-symbols-rounded">payments</span> Moeda
+              </button>
+              <button class="btn-add-block" data-block="tabela">
+                <span class="material-symbols-rounded">table_chart</span> Tabela
+              </button>
+              <button class="btn-add-block" data-block="link">
+                <span class="material-symbols-rounded">link</span> Link
+              </button>
+              <button class="btn-add-block" data-block="lista">
+                <span class="material-symbols-rounded"
+                  >format_list_bulleted</span
+                >
+                Lista
+              </button>
+              <button
+                class="btn-add-block btn-block-more"
+                data-block="mais"
+                title="Mais opções de blocos cívicos"
+              >
+                <span class="material-symbols-rounded">more_horiz</span> e muito
+                mais...
+              </button>
+            </div>
+          </div>
+
+          <!-- Conteúdo Renderizado do Documento -->
+          <div class="structured-doc-body" id="structured-doc-body">
+            <!-- Inserido dinamicamente via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 2: COMPARADOR VISUAL (GIT DIFF MINIMALISTA) -->
+      <div
+        class="prop-panel"
+        id="panel-diff"
+        role="tabpanel"
+        aria-labelledby="tab-diff"
+      >
+        <div class="panel-intro-bar">
+          <div class="panel-intro-text">
+            <h3 class="panel-intro-title">
+              Compare duas versões lado a lado no documento (2 cliques)
+            </h3>
+            <p class="panel-intro-desc">
+              Selecione no topo quais alternativas deseja contrastar. O split
+              view destaca exatamente o que mudou de forma limpa e direta.
+            </p>
+          </div>
+        </div>
+
+        <!-- Seletor das 3 Propostas no Topo -->
+        <div
+          class="diff-proposals-picker"
+          role="group"
+          aria-label="Seletor de Propostas para Comparação"
+        >
+          <div
+            class="diff-prop-card active-left"
+            data-prop="propA"
+            id="card-prop-a"
+          >
+            <div class="diff-prop-card-header">
+              <span class="material-symbols-rounded prop-card-icon"
+                >description</span
+              >
+              <span class="prop-slot-badge slot-left">Lado Esquerdo</span>
+            </div>
+            <div class="diff-prop-card-body">
+              <h4 class="prop-card-name">Proposta #01: Obra Convencional</h4>
+              <p class="prop-card-author">R$ 3.500 com quebra de calçada</p>
+            </div>
+          </div>
+
+          <div
+            class="diff-prop-card active-right"
+            data-prop="propB"
+            id="card-prop-b"
+          >
+            <div class="diff-prop-card-header">
+              <span class="material-symbols-rounded prop-card-icon"
+                >solar_power</span
+              >
+              <span class="prop-slot-badge slot-right">Lado Direito</span>
+            </div>
+            <div class="diff-prop-card-body">
+              <h4 class="prop-card-name">Alternativa Solar & Autônoma</h4>
+              <p class="prop-card-author">R$ 1.200 sem quebra de piso</p>
+            </div>
+          </div>
+
+          <div class="diff-prop-card" data-prop="propC" id="card-prop-c">
+            <div class="diff-prop-card-header">
+              <span class="material-symbols-rounded prop-card-icon"
+                >verified</span
+              >
+              <span class="prop-slot-badge slot-idle"
+                >Clique para comparar</span
+              >
+            </div>
+            <div class="diff-prop-card-body">
+              <h4 class="prop-card-name">Consenso Final com Sensor</h4>
+              <p class="prop-card-author">R$ 1.200 + Sensor de sono 23h</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra Minimalista de Resumo do Diff -->
+        <div class="diff-minimal-summary-bar">
+          <div class="summary-chip">
+            <span class="material-symbols-rounded chip-icon">difference</span>
+            <span class="summary-text" id="diff-diff-count">3 diferenças</span>
+          </div>
+        </div>
+
+        <!-- Container Split-View de Comparação dos Documentos -->
+        <div class="diff-split-container">
+          <!-- Coluna Esquerda: Documento Anterior / Comparado -->
+          <div class="diff-split-col col-left" id="diff-col-left">
+            <div class="split-col-header">
+              <div class="col-header-info">
+                <span class="material-symbols-rounded col-header-icon"
+                  >history</span
+                >
+                <strong class="col-header-title" id="diff-left-title"
+                  >Obra Convencional</strong
+                >
+              </div>
+            </div>
+            <div class="split-col-document" id="diff-left-content">
+              <!-- Renderizado dinamicamente -->
+            </div>
+          </div>
+
+          <!-- Coluna Direita: Documento Proposto / Novo -->
+          <div class="diff-split-col col-right" id="diff-col-right">
+            <div class="split-col-header">
+              <div class="col-header-info">
+                <span class="material-symbols-rounded col-header-icon"
+                  >update</span
+                >
+                <strong class="col-header-title" id="diff-right-title"
+                  >Proposta #02: Alternativa Solar & Autônoma</strong
+                >
+              </div>
+            </div>
+            <div class="split-col-document" id="diff-right-content">
+              <!-- Renderizado dinamicamente -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 3: CHAT DA MESA & CO-PILOTO DE IA -->
+      <div
+        class="prop-panel"
+        id="panel-chat"
+        role="tabpanel"
+        aria-labelledby="tab-chat"
+      >
+        <!-- Card Interativo da Janela de Bate-Papo da Mesa -->
+        <div class="chat-window-card">
+          <!-- Topo da Janela -->
+          <div class="chat-window-header">
+            <div class="chat-group-info">
+              <span class="chat-group-avatar">
+                <span class="material-symbols-rounded">groups</span>
+              </span>
+              <div>
+                <h4 class="chat-group-title">Mesa 03 · Bairro Jardins</h4>
+                <span class="chat-group-subtitle">
+                  10 Moradores Sorteados
+                </span>
+              </div>
+            </div>
+
+            <div class="chat-ephemeral-badge">
+              <span class="material-symbols-rounded ephem-icon"
+                >auto_delete</span
+              >
+              <span>Mensagens somem após a deliberação</span>
+            </div>
+          </div>
+
+          <!-- Corpo do Chat (Mensagens) -->
+          <div class="chat-messages-body" id="chat-messages-container">
+            <!-- Mensagem 1: Mariana -->
+            <div class="chat-msg-row msg-user" data-step="1">
+              <div class="chat-avatar avatar-mariana">M</div>
+              <div class="chat-bubble-wrap">
+                <div class="chat-sender-name">
+                  Mariana <span class="sender-role">Bloco B</span> · 14:02
+                </div>
+                <div class="chat-bubble">
+                  Gente, a praça tá um breu completo à noite! Ontem quase torci
+                  o pé no degrau da quadra... Precisamos resolver isso.
+                </div>
+              </div>
+            </div>
+
+            <!-- Mensagem 2: Seu Jorge -->
+            <div class="chat-msg-row msg-user" data-step="2">
+              <div class="chat-avatar avatar-jorge">J</div>
+              <div class="chat-bubble-wrap">
+                <div class="chat-sender-name">
+                  Seu Jorge <span class="sender-role">Casa 14</span> · 14:03
+                </div>
+                <div class="chat-bubble">
+                  Concordo plenamente, Mariana! Mas o caixa tá apertado. Não dá
+                  pra inventar obra cara com eletricista e quebra de calçada
+                  agora.
+                </div>
+              </div>
+            </div>
+
+            <!-- Mensagem 3: Assistente IA -->
+            <div class="chat-msg-row msg-ai" data-step="3">
+              <div class="chat-avatar avatar-ai">
+                <span class="material-symbols-rounded">smart_toy</span>
+              </div>
+              <div class="chat-bubble-wrap">
+                <div class="chat-sender-name">Assistente</div>
+                <div class="chat-bubble bubble-ai">
+                  <p>
+                    💡 <strong>Olá Mariana e Seu Jorge!</strong> Identifiquei a
+                    preocupação comum com segurança e a restrição de orçamento.
+                    Posso sugerir uma alternativa prática?
+                  </p>
+                  <p>
+                    Refletores com
+                    <strong>energia solar autônoma</strong> custam em média R$
+                    200 cada (R$ 1.200 para 6 pontos), dispensam eletricista,
+                    não quebram piso e têm zero despesa mensal de luz.
+                  </p>
+                  <p class="ai-callout">
+                    Desejam que eu monte um rascunho de proposta para os 10
+                    membros avaliarem?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mensagem 4: Dra. Lúcia -->
+            <div class="chat-msg-row msg-user" data-step="4">
+              <div class="chat-avatar avatar-lucia">L</div>
+              <div class="chat-bubble-wrap">
+                <div class="chat-sender-name">
+                  Dra. Lúcia
+                  <span class="sender-role">Apto 102 (Térreo)</span> · 14:06
+                </div>
+                <div class="chat-bubble">
+                  Excelente ideia da IA! Economiza muito. Só peço um ajuste: meu
+                  quarto fica virado pra praça. Dá pra colocar um sensor/timer
+                  pras luzes reduzirem após as 23h pra não atrapalhar o sono?
+                </div>
+              </div>
+            </div>
+
+            <!-- Mensagem 5: Assistente IA Gerando Proposta -->
+            <div class="chat-msg-row msg-ai" data-step="5">
+              <div class="chat-avatar avatar-ai">
+                <span class="material-symbols-rounded">smart_toy</span>
+              </div>
+              <div class="chat-bubble-wrap">
+                <div class="chat-sender-name">
+                  Assistente Neutro da Mesa
+                  <span class="ai-pill-tag">Rascunho Consolidado</span> · 14:07
+                </div>
+                <div class="chat-bubble bubble-ai">
+                  <p>
+                    ✅ <strong>Emenda acolhida!</strong> Estruturei o rascunho
+                    em Markdown com as proteções sugeridas pela Dra. Lúcia e a
+                    economia apontada pelo Seu Jorge.
+                  </p>
+                  <div class="ai-proposal-preview">
+                    <div class="ai-preview-header">
+                      <span class="material-symbols-rounded preview-icon"
+                        >edit_document</span
+                      >
+                      <strong>Rascunho de Proposta Estruturado</strong>
+                    </div>
+                    <ul class="ai-preview-list">
+                      <li>
+                        <strong># Ação:</strong> Instalação de 6 refletores
+                        solares nos canteiros
+                      </li>
+                      <li>
+                        <strong># Orçamento:</strong> R$ 1.200 (economia de R$
+                        2.300 em relação à obra tradicional)
+                      </li>
+                      <li>
+                        <strong># Cláusula de Sono:</strong> Timer programado
+                        para 20% de luminosidade após as 23h
+                      </li>
+                      <li>
+                        <strong># Responsáveis:</strong> Mariana e Seu Jorge
+                        (mutirão de sábado)
+                      </li>
+                    </ul>
+                    <button
+                      class="btn btn-primary btn-sm btn-full"
+                      id="btn-view-generated-form"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >visibility</span
+                      >
+                      Ver Proposta no Editor Estruturado
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-window-footer">
+            <div class="chat-input-simulated">
+              <span class="chat-input-placeholder"
+                >Os 10 vizinhos dialogam aqui...</span
+              >
+              <button
+                class="btn-chat-send-simulated"
+                disabled
+                aria-label="Enviar mensagem"
+              >
+                <span class="material-symbols-rounded">send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

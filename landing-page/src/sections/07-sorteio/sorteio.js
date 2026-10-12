@@ -76,7 +76,8 @@ if (lotBtn) {
       if (drawPhaseTag) drawPhaseTag.textContent = "Aguardando Início";
       if (drawTableState) drawTableState.textContent = "Cadeiras Livres";
       if (lotMsg) {
-        lotMsg.innerHTML = "Clique para sortear as primeiras 10 pessoas e abrir a discussão.";
+        lotMsg.innerHTML =
+          "Clique para sortear as primeiras 10 pessoas e abrir a discussão.";
       }
       paintDraw();
       return;
@@ -100,7 +101,7 @@ if (lotBtn) {
 
     lotBtn.disabled = true;
     lotBtn.classList.add("spinning");
-    if (drawPhaseTag) drawPhaseTag.textContent = "Sorteando 10 Vizinhos...";
+    if (drawPhaseTag) drawPhaseTag.textContent = "Sorteando...";
     if (drawTableState) drawTableState.textContent = "Girando a roda...";
 
     setTimeout(() => {
@@ -115,23 +116,27 @@ if (lotBtn) {
       if (drawPhaseTag) {
         drawPhaseTag.textContent = isComplete
           ? "Ciclo Completo! (100/100)"
-          : `Discussão das Propostas · Mesa ${roundNumber}/10`;
+          : `Mesa ${roundNumber}/10`;
         drawPhaseTag.className =
           "draw-phase-badge" +
           (isComplete ? " badge-complete" : " badge-active");
       }
 
       if (drawTableState) {
-        drawTableState.textContent = isComplete ? "Ciclo Concluído" : "Discussão em Andamento";
+        drawTableState.textContent = isComplete
+          ? "Ciclo Concluído"
+          : "Discussão em Andamento";
       }
 
       if (lotMsg) {
         if (isComplete) {
-          lotBtn.innerHTML = '<span class="material-symbols-rounded btn-icon">restart_alt</span> Reiniciar Novo Ciclo (100 pessoas)';
+          lotBtn.innerHTML =
+            '<span class="material-symbols-rounded btn-icon">restart_alt</span> Reiniciar Novo Ciclo';
           lotMsg.innerHTML = `<strong>Ciclo Completo!</strong> Todas as 100 pessoas participaram de uma Mesa de 10. Todos tiveram sua voz ouvida e respeitada!`;
         } else {
-          lotBtn.innerHTML = '<span class="material-symbols-rounded btn-icon">casino</span> Sortear Próxima Mesa (10 pessoas)';
-          lotMsg.innerHTML = `<strong>Mesa ${roundNumber} formada!</strong> 10 novos moradores sentam para debater as propostas.<br><small style="color:var(--text-muted);">Os das mesas anteriores continuam marcados (cinza). Faltam ${TOTAL_PEOPLE - totalCalled} moradores.</small>`;
+          lotBtn.innerHTML =
+            '<span class="material-symbols-rounded btn-icon">casino</span> Sortear Próxima';
+          lotMsg.innerHTML = `10 novos moradores sentam para debater as propostas.`;
         }
       }
 
@@ -143,7 +148,8 @@ if (lotBtn) {
     pastParticipants.clear();
     currentTable = [];
     roundNumber = 0;
-    lotBtn.innerHTML = '<span class="material-symbols-rounded btn-icon">casino</span> Sortear Mesa (10 pessoas)';
+    lotBtn.innerHTML =
+      '<span class="material-symbols-rounded btn-icon">casino</span> Sortear';
     lotBtn.disabled = false;
     lotBtn.classList.remove("spinning");
     if (drawPhaseTag) {
@@ -152,7 +158,8 @@ if (lotBtn) {
     }
     if (drawTableState) drawTableState.textContent = "Cadeiras Livres";
     if (lotMsg) {
-      lotMsg.innerHTML = "Clique para sortear as primeiras 10 pessoas e abrir a discussão.";
+      lotMsg.innerHTML =
+        "Clique para sortear as primeiras 10 pessoas e abrir a discussão.";
     }
     paintDraw();
   });

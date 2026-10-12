@@ -8,9 +8,7 @@
     "test": "pnpm --filter @sintetizing/core test",
     "test:coverage": "pnpm --filter @sintetizing/core test:coverage",
     "typecheck": "pnpm --recursive exec tsc --noEmit",
-    "build": "pnpm --recursive --filter \"./packages/*\" run build",
-    "landing:build": "node landing-page/build.js",
-    "landing:watch": "node landing-page/build.js --watch"
+    "build": "pnpm --recursive --filter \"./packages/*\" run build"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

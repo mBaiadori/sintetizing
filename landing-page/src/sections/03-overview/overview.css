@@ -1,0 +1,1033 @@
+/* ==========================================================================
+   SINTETIZANDO — SEÇÃO OVERVIEW / TRILHA DA APLICAÇÃO (STEPPER INTERATIVO)
+   ========================================================================== */
+
+.overview-section {
+  background-color: inherit;
+  position: relative;
+}
+
+/* Layout Principal: 2 Colunas (Stepper à Esquerda + Card de Conteúdo à Direita) */
+.overview-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 36px;
+  align-items: start;
+}
+
+/* --------------------------------------------------------------------------
+   COLUNA ESQUERDA: STEPPER / TRILHA
+   -------------------------------------------------------------------------- */
+.overview-stepper-wrapper {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-subtle);
+  position: sticky;
+  top: 96px;
+}
+
+.stepper-track-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.stepper-kicker {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--civic-forest);
+}
+
+.stepper-counter {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--civic-forest-light);
+  padding: 3px 10px;
+  border-radius: var(--radius-round);
+}
+
+/* Lista de Etapas e Linha Conectora Vertical */
+.overview-stepper-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Linha conectora vertical atrás das bolinhas */
+.stepper-connector-line {
+  position: absolute;
+  top: 34px;
+  bottom: 34px;
+  left: 36px;
+  transform: translateX(-50%);
+  width: 3px;
+  background-color: var(--border-light);
+  z-index: 1;
+  border-radius: var(--radius-round);
+  overflow: hidden;
+}
+
+.stepper-connector-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(180deg, var(--civic-forest) 0%, #2e7d5b 100%);
+  border-radius: var(--radius-round);
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Item de Etapa (Botão Clicável) */
+.stepper-step-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  width: 100%;
+}
+
+.stepper-step-item:hover {
+  background: #f7f5f0;
+  border-color: var(--border-light);
+}
+
+.stepper-step-item:focus-visible {
+  outline: 2px solid var(--civic-forest);
+  outline-offset: 2px;
+}
+
+/* Bolinha da Etapa */
+.step-indicator {
+  flex-shrink: 0;
+}
+
+.step-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background-color: var(--bg-surface);
+  border: 2px solid var(--border-strong);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.step-circle .step-check-icon {
+  display: none;
+  font-size: 1.25rem;
+  color: #ffffff;
+}
+
+/* Texto da Etapa */
+.step-text-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.step-category {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-soft);
+  margin-bottom: 2px;
+  transition: color 0.2s ease;
+}
+
+.step-heading {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+  transition: color 0.2s ease;
+}
+
+.step-summary {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+/* Estados da Etapa: ATIVA */
+.stepper-step-item.active {
+  background: var(--civic-forest-light);
+  border-color: #bcdbc9;
+  box-shadow: 0 2px 8px rgba(24, 78, 56, 0.08);
+}
+
+.stepper-step-item.active .step-circle {
+  background: var(--civic-forest);
+  border-color: var(--civic-forest);
+  color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 0 0 4px rgba(24, 78, 56, 0.16);
+}
+
+.stepper-step-item.active .step-category {
+  color: var(--civic-forest);
+}
+
+.stepper-step-item.active .step-heading {
+  color: var(--civic-forest);
+}
+
+/* Estados da Etapa: CONCLUÍDA */
+.stepper-step-item.completed .step-circle {
+  background: #2e7d5b;
+  border-color: #2e7d5b;
+  color: #ffffff;
+}
+
+.stepper-step-item.completed .step-circle .step-num {
+  display: none;
+}
+
+.stepper-step-item.completed .step-circle .step-check-icon {
+  display: inline-block;
+}
+
+/* --------------------------------------------------------------------------
+   COLUNA DIREITA: PAINEL DE CONTEÚDO E DETALHES
+   -------------------------------------------------------------------------- */
+.overview-display-wrapper {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 36px 40px;
+  box-shadow: var(--shadow-card);
+  min-height: 580px;
+}
+
+.overview-panel {
+  display: none;
+  animation: fadeInPanel 0.35s ease forwards;
+}
+
+.overview-panel.active {
+  display: block;
+}
+
+@keyframes fadeInPanel {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Cabeçalho do Painel */
+.panel-header {
+  margin-bottom: 28px;
+}
+
+.panel-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.badge-step-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--civic-forest);
+  background: var(--civic-forest-light);
+  padding: 5px 12px;
+  border-radius: var(--radius-round);
+}
+
+.badge-step-tag .material-symbols-rounded {
+  font-size: 1.1rem;
+}
+
+.panel-deep-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--civic-terracotta);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.panel-deep-link:hover {
+  color: #923f1a;
+  text-decoration: underline;
+}
+
+.panel-deep-link .material-symbols-rounded {
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.panel-deep-link:hover .material-symbols-rounded {
+  transform: translate(2px, -2px);
+}
+
+.panel-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 2.3vw, 1.95rem);
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+.panel-desc {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+/* --------------------------------------------------------------------------
+   BOX VISUAL INTERATIVO / ILUSTRAÇÃO POR ETAPA
+   -------------------------------------------------------------------------- */
+.panel-visual-box {
+  background: #fbf9f5;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.visual-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border-strong);
+}
+
+.visual-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.visual-title .icon-green {
+  color: var(--civic-forest);
+  font-size: 1.25rem;
+}
+
+.visual-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-round);
+}
+
+.status-verified {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.status-ai {
+  background: #f3e8fd;
+  color: #7b1fa2;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #137333;
+  box-shadow: 0 0 0 0 rgba(19, 115, 51, 0.7);
+  animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(19, 115, 51, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(19, 115, 51, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(19, 115, 51, 0);
+  }
+}
+
+/* Detalhes Visuais: Etapa 1 (Nós e Hash) */
+.visual-nodes-flow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.visual-node-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-subtle);
+  position: relative;
+}
+
+.visual-node-card .node-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: var(--civic-forest-light);
+  color: var(--civic-forest);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.visual-node-card .node-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.node-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.node-hash {
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: var(--text-muted);
+}
+
+.node-badge {
+  position: absolute;
+  top: -9px;
+  right: 12px;
+  background: #f0ede6;
+  border: 1px solid var(--border-strong);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--radius-round);
+  color: var(--text-muted);
+}
+
+.flow-connection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.flow-line {
+  width: 80px;
+  height: 3px;
+  background: #2e7d5b;
+  position: relative;
+  border-radius: var(--radius-round);
+}
+
+.flow-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.hash-demo-box {
+  background: #24292e;
+  color: #f6f8fa;
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+}
+
+.hash-demo-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+
+.hash-code {
+  background: rgba(255, 255, 255, 0.12);
+  color: #7ee787;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+
+.hash-demo-explainer {
+  font-size: 0.82rem;
+  color: #c9d1d9;
+  line-height: 1.45;
+}
+
+/* Detalhes Visuais: Etapa 2 (Unicidade e Comunidades) */
+.community-visual-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.comm-card-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.comm-badge-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--civic-forest);
+  margin-bottom: 12px;
+}
+
+.user-chip-sample {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f7f5f0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+
+.avatar-ring {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--civic-forest);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-chip-sample strong {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.user-chip-sample small {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.comm-text-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.comm-tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.comm-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: #f6f3ed;
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+}
+
+.comm-tag.active {
+  background: var(--civic-forest-light);
+  color: var(--civic-forest);
+  border-color: #bcdbc9;
+}
+
+.comm-tag .material-symbols-rounded {
+  font-size: 1.05rem;
+  color: var(--civic-forest);
+}
+
+/* Detalhes Visuais: Etapa 3 (Comparação & Síntese) */
+.proposals-compare-cards {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.prop-mini-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-subtle);
+}
+
+.prop-mini-head {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.prop-mini-head.prop-a {
+  background: var(--prop-a-bg);
+  color: var(--prop-a-color);
+}
+
+.prop-mini-head.prop-b {
+  background: var(--prop-b-bg);
+  color: var(--prop-b-color);
+}
+
+.badge-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: currentColor;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.prop-mini-body {
+  padding: 12px;
+}
+
+.prop-mini-body strong {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.prop-mini-body p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.prop-diff-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--civic-terracotta);
+}
+
+.diff-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.synthesis-result-callout {
+  background: #fdfaf4;
+  border: 1.5px solid #dfc79c;
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+}
+
+.synth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #8c5a17;
+  margin-bottom: 6px;
+}
+
+.synthesis-result-callout p {
+  font-size: 0.85rem;
+  color: var(--text-main);
+  line-height: 1.45;
+}
+
+/* Detalhes Visuais: Etapa 4 (Mesa e Ficha Única) */
+.table-token-split {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 20px;
+  align-items: center;
+}
+
+.mini-table-visual {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 2px dashed var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fbf9f5;
+}
+
+.table-circle-center {
+  text-align: center;
+}
+
+.table-title {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--civic-forest);
+}
+
+.table-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.seat-dots {
+  position: absolute;
+  inset: -6px;
+}
+
+.seat-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #d8d0c2;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.seat-dot.active {
+  background: var(--civic-forest);
+}
+
+/* Posições dos 10 Assentos ao Redor do Círculo */
+.seat-dot:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+.seat-dot:nth-child(2) { top: 10%; right: 16%; }
+.seat-dot:nth-child(3) { top: 31%; right: 2%; }
+.seat-dot:nth-child(4) { bottom: 31%; right: 2%; }
+.seat-dot:nth-child(5) { bottom: 10%; right: 16%; }
+.seat-dot:nth-child(6) { bottom: 0; left: 50%; transform: translateX(-50%); }
+.seat-dot:nth-child(7) { bottom: 10%; left: 16%; }
+.seat-dot:nth-child(8) { bottom: 31%; left: 2%; }
+.seat-dot:nth-child(9) { top: 31%; left: 2%; }
+.seat-dot:nth-child(10) { top: 10%; left: 16%; }
+
+.token-rule-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.token-badge-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--civic-terracotta);
+  background: var(--civic-terracotta-light);
+  padding: 4px 10px;
+  border-radius: var(--radius-round);
+  margin-bottom: 10px;
+}
+
+.token-explain {
+  font-size: 0.85rem;
+  color: var(--text-main);
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.token-indicator-box {
+  background: #f7f5f0;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+
+.token-chip.in-use {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--civic-forest);
+  margin-bottom: 4px;
+}
+
+.token-chip.in-use .material-symbols-rounded {
+  font-size: 1.05rem;
+}
+
+.token-indicator-box small {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   PILARES DA ETAPA (3 CARDS INFERIORES)
+   -------------------------------------------------------------------------- */
+.panel-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 32px;
+}
+
+.overview-section .pillar-item,
+.pillar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  background: #faf8f4;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(30, 24, 16, 0.02);
+  transition: all 0.2s ease;
+}
+
+.overview-section .pillar-item:hover,
+.pillar-item:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 12px rgba(30, 24, 16, 0.05);
+  transform: translateY(-2px);
+}
+
+.overview-section .pillar-icon,
+.pillar-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--border-strong);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0;
+  color: var(--civic-forest);
+  margin: 0 !important;
+  box-shadow: 0 1px 3px rgba(30, 24, 16, 0.04);
+}
+
+.overview-section .pillar-icon .material-symbols-rounded,
+.pillar-icon .material-symbols-rounded {
+  font-size: 1.35rem !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle;
+  color: var(--civic-forest);
+}
+
+.overview-section .pillar-text,
+.pillar-text {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.overview-section .pillar-text strong,
+.pillar-text strong {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.overview-section .pillar-text p,
+.pillar-text p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   RODAPÉ DO PAINEL (CONTROLES ANTERIOR / PRÓXIMO E DOTS)
+   -------------------------------------------------------------------------- */
+.panel-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-step-nav {
+  gap: 8px;
+  font-weight: 600;
+  padding: 10px 20px;
+}
+
+.step-dots-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.step-dot.active {
+  width: 24px;
+  border-radius: var(--radius-round);
+  background: var(--civic-forest);
+}
+
+.step-dot:hover:not(.active) {
+  background: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVIDADE (TABLETS E MOBILE)
+   -------------------------------------------------------------------------- */
+@media (max-width: 980px) {
+  .overview-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .overview-stepper-wrapper {
+    position: static;
+    padding: 20px;
+  }
+
+  /* No mobile/tablet, a trilha passa a ser uma barra horizontal estilizada */
+  .overview-stepper-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    gap: 12px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stepper-connector-line {
+    top: 34px;
+    left: 36px;
+    right: 36px;
+    bottom: auto;
+    width: auto;
+    height: 3px;
+    transform: none;
+  }
+
+  .stepper-connector-progress {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--civic-forest) 0%, #2e7d5b 100%);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .stepper-step-item {
+    flex: 0 0 auto;
+    width: 240px;
+    scroll-snap-align: start;
+    background: #fbf9f5;
+  }
+
+  .panel-pillars-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .community-visual-split,
+  .table-token-split {
+    grid-template-columns: 1fr;
+  }
+
+  .visual-nodes-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-line {
+    width: 3px;
+    height: 24px;
+  }
+
+  .proposals-compare-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-display-wrapper {
+    padding: 24px 20px;
+  }
+}

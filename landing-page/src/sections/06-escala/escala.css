@@ -701,7 +701,7 @@
   text-align: center;
 }
 
-.pillar-icon {
+.scale-pillar .pillar-icon {
   font-size: 2rem;
   display: inline-block;
   margin-bottom: 12px;
