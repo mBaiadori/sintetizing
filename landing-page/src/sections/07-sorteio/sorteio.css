@@ -1,0 +1,303 @@
+/* ==========================================================================
+   Sorteio Rotativo: 100 Pessoas na Comunidade, 10 por Mesa
+   ========================================================================== */
+.draw-box {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1.15fr;
+  gap: 24px;
+  align-items: stretch;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  box-shadow: var(--shadow-elevated);
+}
+
+.draw-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.draw-col-title {
+  font-weight: 700;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--text-main);
+  margin-bottom: 0;
+}
+
+.draw-progress-badge {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--civic-forest);
+  background: var(--civic-forest-light);
+  border: 1px solid #B8D6C7;
+  padding: 2px 8px;
+  border-radius: var(--radius-round);
+}
+
+.draw-legend {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.leg-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.leg-dot-waiting { background: #FFFFFF; border: 1.5px solid var(--civic-forest); }
+.leg-dot-active  { background: #FDE68A; border: 1.5px solid #B45309; }
+.leg-dot-done    { background: #E4DED2; border: 1.5px solid #B5AB9A; }
+
+/* Grid de 100 Pessoas (10x10) */
+.draw-people-100 {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  background: #F9F6F0;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+}
+
+.draw-people-col,
+.draw-table-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.draw-dot-sm,
+.citizen-chip {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1.5px solid var(--civic-forest);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: #FFFFFF;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.draw-dot-sm.active-table,
+.citizen-chip.chip-table {
+  background: #FDE68A !important;
+  border-color: #B45309 !important;
+  color: #78350F !important;
+  transform: scale(1.18);
+  box-shadow: 0 2px 6px rgba(180, 83, 9, 0.4);
+  z-index: 2;
+}
+
+.draw-dot-sm.past-table,
+.citizen-chip.chip-past {
+  background: #E8E2D5 !important;
+  border-color: #C0B7A6 !important;
+  color: #8C8474 !important;
+  opacity: 0.75;
+}
+
+/* Coluna Central de Ação */
+.draw-action-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.btn-draw-action {
+  padding: 14px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.draw-status-box {
+  background: var(--bg-page);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.draw-phase-badge {
+  display: inline-block;
+  align-self: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #F0EAE1;
+  color: var(--text-muted);
+  padding: 3px 10px;
+  border-radius: var(--radius-round);
+}
+
+.draw-phase-badge.badge-active {
+  background: #FEF4EA;
+  color: #B4621A;
+  border: 1px solid #F5D3B3;
+}
+
+.draw-phase-badge.badge-complete {
+  background: var(--civic-forest-light);
+  color: var(--civic-forest);
+  border: 1px solid #B8D6C7;
+}
+
+/* Mesa dos 10 Redonda do Sorteio (Design idêntico ao simulador, clean e sem ícones) */
+.draw-table-container {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;
+  position: relative;
+  margin: 12px auto 0;
+}
+
+.draw-round-table {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.draw-table-center {
+  width: 136px;
+  height: 136px;
+  background-color: #F6F2EA;
+  border: 2px dashed #C8BFAD;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
+  padding: 10px;
+}
+
+.draw-table-center .table-label {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.draw-table-center .table-sublabel {
+  font-size: 0.72rem;
+  color: var(--civic-forest);
+  font-weight: 600;
+}
+
+/* 10 Assentos Redondos na Mesa (Círculo Perfeito & Geometria Simétrica) */
+.draw-seat-btn {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+  padding: 0;
+  user-select: none;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.draw-seat-btn:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.draw-seat-btn.seat-empty {
+  border: 1.5px dashed #C5BCAD;
+  background-color: #F8F5EE;
+  color: #A09787;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+.draw-seat-btn.seat-occupied,
+.draw-seat-btn.seat-filled {
+  border: 2px solid var(--civic-forest);
+  background-color: #FFFFFF;
+  color: var(--civic-forest);
+  box-shadow: 0 2px 8px rgba(24, 78, 56, 0.2);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes popIn {
+  from { transform: translate(-50%, -50%) scale(0.75); opacity: 0; }
+  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.draw-seat-num {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--civic-forest);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.draw-seat-placeholder {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  color: #A09787;
+  font-weight: 600;
+}
+
+/* Posições Trigonométricas em Círculo Perfeito (Raio ~38% com centro a 50%, 50%) */
+.draw-seat-btn[data-seat="1"]  { top: 12%;   left: 50%;   right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="2"]  { top: 19.3%; left: 72.3%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="3"]  { top: 38.3%; left: 86.1%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="4"]  { top: 61.7%; left: 86.1%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="5"]  { top: 80.7%; left: 72.3%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="6"]  { top: 88%;   left: 50%;   right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="7"]  { top: 80.7%; left: 27.7%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="8"]  { top: 61.7%; left: 13.9%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="9"]  { top: 38.3%; left: 13.9%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+.draw-seat-btn[data-seat="10"] { top: 19.3%; left: 27.7%; right: auto; bottom: auto; transform: translate(-50%, -50%); }
+
+@media (max-width: 950px) {
+  .draw-box {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+

@@ -1,0 +1,860 @@
+      <!-- O Formato da Proposta: Google Forms, Git Diffs & Chat com IA -->
+      <section id="propostas" class="section-editorial">
+        <div class="container">
+          <div class="section-header text-center">
+            <span class="section-tag">A Anatomia da Decisão</span>
+            <h2 class="section-title">
+              Como Nasce uma Proposta: Simples, Transparente e com IA
+            </h2>
+            <p class="section-subtitle">
+              Chega de reuniões arrastadas, documentos impenetráveis e letrinhas
+              miúdas. No Sintetizando, criar, comparar e lapidar ideias é tão
+              rápido e acessível quanto usar os melhores aplicativos do
+              cotidiano.
+            </p>
+          </div>
+
+          <!-- Seletor de Abas dos 3 Recursos -->
+          <div
+            class="proposals-tabs-nav"
+            role="tablist"
+            aria-label="Recursos de Propostas"
+          >
+            <button
+              class="prop-tab-btn active"
+              role="tab"
+              aria-selected="true"
+              aria-controls="panel-form"
+              id="tab-form"
+              data-tab="form"
+            >
+              <span class="material-symbols-rounded tab-icon">assignment</span>
+              <span class="tab-label-group">
+                <span class="tab-title">Tão Fácil quanto um Forms</span>
+                <span class="tab-sub">Formulário em 5 perguntas claras</span>
+              </span>
+            </button>
+
+            <button
+              class="prop-tab-btn"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-diff"
+              id="tab-diff"
+              data-tab="diff"
+            >
+              <span class="material-symbols-rounded tab-icon">difference</span>
+              <span class="tab-label-group">
+                <span class="tab-title">Comparador Visual (Diff)</span>
+                <span class="tab-sub">O que mudou em 30 segundos</span>
+              </span>
+            </button>
+
+            <button
+              class="prop-tab-btn"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-chat"
+              id="tab-chat"
+              data-tab="chat"
+            >
+              <span class="material-symbols-rounded tab-icon">smart_toy</span>
+              <span class="tab-label-group">
+                <span class="tab-title">Chat & Assistente de IA</span>
+                <span class="tab-sub">Do papo informal ao rascunho</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- Container dos Painéis Interativos -->
+          <div class="proposals-panels-wrapper">
+            <!-- PAINEL 1: FORMATO GOOGLE FORMS -->
+            <div
+              class="prop-panel active"
+              id="panel-form"
+              role="tabpanel"
+              aria-labelledby="tab-form"
+            >
+              <div class="panel-intro-bar">
+                <div class="panel-intro-text">
+                  <span class="panel-intro-badge">
+                    <span class="material-symbols-rounded">edit_note</span>
+                    Estrutura Sem Fricção
+                  </span>
+                  <h3 class="panel-intro-title">
+                    Qualquer pessoa preenche em 3 minutos — sem juridiquês
+                  </h3>
+                  <p class="panel-intro-desc">
+                    O formulário guia quem propõe com 5 perguntas objetivas. Não
+                    é necessário escrever projetos formais: basta responder o
+                    que fazer, quanto custa e quem ajuda.
+                  </p>
+                </div>
+
+                <!-- Seletor de Templates de Exemplo -->
+                <div class="template-selector-wrap">
+                  <span class="template-label">Experimente modelos:</span>
+                  <div
+                    class="template-buttons"
+                    role="group"
+                    aria-label="Modelos de Proposta"
+                  >
+                    <button
+                      class="btn-template active"
+                      data-template="praca"
+                      aria-pressed="true"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >wb_sunny</span
+                      >
+                      Ação: Iluminação da Praça
+                    </button>
+                    <button
+                      class="btn-template"
+                      data-template="silencio"
+                      aria-pressed="false"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >volume_down</span
+                      >
+                      Regra: Silêncio e Sons
+                    </button>
+                    <button
+                      class="btn-template"
+                      data-template="boato"
+                      aria-pressed="false"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >fact_check</span
+                      >
+                      Fato: Apuração de Obras
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interface do Formulário Estilo Google Forms -->
+              <div class="forms-card">
+                <div class="forms-header">
+                  <div class="forms-header-top">
+                    <span class="forms-tag" id="form-badge-category">
+                      <span class="material-symbols-rounded form-tag-icon"
+                        >handyman</span
+                      >
+                      Tipo: Ação Prática com Prazo
+                    </span>
+                    <span class="forms-status-pill">
+                      <span class="material-symbols-rounded status-icon"
+                        >check_circle</span
+                      >
+                      Validação Automática
+                    </span>
+                  </div>
+                  <h4 class="forms-title" id="form-prop-title">
+                    Instalação de Iluminação Solar Autônoma nos Canteiros da
+                    Praça
+                  </h4>
+                  <p class="forms-lead" id="form-prop-lead">
+                    Proposta formulada pela Mesa 03 para resolver a escuridão
+                    noturna sem custos de eletricista.
+                  </p>
+                </div>
+
+                <!-- 5 Blocos do Formulário -->
+                <div class="forms-body">
+                  <!-- Bloco 1 -->
+                  <div class="form-question-card">
+                    <div class="form-q-header">
+                      <span class="form-q-num">1</span>
+                      <div class="form-q-meta">
+                        <label class="form-q-title" for="field-problema"
+                          >Qual problema real estamos resolvendo?</label
+                        >
+                        <span class="form-q-hint"
+                          >Descreva a dor diária sentida pelas pessoas de forma
+                          clara.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-q-input-wrap">
+                      <div class="form-field-content" id="field-problema">
+                        A praça fica no escuro após as 19h. Moradores evitam
+                        circular com crianças e pets pelo risco de tropeços nos
+                        desníveis da calçada e sensação de insegurança.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 2 -->
+                  <div class="form-question-card">
+                    <div class="form-q-header">
+                      <span class="form-q-num">2</span>
+                      <div class="form-q-meta">
+                        <label class="form-q-title" for="field-acao"
+                          >Qual é a ação prática proposta?</label
+                        >
+                        <span class="form-q-hint"
+                          >O que será executado no mundo real para dar fim ao
+                          problema.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-q-input-wrap">
+                      <div class="form-field-content" id="field-acao">
+                        Instalar 6 refletores com placas solares integradas e
+                        postes autônomos nos canteiros centrais da praça, sem
+                        precisar quebrar concreto nem passar tubulações
+                        elétricas.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 3 -->
+                  <div class="form-question-card highlight-field">
+                    <div class="form-q-header">
+                      <span class="form-q-num">3</span>
+                      <div class="form-q-meta">
+                        <label class="form-q-title" for="field-recursos"
+                          >Recursos necessários & Custo total estimado</label
+                        >
+                        <span class="form-q-hint"
+                          >Transparência financeira total em cada centavo a ser
+                          desembolsado.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-q-input-wrap">
+                      <div class="form-field-content" id="field-recursos">
+                        <span class="money-badge">R$ 1.200 no total</span>
+                        (compra de 6 refletores solares com nota fiscal). Zero
+                        impacto na conta de luz mensal e zero necessidade de
+                        quebra de piso.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 4 -->
+                  <div class="form-question-card">
+                    <div class="form-q-header">
+                      <span class="form-q-num">4</span>
+                      <div class="form-q-meta">
+                        <label class="form-q-title" for="field-responsaveis"
+                          >Quem se compromete e qual o cronograma?</label
+                        >
+                        <span class="form-q-hint"
+                          >Pessoas de carne e osso responsáveis pelo
+                          acompanhamento.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-q-input-wrap">
+                      <div class="form-field-content" id="field-responsaveis">
+                        Mariana (Bloco B) e Seu Jorge (Casa 14) realizam a
+                        cotação e compra; mutirão de fixação voluntária agendado
+                        para o sábado 18/11 às 9h da manhã.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 5 -->
+                  <div class="form-question-card">
+                    <div class="form-q-header">
+                      <span class="form-q-num">5</span>
+                      <div class="form-q-meta">
+                        <label class="form-q-title" for="field-sucesso"
+                          >Como saberemos que deu certo? (Critério de
+                          Sucesso)</label
+                        >
+                        <span class="form-q-hint"
+                          >Resultado visível que comprova o sucesso em até 30
+                          dias.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-q-input-wrap">
+                      <div class="form-field-content" id="field-sucesso">
+                        Área de convivência 100% iluminada até às 23h, retorno
+                        de passeios familiares noturnos e zero relatos de quedas
+                        ou incidentes na calçada.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="forms-footer">
+                  <div class="forms-footer-info">
+                    <span class="material-symbols-rounded footer-check-icon"
+                      >verified_user</span
+                    >
+                    <span
+                      >Formato auditável e imutável quando aprovado pelo
+                      consenso da comunidade.</span
+                    >
+                  </div>
+                  <button class="btn btn-secondary btn-sm" id="btn-copy-form">
+                    <span class="material-symbols-rounded btn-icon-sm"
+                      >content_copy</span
+                    >
+                    Copiar Estrutura Deste Modelo
+                  </button>
+                </div>
+              </div>
+
+              <!-- Por que funciona -->
+              <div class="why-forms-box">
+                <div class="why-item">
+                  <span class="why-icon material-symbols-rounded">speed</span>
+                  <div>
+                    <strong>Fim dos Textos Infinitos:</strong>
+                    Ninguém tem tempo para ler 15 páginas. O formulário em 5
+                    blocos garante leitura completa em 2 minutos.
+                  </div>
+                </div>
+                <div class="why-item">
+                  <span class="why-icon material-symbols-rounded">gavel</span>
+                  <div>
+                    <strong>Foco em Execução:</strong>
+                    Exigir custo, responsáveis e critério de sucesso impede
+                    propostas vazias que só servem para discussão sem ação.
+                  </div>
+                </div>
+                <div class="why-item">
+                  <span class="why-icon material-symbols-rounded"
+                    >diversity_3</span
+                  >
+                  <div>
+                    <strong>Acessível a Qualquer Idade:</strong>
+                    Se um morador sabe mandar mensagem ou preencher um cadastro
+                    simples, ele sabe redigir uma proposta excelente.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PAINEL 2: COMPARADOR VISUAL (GIT DIFF LIMPO) -->
+            <div
+              class="prop-panel"
+              id="panel-diff"
+              role="tabpanel"
+              aria-labelledby="tab-diff"
+            >
+              <div class="panel-intro-bar">
+                <div class="panel-intro-text">
+                  <span class="panel-intro-badge diff-badge-accent">
+                    <span class="material-symbols-rounded">compare</span>
+                    Lógica Git Adaptada ao Cotidiano
+                  </span>
+                  <h3 class="panel-intro-title">
+                    Veja exatamente o que mudou em 30 segundos
+                  </h3>
+                  <p class="panel-intro-desc">
+                    Quando alguém propõe uma melhoria ou contraproposta, ninguém
+                    precisa caçar diferenças na mão. As adições entram em verde
+                    sutil, os cortes em vermelho riscado e os pontos em comum
+                    permanecem intactos.
+                  </p>
+                </div>
+
+                <!-- Seletor de Cenários e Modos -->
+                <div class="diff-controls-wrap">
+                  <div class="diff-scenario-selector">
+                    <button
+                      class="btn-scenario active"
+                      data-scenario="praca"
+                      aria-pressed="true"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >wb_sunny</span
+                      >
+                      Cenário: Iluminação da Praça
+                    </button>
+                    <button
+                      class="btn-scenario"
+                      data-scenario="salao"
+                      aria-pressed="false"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >home_work</span
+                      >
+                      Cenário: Regras do Salão de Festas
+                    </button>
+                  </div>
+
+                  <div class="diff-view-modes">
+                    <button
+                      class="btn-diff-mode active"
+                      id="btn-mode-diff"
+                      aria-pressed="true"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >difference</span
+                      >
+                      Modo Diff (Destaques)
+                    </button>
+                    <button
+                      class="btn-diff-mode"
+                      id="btn-mode-consolidated"
+                      aria-pressed="false"
+                    >
+                      <span class="material-symbols-rounded btn-icon-sm"
+                        >article</span
+                      >
+                      Versão Final Consolidada
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Barra de Estatísticas do Diff -->
+              <div class="diff-stats-bar" id="diff-stats-strip">
+                <span class="diff-stat-item stat-added">
+                  <span class="diff-stat-dot dot-add"></span>
+                  <strong id="stat-count-add">+ 2 Adições</strong> (Novas
+                  proteções sugeridas pela mesa)
+                </span>
+                <span class="diff-stat-item stat-removed">
+                  <span class="diff-stat-dot dot-rem"></span>
+                  <strong id="stat-count-rem">- 1 Corte</strong> (Eliminação de
+                  gastos desnecessários)
+                </span>
+                <span class="diff-stat-item stat-equal">
+                  <span class="diff-stat-dot dot-eq"></span>
+                  <strong id="stat-count-eq">= 3 Mantidos</strong> (Acordos que
+                  já tinham consenso)
+                </span>
+                <span
+                  class="diff-stat-item stat-highlight"
+                  id="stat-highlight-pill"
+                >
+                  <span class="material-symbols-rounded btn-icon-sm"
+                    >savings</span
+                  >
+                  <strong id="stat-highlight-text">Economia de R$ 2.300</strong>
+                  no caixa comum
+                </span>
+              </div>
+
+              <!-- Card Principal do Visualizador de Diff -->
+              <div class="diff-viewer-card" id="diff-viewer-container">
+                <div class="diff-card-header">
+                  <div class="diff-header-branches">
+                    <div class="branch-pill branch-orig">
+                      <span class="branch-label">Versão Original:</span>
+                      <strong id="diff-branch-orig-name"
+                        >Proposta #04 (Mariana)</strong
+                      >
+                    </div>
+                    <span class="material-symbols-rounded branch-arrow"
+                      >arrow_forward</span
+                    >
+                    <div class="branch-pill branch-synt">
+                      <span class="branch-label">Emenda Consensual:</span>
+                      <strong id="diff-branch-synt-name"
+                        >Síntese #04-B (Mesa 03)</strong
+                      >
+                    </div>
+                  </div>
+                  <div class="diff-consensus-level">
+                    <span class="material-symbols-rounded consensus-icon"
+                      >thumb_up</span
+                    >
+                    <span id="diff-consensus-text"
+                      >Aprovado por 9 de 10 vizinhos da mesa</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Lista de Linhas / Blocos do Diff -->
+                <div class="diff-rows-container" id="diff-rows-list">
+                  <!-- Bloco 1: Mantido -->
+                  <div class="diff-row diff-row-equal">
+                    <div class="diff-row-gutter">
+                      <span class="diff-tag-badge tag-eq">[ = ]</span>
+                    </div>
+                    <div class="diff-row-main">
+                      <div class="diff-field-name">Ação Prática</div>
+                      <div class="diff-field-content">
+                        Instalação de postes de iluminação para clarear os
+                        canteiros e calçadas centrais da praça comunitária.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 2: Removido -->
+                  <div class="diff-row diff-row-removed">
+                    <div class="diff-row-gutter">
+                      <span class="diff-tag-badge tag-rem">[ - ]</span>
+                    </div>
+                    <div class="diff-row-main">
+                      <div class="diff-field-name">
+                        Orçamento Original de Obra Pesada
+                      </div>
+                      <div class="diff-field-content strike-through">
+                        R$ 3.500 para quebra de piso de concreto, cabeamento
+                        subterrâneo e ligação com o relógio geral do condomínio.
+                      </div>
+                      <div class="diff-note-explain note-rem">
+                        <span class="material-symbols-rounded note-icon"
+                          >delete_forever</span
+                        >
+                        Corte solicitado pelo Seu Jorge e apoiado pela mesa:
+                        evitar quebrar calçadas e poupar R$ 2.300 do caixa.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 3: Adicionado -->
+                  <div class="diff-row diff-row-added">
+                    <div class="diff-row-gutter">
+                      <span class="diff-tag-badge tag-add">[ + ]</span>
+                    </div>
+                    <div class="diff-row-main">
+                      <div class="diff-field-name">
+                        Novo Orçamento Sustentável (Adicionado pela Mesa)
+                      </div>
+                      <div class="diff-field-content add-text">
+                        R$ 1.200 para compra de 6 refletores com placas solares
+                        autônomas. Instalação rápida em terra/canteiro, sem
+                        quebra de piso e zero despesa mensal de luz.
+                      </div>
+                      <div class="diff-note-explain note-add">
+                        <span class="material-symbols-rounded note-icon"
+                          >check_circle</span
+                        >
+                        Aprovado por unanimidade: solução ecológica, rápida e
+                        muito mais barata.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 4: Adicionado -->
+                  <div class="diff-row diff-row-added">
+                    <div class="diff-row-gutter">
+                      <span class="diff-tag-badge tag-add">[ + ]</span>
+                    </div>
+                    <div class="diff-row-main">
+                      <div class="diff-field-name">
+                        Cláusula de Proteção ao Sono (Emenda da Mesa)
+                      </div>
+                      <div class="diff-field-content add-text">
+                        Sensor automático com timer programado para reduzir a
+                        luminosidade para 20% após as 23h, garantindo que o
+                        facho de luz não incida nas janelas dos apartamentos
+                        térreos.
+                      </div>
+                      <div class="diff-note-explain note-add">
+                        <span class="material-symbols-rounded note-icon"
+                          >bedtime</span
+                        >
+                        Incluído para atender à solicitação da Dra. Lúcia
+                        (vizinha do bloco térreo).
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloco 5: Mantido -->
+                  <div class="diff-row diff-row-equal">
+                    <div class="diff-row-gutter">
+                      <span class="diff-tag-badge tag-eq">[ = ]</span>
+                    </div>
+                    <div class="diff-row-main">
+                      <div class="diff-field-name">Responsáveis & Execução</div>
+                      <div class="diff-field-content">
+                        Mariana e Seu Jorge coordenam a compra online com nota
+                        fiscal e o mutirão voluntário no sábado 18/11.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="diff-card-footer">
+                  <div class="diff-tip-text">
+                    <span class="material-symbols-rounded tip-icon"
+                      >lightbulb</span
+                    >
+                    <span
+                      ><strong>Por que o Git Diff funciona aqui?</strong> A
+                      comunidade nunca vota no escuro. Ninguém precisa ter
+                      receio de que uma "letrinha miúda" foi alterada às
+                      escondidas.</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PAINEL 3: CHAT DA MESA & CO-PILOTO DE IA -->
+            <div
+              class="prop-panel"
+              id="panel-chat"
+              role="tabpanel"
+              aria-labelledby="tab-chat"
+            >
+              <div class="panel-intro-bar">
+                <div class="panel-intro-text">
+                  <span class="panel-intro-badge chat-badge-accent">
+                    <span class="material-symbols-rounded">chat</span>
+                    IA Como Secretária Neutra
+                  </span>
+                  <h3 class="panel-intro-title">
+                    Do desabafo informal ao rascunho oficial em minutos
+                  </h3>
+                  <p class="panel-intro-desc">
+                    As pessoas conversam de forma livre e humana. O Assistente
+                    de IA analisa os pontos de acordo, faz pesquisas úteis de
+                    preços e monta o formulário da proposta para os membros
+                    revisarem e assinarem.
+                  </p>
+                </div>
+
+                <!-- Ações da Simulação de Chat -->
+                <div class="chat-controls-wrap">
+                  <button class="btn btn-primary btn-sm" id="btn-chat-step">
+                    <span class="material-symbols-rounded btn-icon-sm"
+                      >play_arrow</span
+                    >
+                    Avançar Diálogo Passo a Passo
+                  </button>
+                  <button class="btn btn-outline btn-sm" id="btn-chat-reset">
+                    <span class="material-symbols-rounded btn-icon-sm"
+                      >restart_alt</span
+                    >
+                    Reiniciar Chat
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card Interativo da Janela de Bate-Papo da Mesa -->
+              <div class="chat-window-card">
+                <!-- Topo da Janela -->
+                <div class="chat-window-header">
+                  <div class="chat-group-info">
+                    <span class="chat-group-avatar">
+                      <span class="material-symbols-rounded">groups</span>
+                    </span>
+                    <div>
+                      <h4 class="chat-group-title">Mesa 03 · Bairro Jardins</h4>
+                      <span class="chat-group-subtitle">
+                        10 Moradores Sorteados •
+                        <span class="ai-live-tag"
+                          >🤖 Co-Piloto Neutro Ativo</span
+                        >
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="chat-ephemeral-badge">
+                    <span class="material-symbols-rounded ephem-icon"
+                      >auto_delete</span
+                    >
+                    <span
+                      >Mensagens somem após a deliberação (privacidade
+                      total)</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Corpo do Chat (Mensagens) -->
+                <div class="chat-messages-body" id="chat-messages-container">
+                  <!-- Mensagem 1: Mariana -->
+                  <div class="chat-msg-row msg-user" data-step="1">
+                    <div class="chat-avatar avatar-mariana">M</div>
+                    <div class="chat-bubble-wrap">
+                      <div class="chat-sender-name">
+                        Mariana <span class="sender-role">Bloco B</span> · 14:02
+                      </div>
+                      <div class="chat-bubble">
+                        Gente, a praça tá um breu completo à noite! Ontem quase
+                        torci o pé feio no degrau da entrada da quadra...
+                        Precisamos resolver isso.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mensagem 2: Seu Jorge -->
+                  <div class="chat-msg-row msg-user" data-step="2">
+                    <div class="chat-avatar avatar-jorge">J</div>
+                    <div class="chat-bubble-wrap">
+                      <div class="chat-sender-name">
+                        Seu Jorge <span class="sender-role">Casa 14</span> ·
+                        14:03
+                      </div>
+                      <div class="chat-bubble">
+                        Concordo plenamente, Mariana! Mas o caixa do condomínio
+                        tá apertado. Não dá pra inventar obra cara com
+                        eletricista e quebra de calçada agora.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mensagem 3: Assistente IA -->
+                  <div class="chat-msg-row msg-ai" data-step="3">
+                    <div class="chat-avatar avatar-ai">
+                      <span class="material-symbols-rounded">smart_toy</span>
+                    </div>
+                    <div class="chat-bubble-wrap">
+                      <div class="chat-sender-name">
+                        Assistente Neutro da Mesa
+                        <span class="ai-pill-tag">Co-Piloto Sem Voto</span> ·
+                        14:04
+                      </div>
+                      <div class="chat-bubble bubble-ai">
+                        <p>
+                          💡
+                          <strong>Olá Mariana e Seu Jorge!</strong> Identifiquei
+                          a preocupação comum com segurança e a limitação de
+                          orçamento. Posso sugerir uma alternativa prática?
+                        </p>
+                        <p>
+                          Refletores com
+                          <strong>energia solar autônoma</strong> custam em
+                          média R$ 200 cada (total R$ 1.200 para 6 pontos),
+                          dispensam eletricista, não precisam quebrar piso e têm
+                          zero custo de luz mensal.
+                        </p>
+                        <p class="ai-callout">
+                          Desejam que eu monte um rascunho de formulário para os
+                          10 membros avaliarem?
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mensagem 4: Dra. Lúcia -->
+                  <div class="chat-msg-row msg-user" data-step="4">
+                    <div class="chat-avatar avatar-lucia">L</div>
+                    <div class="chat-bubble-wrap">
+                      <div class="chat-sender-name">
+                        Dra. Lúcia
+                        <span class="sender-role">Apto 102 (Térreo)</span> ·
+                        14:06
+                      </div>
+                      <div class="chat-bubble">
+                        Excelente ideia da IA! Economiza muito. Só peço um
+                        ajuste: meu quarto fica virado pra praça. Dá pra colocar
+                        um timer pras luzes reduzirem após as 23h pra não
+                        atrapalhar meu sono?
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mensagem 5: Assistente IA Gerando Proposta -->
+                  <div class="chat-msg-row msg-ai" data-step="5">
+                    <div class="chat-avatar avatar-ai">
+                      <span class="material-symbols-rounded">smart_toy</span>
+                    </div>
+                    <div class="chat-bubble-wrap">
+                      <div class="chat-sender-name">
+                        Assistente Neutro da Mesa
+                        <span class="ai-pill-tag">Co-Piloto Sem Voto</span> ·
+                        14:07
+                      </div>
+                      <div class="chat-bubble bubble-ai">
+                        <p>
+                          ✨ Perfeito, Dra. Lúcia! Incorporei a cláusula de
+                          timer para às 23h.
+                        </p>
+                        <p>
+                          <strong
+                            >Rascunho estruturado no formato oficial da
+                            comunidade gerado com sucesso:</strong
+                          >
+                        </p>
+
+                        <!-- Card de Proposta Criada dentro do Chat -->
+                        <div class="chat-embedded-proposal-card">
+                          <div class="emb-prop-header">
+                            <span class="material-symbols-rounded emb-icon"
+                              >description</span
+                            >
+                            <div>
+                              <strong class="emb-title"
+                                >Proposta #04-B: Iluminação Solar da
+                                Praça</strong
+                              >
+                              <span class="emb-sub"
+                                >Formulário de 5 blocos preenchido
+                                automaticamente</span
+                              >
+                            </div>
+                          </div>
+                          <div class="emb-prop-tags">
+                            <span class="emb-tag">💰 R$ 1.200</span>
+                            <span class="emb-tag">⏱️ Mutirão 18/11</span>
+                            <span class="emb-tag">🌙 Timer 23h</span>
+                            <span class="emb-tag">👥 2 Responsáveis</span>
+                          </div>
+                          <div class="emb-prop-actions">
+                            <button
+                              class="btn btn-secondary btn-sm"
+                              id="btn-view-generated-form"
+                            >
+                              <span class="material-symbols-rounded btn-icon-sm"
+                                >open_in_new</span
+                              >
+                              Ver Formulário Completo
+                            </button>
+                            <span class="emb-author-note"
+                              >Pronto para Mariana revisar e colocar na
+                              mesa.</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mensagem 6: Mariana Aprovando -->
+                  <div class="chat-msg-row msg-user" data-step="6">
+                    <div class="chat-avatar avatar-mariana">M</div>
+                    <div class="chat-bubble-wrap">
+                      <div class="chat-sender-name">
+                        Mariana <span class="sender-role">Bloco B</span> · 14:08
+                      </div>
+                      <div class="chat-bubble">
+                        Ficou perfeito! Revisei os 5 campos e já coloquei na
+                        mesa. Vizinhos, vamos votar na nossa ficha única! 👏
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rodapé da Janela de Chat (Input Simulado) -->
+                <div class="chat-window-footer">
+                  <div class="chat-input-placeholder">
+                    <span class="material-symbols-rounded mic-icon">mic</span>
+                    <span
+                      >Mensagem de texto ou áudio (transcrito automaticamente
+                      pela IA)...</span
+                    >
+                  </div>
+                  <button
+                    class="btn-send-simulated"
+                    aria-label="Enviar mensagem"
+                  >
+                    <span class="material-symbols-rounded">send</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Princípio de Ouro da IA -->
+              <div class="ai-rule-box">
+                <span class="ai-rule-badge">
+                  <span class="material-symbols-rounded">gavel</span>
+                  Princípio Inviolável de Governança
+                </span>
+                <p class="ai-rule-text">
+                  <strong
+                    >A Inteligência Artificial NUNCA tem voto, preferência ou
+                    poder de decisão.</strong
+                  >
+                  Ela atua estritamente como uma secretária neutra e co-piloto
+                  de síntese. Quem redige o formulário final, debate, assina com
+                  a própria digital e decide são 100% pessoas de carne e osso.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+

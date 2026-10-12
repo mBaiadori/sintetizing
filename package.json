@@ -1,0 +1,18 @@
+{
+  "name": "sintetizing-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Protocol Fractal of Synthesis and Dynamic Consensus ",
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "test": "pnpm --filter @sintetizing/core test",
+    "test:coverage": "pnpm --filter @sintetizing/core test:coverage",
+    "typecheck": "pnpm --recursive exec tsc --noEmit",
+    "build": "pnpm --recursive --filter \"./packages/*\" run build",
+    "landing:build": "node landing-page/build.js",
+    "landing:watch": "node landing-page/build.js --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

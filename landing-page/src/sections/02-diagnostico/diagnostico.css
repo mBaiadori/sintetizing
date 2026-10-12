@@ -1,0 +1,88 @@
+/* ==========================================================================
+   Diagnóstico: Comparativo
+   ========================================================================== */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.comparison-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 36px 32px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.card-problem {
+  border-top: 4px solid #DC2626;
+}
+
+.card-solution {
+  border-top: 4px solid var(--civic-forest);
+}
+
+.card-pill {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--radius-round);
+  margin-bottom: 24px;
+}
+
+.pill-danger {
+  background-color: #FDE8E8;
+  color: #9B1C1C;
+}
+
+.pill-success {
+  background-color: var(--civic-forest-light);
+  color: var(--civic-forest);
+}
+
+.comparison-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.comparison-list li {
+  font-size: 0.98rem;
+  color: var(--text-main);
+  line-height: 1.55;
+}
+
+.comparison-list li strong {
+  display: block;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.item-title-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-item-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.list-item-icon.icon-danger {
+  color: #C2410C;
+}
+
+.list-item-icon.icon-success {
+  color: var(--civic-forest);
+}
+
+@media (max-width: 900px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,290 @@
+      <!-- Simulador Interativo da Mesa dos 10 -->
+      <section id="simulador" class="section-editorial section-simulator">
+        <div class="container">
+          <div class="section-header text-center">
+            <span class="section-tag">Experimente Você Mesmo</span>
+            <h2 class="section-title">Simulador Interativo</h2>
+            <p class="section-subtitle">
+              Veja com seus próprios olhos como o
+              <strong>Relógio Inteligente</strong> reage conforme os moradores
+              apoiam ou migram seus votos entre propostas concorrentes.
+            </p>
+          </div>
+
+          <div class="simulator-wrapper">
+            <!-- Simulator Controls & Info -->
+            <div class="sim-panel">
+              <div class="sim-context-header">
+                <span class="sim-badge">Exemplo Prático</span>
+                <h3 class="sim-topic">Comunidade: Condomínio Vida Aberta</h3>
+                <h4 class="sim-topic">
+                  Pátio do Condomínio: O que fazer com o espaço vazio?
+                </h4>
+              </div>
+
+              <!-- Propostas Concorrentes -->
+              <div
+                class="proposals-selector"
+                role="radiogroup"
+                aria-label="Escolha a proposta para apoiar"
+              >
+                <div
+                  class="proposal-card active"
+                  id="prop-card-a"
+                  data-prop="A"
+                >
+                  <div class="proposal-card-header">
+                    <span class="prop-tag tag-a">Proposta A</span>
+                    <span class="prop-votes-badge" id="votes-count-a"
+                      >6 votos</span
+                    >
+                  </div>
+                  <h4 class="prop-title">
+                    Horta Comunitária & Pomar de Frutas
+                  </h4>
+                  <p class="prop-desc">
+                    Canteiros elevados, sistema de irrigação simples e mutirão
+                    de plantio nos fins de semana.
+                  </p>
+                  <div class="prop-meta">
+                    Orçamento: R$ 2.400 • Prazo: 30 dias
+                  </div>
+                </div>
+
+                <div class="proposal-card" id="prop-card-b" data-prop="B">
+                  <div class="proposal-card-header">
+                    <span class="prop-tag tag-b">Proposta B</span>
+                    <span class="prop-votes-badge" id="votes-count-b"
+                      >4 votos</span
+                    >
+                  </div>
+                  <h4 class="prop-title">Espaço Pet com Grama & Cercado</h4>
+                  <p class="prop-desc">
+                    Área cercada segura para os animais brincarem sem incomodar
+                    os pedestres.
+                  </p>
+                  <div class="prop-meta">
+                    Orçamento: R$ 3.100 • Prazo: 20 dias
+                  </div>
+                </div>
+              </div>
+
+              <!-- O Relógio Inteligente -->
+              <div class="timer-box">
+                <div class="timer-box-header">
+                  <span class="timer-title"
+                    ><span class="material-symbols-rounded timer-title-icon"
+                      >timer</span
+                    >
+                    Status do Relógio Inteligente</span
+                  >
+                  <span class="timer-status-badge" id="timer-badge"
+                    >Debate Ativo</span
+                  >
+                </div>
+                <div class="timer-bar-track">
+                  <div
+                    class="timer-bar-fill"
+                    id="timer-bar"
+                    style="width: 50%"
+                  ></div>
+                </div>
+                <div class="timer-box-footer">
+                  <div class="timer-clock">
+                    <span class="timer-digits" id="timer-display"
+                      >4 dias restantes</span
+                    >
+                  </div>
+                  <div class="timer-hint" id="timer-explanation">
+                    A Proposta A lidera com 6 votos. Se receber mais 3 votos
+                    (total 9), o prazo encurta para apenas 2 dias!
+                  </div>
+                </div>
+              </div>
+
+              <div class="sim-instructions">
+                <p>
+                  <span class="material-symbols-rounded instruction-icon"
+                    >lightbulb</span
+                  >
+                  <strong>Como testar:</strong> Clique nos assentos dos
+                  moradores à direita para alternar o voto deles entre a
+                  Proposta A (Verde) e a Proposta B (Amarela). Observe o relógio
+                  mudar na hora!
+                </p>
+              </div>
+            </div>
+
+            <!-- A Mesa Redonda dos 10 -->
+            <div class="sim-table-area">
+              <div class="table-container">
+                <div class="round-table">
+                  <div class="table-center">
+                    <span class="table-icon"
+                      ><span class="material-symbols-rounded"
+                        >table_restaurant</span
+                      ></span
+                    >
+                    <span class="table-label">Mesa dos 10</span>
+                    <span class="table-sublabel">Quórum Mínimo: 5</span>
+                  </div>
+
+                  <!-- 10 Assentos circulares (gerados ou posicionados via CSS) -->
+                  <button
+                    class="seat-btn seat-a"
+                    data-seat="1"
+                    aria-label="Vizinho 1: votou na Proposta A"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_3</span
+                      ></span
+                    >
+                    <span class="seat-name">Ana</span>
+                    <span class="seat-vote-dot vote-a">A</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-a"
+                    data-seat="2"
+                    aria-label="Vizinho 2: votou na Proposta A"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_6</span
+                      ></span
+                    >
+                    <span class="seat-name">Carlos</span>
+                    <span class="seat-vote-dot vote-a">A</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-a"
+                    data-seat="3"
+                    aria-label="Vizinho 3: votou na Proposta A"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_4</span
+                      ></span
+                    >
+                    <span class="seat-name">Lúcia</span>
+                    <span class="seat-vote-dot vote-a">A</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-a"
+                    data-seat="4"
+                    aria-label="Vizinho 4: votou na Proposta A"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded">face</span></span
+                    >
+                    <span class="seat-name">Rafael</span>
+                    <span class="seat-vote-dot vote-a">A</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-a"
+                    data-seat="5"
+                    aria-label="Vizinho 5: votou na Proposta A"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_2</span
+                      ></span
+                    >
+                    <span class="seat-name">Beatriz</span>
+                    <span class="seat-vote-dot vote-a">A</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-a"
+                    data-seat="6"
+                    aria-label="Vizinho 6: votou na Proposta A"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_5</span
+                      ></span
+                    >
+                    <span class="seat-name">Antônio</span>
+                    <span class="seat-vote-dot vote-a">A</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-b"
+                    data-seat="7"
+                    aria-label="Vizinho 7: votou na Proposta B"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >person</span
+                      ></span
+                    >
+                    <span class="seat-name">Gabriel</span>
+                    <span class="seat-vote-dot vote-b">B</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-b"
+                    data-seat="8"
+                    aria-label="Vizinho 8: votou na Proposta B"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_3</span
+                      ></span
+                    >
+                    <span class="seat-name">Marina</span>
+                    <span class="seat-vote-dot vote-b">B</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-b"
+                    data-seat="9"
+                    aria-label="Vizinho 9: votou na Proposta B"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_6</span
+                      ></span
+                    >
+                    <span class="seat-name">Eduardo</span>
+                    <span class="seat-vote-dot vote-b">B</span>
+                  </button>
+                  <button
+                    class="seat-btn seat-b"
+                    data-seat="10"
+                    aria-label="Vizinho 10: votou na Proposta B"
+                  >
+                    <span class="seat-avatar"
+                      ><span class="material-symbols-rounded"
+                        >face_2</span
+                      ></span
+                    >
+                    <span class="seat-name">Samira</span>
+                    <span class="seat-vote-dot vote-b">B</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Legenda Rápida -->
+              <div class="sim-legend">
+                <span class="legend-item"
+                  ><span class="legend-dot dot-a"></span> Voto na Horta
+                  (A)</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-dot dot-b"></span> Voto no Pet (B)</span
+                >
+                <button class="btn-text-action" id="btn-unanimidade">
+                  <span class="material-symbols-rounded btn-icon-sm"
+                    >check_circle</span
+                  >
+                  Simular 10 Votos (Aprovação)
+                </button>
+                <button class="btn-text-action" id="btn-reset">
+                  <span class="material-symbols-rounded btn-icon-sm"
+                    >refresh</span
+                  >
+                  Resetar Mesa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
