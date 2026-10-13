@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sintetizando | Jornada Interativa</title>
+
+    <!-- Fontes Google: Fraunces (títulos elegantes) + Plus Jakarta Sans (UI moderna e limpa) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+
+    <!-- GSAP (Animações de alta precisão) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+
+    <!-- Estilos da Jornada Interativa -->
+    <link rel="stylesheet" href="styles.css?v=2.1" />
+  </head>
+  <body>
+    <!-- Topo Minimalista -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="logo">
+          <span class="material-symbols-rounded logo-icon">auto_awesome</span>
+          <span class="logo-text">Sintetizando</span>
+        </div>
+        <div class="journey-tracker">
+          <span
+            class="tracker-dot active"
+            data-step="1"
+            title="Identidade"
+          ></span>
+          <span class="tracker-line"></span>
+          <span class="tracker-dot" data-step="2" title="Comunidade"></span>
+          <span class="tracker-line"></span>
+          <span class="tracker-dot" data-step="3" title="Tema"></span>
+          <span class="tracker-line"></span>
+          <span
+            class="tracker-dot"
+            data-step="4"
+            title="Síntese & Diffs"
+          ></span>
+          <span class="tracker-line"></span>
+          <span class="tracker-dot" data-step="5" title="Consenso"></span>
+          <span class="tracker-line"></span>
+          <span class="tracker-dot" data-step="6" title="Segurança"></span>
+        </div>
+        <button
+          id="btn-restart-top"
+          class="btn-ghost"
+          title="Reiniciar Jornada"
+        >
+          <span class="material-symbols-rounded">restart_alt</span>
+          <span>Reiniciar</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="journey-flow">
+      <!-- ==========================================
+           VISÃO GERAL: COMO FUNCIONA
+           ========================================== -->
+      <section
+        id="intro"
+        class="flow-stage layout-wrapper full-height is-column"
+      >
+        <div class="stage-container">
+          <div class="intro-hero-header">
+            <h1 class="intro-hero-title">Decisões eficientes sem desgaste.</h1>
+            <p class="intro-hero-desc">
+              O Sintetizando organiza as ideias de vizinhos, bairros e
+              cooperativas <strong>sintetizando</strong> as opiniões, de todos,
+              encontramos o consenso e entregamos o resultado pronto para
+              votação.
+            </p>
+          </div>
+
+          <!-- Ilustração Heroica Ampla com Tag Semântica <figure> -->
+          <figure class="media intro-hero-graphic-wrap">
+            <img
+              src="assets/fluxo_consenso.png"
+              alt="Fluxo contínuo: opiniões convergem para a síntese e a comunidade apoia a versão gerada"
+              class="intro-hero-img"
+            />
+          </figure>
+
+          <!-- Seta sutil apontando para baixo -->
+          <div class="scroll-cue">
+            <a
+              href="#step-1"
+              id="scroll-arrow"
+              class="scroll-arrow-link"
+              aria-label="Rolar para a simulação"
+            >
+              <span class="material-symbols-rounded scroll-arrow-icon"
+                >keyboard_arrow_down</span
+              >
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 1: SUA IDENTIDADE
+           ========================================== -->
+      <section id="step-1" class="flow-stage layout-wrapper full-height">
+        <div class="stage-container">
+          <div class="identity-two-columns">
+            <!-- Coluna Esquerda: Textos Centralizados (.box) -->
+            <div class="box identity-text-col">
+              <div class="identity-header">
+                <h2 class="stage-title">Sua Identidade</h2>
+                <p class="stage-sub">
+                  Uma pessoa real. Uma voz única. Sem bots.
+                </p>
+              </div>
+              <div class="identity-info-block">
+                <div class="identity-feature-badge">
+                  <span class="material-symbols-rounded">verified_user</span>
+                  <span>1 Pessoa = 1 Voz</span>
+                </div>
+                <p class="identity-feature-desc">
+                  Sua chave criptográfica garante que ninguém vota duas vezes e
+                  ninguém fala por você.
+                </p>
+              </div>
+            </div>
+
+            <!-- Coluna Direita: Imagem id.png (.box com figure.media) -->
+            <div class="box identity-media-col">
+              <figure
+                id="identity-card"
+                class="media id-card-interactive"
+                role="button"
+                tabindex="0"
+                aria-label="Ativar sua Identidade"
+              >
+                <img
+                  src="assets/id.png"
+                  alt="Cartão de Identidade Morador Soberano"
+                  class="id-card-graphic"
+                />
+                <div class="id-call-to-action">
+                  <span class="pulse-indicator"></span>
+                  <span>Toque no cartão para entrar</span>
+                </div>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 2: ESCOLHA SUA COMUNIDADE
+           ========================================== -->
+      <section
+        id="step-2"
+        class="flow-stage layout-wrapper full-height is-column"
+      >
+        <div class="stage-container">
+          <header class="stage-header">
+            <h2 class="stage-title">Comunidades</h2>
+            <p class="stage-sub">
+              Onde você vive e faz a diferença de forma segura e auditável.
+            </p>
+          </header>
+
+          <div class="community-two-columns">
+            <!-- Coluna Esquerda: Imagem comunnity.png (.box com figure.media) -->
+            <div class="box community-media-col">
+              <figure class="media community-media-wrap">
+                <img
+                  src="assets/comunnity.png"
+                  alt="Rede de pessoas conectadas em comunidade no Sintetizando"
+                  class="community-hero-graphic"
+                />
+              </figure>
+            </div>
+
+            <!-- Coluna Direita: Cards Minimalistas e Bem Elaborados (.box) -->
+            <div class="box community-cards-col">
+              <div class="community-cards-stack">
+                <!-- Opção 1: Condomínio -->
+                <article
+                  class="card comm-card is-selected"
+                  data-community="condo"
+                  tabindex="0"
+                  role="button"
+                  aria-pressed="true"
+                  aria-label="Selecionar Edifício das Flores, Condomínio Residencial"
+                >
+                  <div class="comm-card-main">
+                    <div class="comm-icon-box theme-condo">
+                      <span class="material-symbols-rounded">apartment</span>
+                    </div>
+                    <div class="comm-details">
+                      <div class="comm-heading">
+                        <h3 class="comm-title">Edifício das Flores</h3>
+                        <span class="comm-category-tag">Condomínio</span>
+                      </div>
+                      <p class="comm-desc">
+                        Decisões prediais e melhorias nas áreas comuns
+                      </p>
+                      <div class="comm-meta-row">
+                        <span class="comm-meta-item"
+                          ><strong>186</strong> membros</span
+                        >
+                        <span class="comm-meta-dot">•</span>
+                        <span class="comm-meta-item"
+                          ><strong>75%</strong> apoio mín.</span
+                        >
+                        <span class="comm-meta-dot">•</span>
+                        <span class="comm-meta-item"
+                          ><strong>3 dias</strong> ciclo</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comm-action-pill" aria-hidden="true">
+                    <span class="state-idle"
+                      >Selecionar
+                      <span class="material-symbols-rounded"
+                        >arrow_forward</span
+                      ></span
+                    >
+                    <span class="state-active"
+                      ><span class="material-symbols-rounded">check</span>
+                      Ativa</span
+                    >
+                  </div>
+                </article>
+
+                <!-- Opção 2: Bairro -->
+                <article
+                  class="card comm-card"
+                  data-community="bairro"
+                  tabindex="0"
+                  role="button"
+                  aria-pressed="false"
+                  aria-label="Selecionar Vila Esperança, Associação de Moradores"
+                >
+                  <div class="comm-card-main">
+                    <div class="comm-icon-box theme-bairro">
+                      <span class="material-symbols-rounded"
+                        >nature_people</span
+                      >
+                    </div>
+                    <div class="comm-details">
+                      <div class="comm-heading">
+                        <h3 class="comm-title">Vila Esperança</h3>
+                        <span class="comm-category-tag">Bairro</span>
+                      </div>
+                      <p class="comm-desc">
+                        Melhorias urbanas, praça e segurança local
+                      </p>
+                      <div class="comm-meta-row">
+                        <span class="comm-meta-item"
+                          ><strong>1.420</strong> membros</span
+                        >
+                        <span class="comm-meta-dot">•</span>
+                        <span class="comm-meta-item"
+                          ><strong>60%</strong> apoio mín.</span
+                        >
+                        <span class="comm-meta-dot">•</span>
+                        <span class="comm-meta-item"
+                          ><strong>5 dias</strong> ciclo</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comm-action-pill" aria-hidden="true">
+                    <span class="state-idle"
+                      >Selecionar
+                      <span class="material-symbols-rounded"
+                        >arrow_forward</span
+                      ></span
+                    >
+                    <span class="state-active"
+                      ><span class="material-symbols-rounded">check</span>
+                      Ativa</span
+                    >
+                  </div>
+                </article>
+
+                <!-- Opção 3: Cooperativa -->
+                <article
+                  class="card comm-card"
+                  data-community="coop"
+                  tabindex="0"
+                  role="button"
+                  aria-pressed="false"
+                  aria-label="Selecionar Cooperativa Solar, Cooperativa de Trabalho"
+                >
+                  <div class="comm-card-main">
+                    <div class="comm-icon-box theme-coop">
+                      <span class="material-symbols-rounded">handshake</span>
+                    </div>
+                    <div class="comm-details">
+                      <div class="comm-heading">
+                        <h3 class="comm-title">Cooperativa Solar</h3>
+                        <span class="comm-category-tag">Cooperativa</span>
+                      </div>
+                      <p class="comm-desc">
+                        Compras coletivas e alocação de ferramentas
+                      </p>
+                      <div class="comm-meta-row">
+                        <span class="comm-meta-item"
+                          ><strong>84</strong> membros</span
+                        >
+                        <span class="comm-meta-dot">•</span>
+                        <span class="comm-meta-item"
+                          ><strong>80%</strong> apoio mín.</span
+                        >
+                        <span class="comm-meta-dot">•</span>
+                        <span class="comm-meta-item"
+                          ><strong>2 dias</strong> ciclo</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comm-action-pill" aria-hidden="true">
+                    <span class="state-idle"
+                      >Selecionar
+                      <span class="material-symbols-rounded"
+                        >arrow_forward</span
+                      ></span
+                    >
+                    <span class="state-active"
+                      ><span class="material-symbols-rounded">check</span>
+                      Ativa</span
+                    >
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 3: Assunto e Proposta
+           ========================================== -->
+      <section
+        id="step-3"
+        class="flow-stage layout-wrapper full-height is-column"
+      >
+        <div class="stage-container">
+          <header class="stage-header">
+            <h2 class="stage-title">Assunto & Propostas</h2>
+            <p class="stage-sub">
+              O problema real que o grupo resolver com uma proposta bem
+              estruturada.
+            </p>
+          </header>
+
+          <div class="proposal-two-columns">
+            <!-- Coluna Esquerda: Documento (<figure class="media">) -->
+            <div class="box proposal-media-col">
+              <figure class="media proposal-doc-figure">
+                <img
+                  src="assets/document.png"
+                  alt="Documento do Assunto e Proposta"
+                  class="proposal-doc-img"
+                />
+              </figure>
+            </div>
+
+            <!-- Coluna Direita: Dados e Ação (<article class="card">) -->
+            <div class="box proposal-data-col">
+              <article class="card proposal-info-card">
+                <div class="proposal-topic-header">
+                  <span
+                    class="material-symbols-rounded proposal-topic-icon"
+                    id="theme-icon"
+                    >garage_door</span
+                  >
+                  <div class="proposal-topic-text">
+                    <h3 class="proposal-topic-title" id="theme-title">
+                      Portão da Garagem
+                    </h3>
+                    <p class="proposal-topic-desc" id="theme-desc">
+                      Trocar o motor antigo e melhorar a segurança da entrada.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="proposal-stats-list">
+                  <div class="proposal-stat-item">
+                    <span class="material-symbols-rounded stat-icon"
+                      >group</span
+                    >
+                    <div class="stat-content">
+                      <span class="stat-label">Participação</span>
+                      <span class="stat-main-text" id="theme-activity-count"
+                        >42 moradores já enviaram suas propostas</span
+                      >
+                    </div>
+                  </div>
+
+                  <div
+                    class="proposal-stat-item proposal-deadline-item"
+                    id="proposal-deadline-card"
+                  >
+                    <span class="material-symbols-rounded stat-icon"
+                      >event</span
+                    >
+                    <div class="stat-content">
+                      <span class="stat-label">Prazo Final</span>
+                      <span class="stat-main-text" id="theme-deadline-text"
+                        >3 dias</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <div class="proposal-action-wrap">
+                  <button id="btn-submit-proposal" class="btn-primary-action">
+                    <span class="material-symbols-rounded">send</span>
+                    <span>Enviar minha proposta</span>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 4: SÍNTESE & DIFFS
+           ========================================== -->
+      <section
+        id="step-4"
+        class="flow-stage layout-wrapper full-height is-column"
+      >
+        <div class="stage-container">
+          <header class="stage-header">
+            <h2 class="stage-title">Síntese & Diferenças</h2>
+            <p class="stage-sub">
+              Unimos o que há em comum e destacamos apenas onde as ideias
+              divergem. Você pode apoiar a melhor versão ou criar uma nova.
+            </p>
+          </header>
+
+          <!-- Arena de Animação de Fusão (Puramente Visual: Documentos Convergindo para o Sintetizador e Revelando Document-OK Maior) -->
+          <div id="fusion-arena" class="fusion-arena">
+            <img
+              src="assets/document.png"
+              alt="Proposta"
+              class="flying-doc-item node-1"
+            />
+            <img
+              src="assets/document.png"
+              alt="Proposta"
+              class="flying-doc-item node-2"
+            />
+            <img
+              src="assets/document.png"
+              alt="Proposta"
+              class="flying-doc-item node-3"
+            />
+            <img
+              src="assets/document.png"
+              alt="Proposta"
+              class="flying-doc-item node-4"
+            />
+            <div class="fusion-center-core" id="fusion-core">
+              <img
+                src="assets/sintetizor.png"
+                alt="Sintetizador"
+                id="fusion-doc-processing"
+                class="fusion-sintetizor-img"
+              />
+              <img
+                src="assets/document-ok.png"
+                alt="Documento Consensual Aprovado"
+                id="fusion-doc-approved"
+                class="fusion-doc-approved-img"
+              />
+            </div>
+          </div>
+
+          <!-- Resultado da Síntese (Visual Puro, Sem Card, Centralizado) -->
+          <div
+            id="diff-card"
+            class="synthesis-result-area"
+            style="display: none"
+          >
+            <!-- Contêiner de Documentos (Cenário 1: 1 Doc central / Cenário 2: 2 Docs lado a lado) -->
+            <div id="synthesis-docs-container" class="synthesis-docs-container">
+              <!-- Preenchido dinamicamente via JS -->
+            </div>
+
+            <!-- Linha de Apoios e Percentagem Mínima Centralizada -->
+            <div class="synthesis-support-info" id="synthesis-support-info">
+              <span id="support-count-text" class="support-count-highlight"
+                >108 apoios (58%)</span
+              >
+              <span class="support-divider">•</span>
+              <span id="support-target-text">Mínimo necessário: 75%</span>
+            </div>
+
+            <!-- Botões de Ação Centralizados -->
+            <div class="synthesis-actions-row">
+              <button id="btn-new-proposal" class="btn-diff-secondary">
+                <span class="material-symbols-rounded">edit_note</span>
+                <span>Nova Proposta</span>
+              </button>
+              <button id="btn-support-proposal" class="btn-diff-primary">
+                <span class="material-symbols-rounded">thumb_up</span>
+                <span>Apoiar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 5: CONSENSO & RATIFICAÇÃO
+           ========================================== -->
+      <section
+        id="step-5"
+        class="flow-stage layout-wrapper full-height is-column"
+      >
+        <div class="stage-container">
+          <!-- Título e Texto no Topo ao Centro -->
+          <header class="stage-header">
+            <h2 class="stage-title">Consenso Alcançado</h2>
+            <p class="stage-sub">
+              Ranking final das propostas pela quantidade de apoios da
+              comunidade.
+            </p>
+          </header>
+
+          <!-- Rank de 3 Documentos -->
+          <div class="proposals-rank-grid">
+            <!-- Proposta Normal (Esquerda) -->
+            <div class="rank-item">
+              <figure class="media rank-doc-figure">
+                <img
+                  src="assets/document.png"
+                  alt="Proposta Alternativa"
+                  class="rank-doc-img"
+                />
+              </figure>
+              <div class="rank-support-info">
+                <span class="rank-support-count" id="rank-support-2"
+                  >26 apoios (14%)</span
+                >
+              </div>
+            </div>
+
+            <!-- Proposta Vencedora (Verde ao Centro) -->
+            <div class="rank-item is-winner">
+              <figure class="media rank-doc-figure">
+                <img
+                  src="assets/document-ok.png"
+                  alt="Proposta Vencedora com Consenso"
+                  class="rank-doc-img"
+                />
+              </figure>
+              <div class="rank-support-info">
+                <span
+                  class="rank-support-count winner-count"
+                  id="rank-support-1"
+                  >148 apoios (79%)</span
+                >
+              </div>
+            </div>
+
+            <!-- Proposta Normal (Direita) -->
+            <div class="rank-item">
+              <figure class="media rank-doc-figure">
+                <img
+                  src="assets/document.png"
+                  alt="Proposta Alternativa"
+                  class="rank-doc-img"
+                />
+              </figure>
+              <div class="rank-support-info">
+                <span class="rank-support-count" id="rank-support-3"
+                  >12 apoios (7%)</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Ações da Etapa 5 -->
+          <div class="rank-action-wrap">
+            <button id="btn-loop-restart" class="btn-ghost rank-restart-btn">
+              <span class="material-symbols-rounded">refresh</span>
+              <span>Simular Comunidade</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 6: CRIPTOGRAFIA & BANCO DESCENTRALIZADO
+           ========================================== -->
+      <section
+        id="step-6"
+        class="flow-stage layout-wrapper full-height is-column"
+      >
+        <div class="stage-container">
+          <header class="stage-header">
+            <h2 class="stage-title">Criptografia & Descentralização</h2>
+            <p class="stage-sub">
+              Decisões matemáticas, transparentes e invioláveis. O poder de
+              decidir permanece sempre com a comunidade.
+            </p>
+          </header>
+
+          <div class="security-two-columns">
+            <!-- Coluna Visual: Imagem secure.png -->
+            <div class="box security-media-col">
+              <figure class="media security-media-wrap">
+                <img
+                  src="assets/secure.png"
+                  alt="Rede distribuída de pessoas com criptografia e banco de dados descentralizado no Sintetizando"
+                  class="security-hero-graphic"
+                />
+              </figure>
+            </div>
+
+            <!-- Coluna de Pilares / Cartões Explicativos -->
+            <div class="box security-cards-col">
+              <div class="security-cards-stack">
+                <!-- Pilar 1: Criptografia Soberana -->
+                <article class="card security-pillar-card">
+                  <div class="security-pillar-icon-box theme-crypto">
+                    <span class="material-symbols-rounded">key</span>
+                  </div>
+                  <div class="security-pillar-content">
+                    <h3 class="security-pillar-title">
+                      1 Pessoa = 1 Chave Soberana
+                    </h3>
+                    <p class="security-pillar-desc">
+                      Todas as suas propostas e apoios são assinados
+                      digitalmente. É matematicamente impossível fraudar votos,
+                      votar em duplicidade ou falar por outra pessoa.
+                    </p>
+                  </div>
+                </article>
+
+                <!-- Pilar 2: Banco Descentralizado -->
+                <article class="card security-pillar-card">
+                  <div class="security-pillar-icon-box theme-p2p">
+                    <span class="material-symbols-rounded">hub</span>
+                  </div>
+                  <div class="security-pillar-content">
+                    <h3 class="security-pillar-title">Banco Descentralizado</h3>
+                    <p class="security-pillar-desc">
+                      Nenhum servidor central ou empresa intermediária tem
+                      controle dos dados. As informações ficam replicadas entre
+                      os próprios membros da comunidade.
+                    </p>
+                  </div>
+                </article>
+
+                <!-- Pilar 3: Imutável e Auditável -->
+                <article class="card security-pillar-card">
+                  <div class="security-pillar-icon-box theme-immutable">
+                    <span class="material-symbols-rounded">verified_user</span>
+                  </div>
+                  <div class="security-pillar-content">
+                    <h3 class="security-pillar-title">
+                      Consenso Imutável & Auditável
+                    </h3>
+                    <p class="security-pillar-desc">
+                      Uma vez atingido o quórum, o resultado gera um registro
+                      definitivo. Ninguém pode apagar ou alterar a vontade
+                      coletiva aprovada.
+                    </p>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Rodapé Semântico -->
+    <footer class="bottom-footer app-footer">
+      <div class="footer-wrapper">
+        <p>
+          Sintetizando • O caminho mais simples para pessoas decidirem juntas.
+        </p>
+      </div>
+    </footer>
+
+    <!-- Lógica Interativa e Animações GSAP -->
+    <script src="script.js"></script>
+  </body>
+</html>

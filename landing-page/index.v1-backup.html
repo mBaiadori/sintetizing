@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sintetizando | Coordenação Cívica & Decisões Coletivas</title>
+    <meta
+      name="description"
+      content="Um organizador cívico de boas ideias que reúne pessoas em mesas de 10, elimina o atrito das redes sociais e transforma conversas em soluções reais e invioláveis."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+
+    <!-- Estilos Modulares por Seção (Diretamente das Pastas) -->
+    <link rel="stylesheet" href="src/styles/base.css" />
+    <link rel="stylesheet" href="src/layout/header.css" />
+    <link rel="stylesheet" href="src/sections/01-hero/hero.css" />
+    <link rel="stylesheet" href="src/sections/02-diagnostico/diagnostico.css" />
+    <link rel="stylesheet" href="src/sections/03-overview/overview.css" />
+    <link rel="stylesheet" href="src/sections/04-propostas/propostas.css" />
+    <link rel="stylesheet" href="src/sections/05-simulador/simulador.css" />
+    <link rel="stylesheet" href="src/sections/06-escala/escala.css" />
+    <link rel="stylesheet" href="src/sections/07-sorteio/sorteio.css" />
+    <link rel="stylesheet" href="src/sections/08-seguranca/seguranca.css" />
+    <link rel="stylesheet" href="src/sections/09-casos/casos.css" />
+    <link rel="stylesheet" href="src/sections/10-faq/faq.css" />
+    <link rel="stylesheet" href="src/layout/footer.css" />
+  </head>
+  <body>
+    <!-- Header e Navegação -->
+    <div data-include="src/layout/header.html"></div>
+
+    <!-- Seções da Landing Page -->
+    <main>
+      <div data-include="src/sections/01-hero/hero.html"></div>
+      <div data-include="src/sections/02-diagnostico/diagnostico.html"></div>
+      <div data-include="src/sections/03-overview/overview.html"></div>
+      <div data-include="src/sections/04-propostas/propostas.html"></div>
+      <div data-include="src/sections/05-simulador/simulador.html"></div>
+      <div data-include="src/sections/06-escala/escala.html"></div>
+      <div data-include="src/sections/07-sorteio/sorteio.html"></div>
+      <div data-include="src/sections/08-seguranca/seguranca.html"></div>
+      <div data-include="src/sections/09-casos/casos.html"></div>
+      <div data-include="src/sections/10-faq/faq.html"></div>
+    </main>
+
+    <!-- Footer -->
+    <div data-include="src/layout/footer.html"></div>
+
+    <!-- Carregador Modular sem Build (Fetch das Seções + Scripts) -->
+    <script>
+      (async function () {
+        // 1. Carrega todas as seções assincronamente e substitui cada placeholder pelo HTML real
+        const placeholders = Array.from(document.querySelectorAll("[data-include]"));
+        for (const el of placeholders) {
+          const file = el.getAttribute("data-include");
+          try {
+            const res = await fetch(file);
+            if (res.ok) {
+              const html = await res.text();
+              el.outerHTML = html;
+            }
+          } catch (err) {
+            console.error("Erro ao carregar seção:", file, err);
+          }
+        }
+
+        // 2. Alternância automática de contraste entre as seções (tom claro / tom contraste)
+        document.querySelectorAll("main > section").forEach((sec, idx) => {
+          sec.classList.remove("section-contrast");
+          if (idx % 2 === 1) {
+            sec.classList.add("section-contrast");
+          }
+        });
+
+        // 3. Carrega e executa os scripts modulares interativos após o DOM estar pronto
+        const scripts = [
+          "src/sections/03-overview/overview.js",
+          "src/sections/04-propostas/propostas.js",
+          "src/sections/05-simulador/simulador.js",
+          "src/sections/07-sorteio/sorteio.js",
+        ];
+
+        for (const src of scripts) {
+          await new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = resolve;
+            document.body.appendChild(script);
+          });
+        }
+
+        // 4. Suporte a âncoras na URL na inicialização (ex: #simulador, #escala)
+        if (window.location.hash) {
+          const target = document.querySelector(window.location.hash);
+          if (target) {
+            setTimeout(() => target.scrollIntoView({ behavior: "smooth" }), 100);
+          }
+        }
+
+        // 5. Atualização dinâmica da âncora na URL conforme o scroll (ScrollSpy suave sem poluir o histórico)
+        const trackedSections = Array.from(document.querySelectorAll("main > section[id]"));
+        const navLinks = Array.from(document.querySelectorAll(".main-nav a[href^='#']"));
+
+        if (trackedSections.length > 0) {
+          let currentActiveHash = window.location.hash || "#hero";
+          let isThrottled = false;
+
+          function updateNavState(id) {
+            navLinks.forEach((link) => {
+              const hrefId = link.getAttribute("href").replace("#", "");
+              if (hrefId === id) {
+                link.classList.add("active");
+              } else {
+                link.classList.remove("active");
+              }
+            });
+          }
+
+          function onScrollSpy() {
+            const scrollY = window.scrollY;
+            const headerOffset = 130;
+
+            // Topo da página: Hero
+            if (scrollY < 200) {
+              if (currentActiveHash !== "#hero") {
+                currentActiveHash = "#hero";
+                history.replaceState(null, null, "#hero");
+                updateNavState("hero");
+              }
+              return;
+            }
+
+            // Fim da página: última seção
+            if (window.innerHeight + scrollY >= document.documentElement.scrollHeight - 60) {
+              const lastSec = trackedSections[trackedSections.length - 1];
+              if (lastSec && currentActiveHash !== `#${lastSec.id}`) {
+                currentActiveHash = `#${lastSec.id}`;
+                history.replaceState(null, null, currentActiveHash);
+                updateNavState(lastSec.id);
+              }
+              return;
+            }
+
+            // Identifica qual seção está na linha de leitura
+            let visibleSection = null;
+            for (const section of trackedSections) {
+              const top = section.offsetTop - headerOffset;
+              const height = section.offsetHeight;
+              if (scrollY >= top && scrollY < top + height) {
+                visibleSection = section;
+                break;
+              }
+            }
+
+            if (visibleSection) {
+              const newHash = `#${visibleSection.id}`;
+              if (currentActiveHash !== newHash) {
+                currentActiveHash = newHash;
+                history.replaceState(null, null, newHash);
+                updateNavState(visibleSection.id);
+              }
+            }
+          }
+
+          window.addEventListener(
+            "scroll",
+            () => {
+              if (!isThrottled) {
+                window.requestAnimationFrame(() => {
+                  onScrollSpy();
+                  isThrottled = false;
+                });
+                isThrottled = true;
+              }
+            },
+            { passive: true }
+          );
+
+          // Executa na inicialização após breve timeout
+          setTimeout(onScrollSpy, 250);
+        }
+      })();
+    </script>
+  </body>
+</html>

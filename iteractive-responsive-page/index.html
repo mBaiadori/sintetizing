@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estrutura Responsiva Semântica - Wireframe</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- 1. Menu Superior Fixo com Nav Semântica -->
+    <header class="top-nav">
+      <nav class="nav-wrapper" aria-label="Navegação Principal">
+        <a href="#" class="brand">PROJETO WIREFRAME</a>
+        <ul class="nav-links">
+          <li><a href="#hero">Início</a></li>
+          <li><a href="#coluna">Coluna</a></li>
+          <li><a href="#proporcao">Proporção</a></li>
+          <li><a href="#cards">Cards</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <!-- 2. Conteúdo Principal da Aplicação -->
+    <main class="page-container">
+      <!-- Seção 1: Hero / Full-Height (Lado a Lado) -->
+      <section id="hero" class="layout-wrapper full-height">
+        <div class="box">
+          <h2>Hero Box (Texto)</h2>
+          <p>
+            Texto escalável com tipografia semântica, ajustando-se à viewport.
+          </p>
+        </div>
+
+        <div class="box">
+          <figure class="media">
+            <span>Box Mídia (<figure>)</span>
+            <figcaption>Legenda da imagem/vídeo</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Seção 2: Orientação em Coluna -->
+      <section id="coluna" class="layout-wrapper is-column">
+        <div class="box">
+          <h2>Seção Coluna (Superior)</h2>
+          <p>
+            Ocupa 100% da largura útil com empilhamento vertical padronizado.
+          </p>
+        </div>
+
+        <div class="box">
+          <figure class="media">
+            <span>Box Mídia (Inferior)</span>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Seção 3: Proporção Assimétrica (wide e is-narrow) -->
+      <section id="proporcao" class="layout-wrapper">
+        <div class="box wide">
+          <h2>Box Larga (66% do espaço)</h2>
+          <p>
+            Utiliza a classe .wide para priorizar o conteúdo em destaque.
+          </p>
+        </div>
+
+        <div class="box is-narrow">
+          <figure class="media">
+            <span>Box Estreita (33%)</span>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Seção 4: Conteúdo Independente com <article> (Cards) -->
+      <section id="cards" class="layout-wrapper">
+        <div class="box">
+          <article class="card">
+            <h3>Card 1 (<article>)</h3>
+            <p>
+              Estrutura semântica para cartões, depoimentos ou itens de produto.
+            </p>
+          </article>
+        </div>
+
+        <div class="box">
+          <article class="card">
+            <h3>Card 2 (<article>)</h3>
+            <p>
+              Fundo, bordas e textos herdam os tokens semânticos globais.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <!-- 3. Rodapé Semântico -->
+    <footer class="bottom-footer">
+      <div class="footer-wrapper">
+        <p>&copy; 2026 Wireframe Responsivo. Estrutura 100% Semântica.</p>
+        <p>HTML5 & CSS Tokens</p>
+      </div>
+    </footer>
+  </body>
+</html>
