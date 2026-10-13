@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Estado da Aplicação
-  let currentCommunityKey = "condo";
+  let currentCommunityKey = null;
   let currentSupport = 68;
   let iterationVersion = 1;
   let isFusionRunning = false;

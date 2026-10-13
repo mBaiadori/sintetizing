@@ -22,7 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
 
     <!-- Estilos da Jornada Interativa -->
-    <link rel="stylesheet" href="styles.css?v=2.1" />
+    <link rel="stylesheet" href="styles.css?v=2.5" />
   </head>
   <body>
     <!-- Topo Minimalista -->
@@ -77,9 +77,8 @@
             <h1 class="intro-hero-title">Decisões eficientes sem desgaste.</h1>
             <p class="intro-hero-desc">
               O Sintetizando organiza as ideias de vizinhos, bairros e
-              cooperativas <strong>sintetizando</strong> as opiniões, de todos,
-              encontramos o consenso e entregamos o resultado pronto para
-              votação.
+              cooperativas <strong>sintetizando</strong> opiniões e promovendo o
+              consenso de forma democratica.
             </p>
           </div>
 
@@ -127,7 +126,7 @@
                   <span class="material-symbols-rounded">verified_user</span>
                   <span>1 Pessoa = 1 Voz</span>
                 </div>
-                <p class="identity-feature-desc">
+                <p>
                   Sua chave criptográfica garante que ninguém vota duas vezes e
                   ninguém fala por você.
                 </p>
@@ -190,11 +189,11 @@
               <div class="community-cards-stack">
                 <!-- Opção 1: Condomínio -->
                 <article
-                  class="card comm-card is-selected"
+                  class="card comm-card"
                   data-community="condo"
                   tabindex="0"
                   role="button"
-                  aria-pressed="true"
+                  aria-pressed="false"
                   aria-label="Selecionar Edifício das Flores, Condomínio Residencial"
                 >
                   <div class="comm-card-main">
@@ -210,17 +209,11 @@
                         Decisões prediais e melhorias nas áreas comuns
                       </p>
                       <div class="comm-meta-row">
-                        <span class="comm-meta-item"
-                          ><strong>186</strong> membros</span
-                        >
+                        <span class="comm-meta-item"><strong>186</strong> <span>membros</span></span>
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>75%</strong> apoio mín.</span
-                        >
+                        <span class="comm-meta-item"><strong>75%</strong> <span>apoio</span></span>
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>3 dias</strong> ciclo</span
-                        >
+                        <span class="comm-meta-item"><strong>3 dias</strong> <span>ciclo</span></span>
                       </div>
                     </div>
                   </div>
@@ -262,17 +255,11 @@
                         Melhorias urbanas, praça e segurança local
                       </p>
                       <div class="comm-meta-row">
-                        <span class="comm-meta-item"
-                          ><strong>1.420</strong> membros</span
-                        >
+                        <span class="comm-meta-item"><strong>1.420</strong> <span>membros</span></span>
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>60%</strong> apoio mín.</span
-                        >
+                        <span class="comm-meta-item"><strong>60%</strong> <span>apoio</span></span>
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>5 dias</strong> ciclo</span
-                        >
+                        <span class="comm-meta-item"><strong>5 dias</strong> <span>ciclo</span></span>
                       </div>
                     </div>
                   </div>
@@ -312,17 +299,11 @@
                         Compras coletivas e alocação de ferramentas
                       </p>
                       <div class="comm-meta-row">
-                        <span class="comm-meta-item"
-                          ><strong>84</strong> membros</span
-                        >
+                        <span class="comm-meta-item"><strong>84</strong> <span>membros</span></span>
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>80%</strong> apoio mín.</span
-                        >
+                        <span class="comm-meta-item"><strong>80%</strong> <span>apoio</span></span>
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>2 dias</strong> ciclo</span
-                        >
+                        <span class="comm-meta-item"><strong>2 dias</strong> <span>ciclo</span></span>
                       </div>
                     </div>
                   </div>
@@ -598,6 +579,14 @@
               <span class="material-symbols-rounded">refresh</span>
               <span>Simular Comunidade</span>
             </button>
+            <button
+              id="btn-to-security"
+              class="btn-icon-lock"
+              title="Segurança & Descentralização"
+              aria-label="Segurança e Descentralização"
+            >
+              <span class="material-symbols-rounded">lock</span>
+            </button>
           </div>
         </div>
       </section>
@@ -619,17 +608,6 @@
           </header>
 
           <div class="security-two-columns">
-            <!-- Coluna Visual: Imagem secure.png -->
-            <div class="box security-media-col">
-              <figure class="media security-media-wrap">
-                <img
-                  src="assets/secure.png"
-                  alt="Rede distribuída de pessoas com criptografia e banco de dados descentralizado no Sintetizando"
-                  class="security-hero-graphic"
-                />
-              </figure>
-            </div>
-
             <!-- Coluna de Pilares / Cartões Explicativos -->
             <div class="box security-cards-col">
               <div class="security-cards-stack">
@@ -682,6 +660,16 @@
                   </div>
                 </article>
               </div>
+            </div>
+            <!-- Coluna Visual: Imagem secure.png -->
+            <div class="box security-media-col">
+              <figure class="media security-media-wrap">
+                <img
+                  src="assets/secure.png"
+                  alt="Rede distribuída de pessoas com criptografia e banco de dados descentralizado no Sintetizando"
+                  class="security-hero-graphic"
+                />
+              </figure>
             </div>
           </div>
         </div>
