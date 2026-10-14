@@ -22,7 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
 
     <!-- Estilos da Jornada Interativa -->
-    <link rel="stylesheet" href="styles.css?v=2.9" />
+    <link rel="stylesheet" href="styles.css?v=3.4" />
   </head>
   <body>
     <!-- Topo Minimalista -->
@@ -51,7 +51,11 @@
           <span class="tracker-line"></span>
           <span class="tracker-dot" data-step="5" title="Consenso"></span>
           <span class="tracker-line"></span>
-          <span class="tracker-dot" data-step="6" title="Segurança"></span>
+          <span class="tracker-dot" data-step="6" title="Ferramentas"></span>
+          <span class="tracker-line"></span>
+          <span class="tracker-dot" data-step="7" title="Segurança"></span>
+          <span class="tracker-line"></span>
+          <span class="tracker-dot" data-step="8" title="Futuro"></span>
         </div>
         <button
           id="btn-restart-top"
@@ -209,11 +213,17 @@
                         Decisões prediais e melhorias nas áreas comuns
                       </p>
                       <div class="comm-meta-row">
-                        <span class="comm-meta-item"><strong>186</strong> <span>membros</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>186</strong> <span>membros</span></span
+                        >
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"><strong>75%</strong> <span>apoio</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>75%</strong> <span>apoio</span></span
+                        >
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"><strong>3 dias</strong> <span>ciclo</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>3 dias</strong> <span>ciclo</span></span
+                        >
                       </div>
                     </div>
                   </div>
@@ -255,11 +265,17 @@
                         Melhorias urbanas, praça e segurança local
                       </p>
                       <div class="comm-meta-row">
-                        <span class="comm-meta-item"><strong>1.420</strong> <span>membros</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>1.420</strong> <span>membros</span></span
+                        >
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"><strong>60%</strong> <span>apoio</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>60%</strong> <span>apoio</span></span
+                        >
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"><strong>5 dias</strong> <span>ciclo</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>5 dias</strong> <span>ciclo</span></span
+                        >
                       </div>
                     </div>
                   </div>
@@ -299,11 +315,17 @@
                         Compras coletivas e alocação de ferramentas
                       </p>
                       <div class="comm-meta-row">
-                        <span class="comm-meta-item"><strong>84</strong> <span>membros</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>84</strong> <span>membros</span></span
+                        >
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"><strong>80%</strong> <span>apoio</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>80%</strong> <span>apoio</span></span
+                        >
                         <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"><strong>2 dias</strong> <span>ciclo</span></span>
+                        <span class="comm-meta-item"
+                          ><strong>2 dias</strong> <span>ciclo</span></span
+                        >
                       </div>
                     </div>
                   </div>
@@ -517,6 +539,8 @@
             <p class="stage-sub">
               Ranking final das propostas pela quantidade de apoios da
               comunidade.
+              <br />
+              Sem privilégios, quem vence é a melhor proposta!
             </p>
           </header>
 
@@ -580,6 +604,94 @@
               <span>Simular Comunidade</span>
             </button>
             <button
+              id="btn-to-tools"
+              class="btn-icon-tools"
+              title="Ferramentas do Software"
+              aria-label="Ferramentas do Software"
+            >
+              <span class="material-symbols-rounded">widgets</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 6: FERRAMENTAS DO SOFTWARE
+           ========================================== -->
+      <section
+        id="step-6"
+        class="flow-stage layout-wrapper is-column tools-stage"
+      >
+        <div class="stage-container">
+          <div class="tools-showcase-stack">
+            <!-- Ferramenta 1: Categorias & Templates (Imagem à Esquerda, Texto à Direita) -->
+            <div class="tool-feature-row">
+              <div class="box tool-media-col">
+                <figure class="media tool-media-wrap">
+                  <img
+                    src="assets/category-template.png"
+                    alt="Categorias Inteligentes e Templates de Proposta"
+                    class="tool-feature-graphic"
+                  />
+                </figure>
+              </div>
+              <div class="box tool-text-col">
+                <h3 class="tool-feature-title">Categorias & Templates</h3>
+                <p class="tool-feature-desc">
+                  Propor uma melhoria não deve ser um processo burocrático.
+                  Organizados em categorias e modelos de documentos é facil ter
+                  propostas completas e claras em poucos minutos.
+                </p>
+              </div>
+            </div>
+
+            <!-- Ferramenta 2: Sociedades & Federações (Texto à Esquerda, Imagem à Direita) -->
+            <div class="tool-feature-row is-reversed">
+              <div class="box tool-media-col">
+                <figure class="media tool-media-wrap">
+                  <img
+                    src="assets/society-federation.png"
+                    alt="Conexão Multinível Sem Perder a Base"
+                    class="tool-feature-graphic"
+                  />
+                </figure>
+              </div>
+              <div class="box tool-text-col">
+                <h3 class="tool-feature-title">Escala & Participação</h3>
+                <p class="tool-feature-desc">
+                  Para problemas que ultrapassam os limites de um único grupo,
+                  as comunidades se associam em sociedades e federações
+                  colaborativas. Uma arquitetura modular que preserva a
+                  soberania de cada participante em qualquer escala.
+                </p>
+              </div>
+            </div>
+
+            <!-- Ferramenta 3: Chat & Assistente (Imagem à Esquerda, Texto à Direita) -->
+            <div class="tool-feature-row">
+              <div class="box tool-media-col">
+                <figure class="media tool-media-wrap">
+                  <img
+                    src="assets/chat-assistant.png"
+                    alt="Do Bate-Papo à Proposta Formal"
+                    class="tool-feature-graphic"
+                  />
+                </figure>
+              </div>
+              <div class="box tool-text-col">
+                <h3 class="tool-feature-title">Chat & Proposta</h3>
+                <p class="tool-feature-desc">
+                  Organize e troque ideias livremente no chat. O assistente
+                  sintetiza o debate coletivo e cria a proposta. Sem scroll
+                  desorganizado e ideias dispersas. Apenas conversas produtivas
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ação para Avançar para Segurança -->
+          <div class="tools-actions-wrap">
+            <button
               id="btn-to-security"
               class="btn-icon-lock"
               title="Segurança & Descentralização"
@@ -592,10 +704,10 @@
       </section>
 
       <!-- ==========================================
-           ETAPA 6: CRIPTOGRAFIA & BANCO DESCENTRALIZADO
+           ETAPA 7: CRIPTOGRAFIA & BANCO DESCENTRALIZADO
            ========================================== -->
       <section
-        id="step-6"
+        id="step-7"
         class="flow-stage layout-wrapper full-height is-column"
       >
         <div class="stage-container">
@@ -670,6 +782,61 @@
                   class="security-hero-graphic"
                 />
               </figure>
+            </div>
+          </div>
+
+          <!-- Ação para Avançar ao Futuro -->
+          <div class="security-actions-wrap">
+            <button
+              id="btn-to-future"
+              class="btn-icon-circle"
+              title="O Futuro da Decisão"
+              aria-label="O Futuro da Decisão"
+            >
+              <span class="material-symbols-rounded">favorite</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           ETAPA 8: O FUTURO DA DECISÃO
+           ========================================== -->
+      <section
+        id="step-8"
+        class="flow-stage layout-wrapper full-height is-column"
+      >
+        <div class="stage-container">
+          <div class="future-two-columns">
+            <!-- Coluna de Texto / Manifesto -->
+            <div class="box future-text-col">
+              <h2 class="stage-title future-title">
+                A distância entre você e a decisão acabou.
+              </h2>
+
+              <p class="future-lead">
+                O sistema representativo tradicional foi criado para uma época
+                em que ouvir milhares de pessoas ao mesmo tempo era impossível.
+                <strong>Com a tecnologia esse tempo passou.</strong>
+              </p>
+
+              <div class="box future-media-col">
+                <figure class="media future-media-wrap">
+                  <img
+                    src="assets/future.png"
+                    alt="A distância entre você e a decisão acabou - Sintetizando"
+                    class="future-hero-graphic"
+                  />
+                </figure>
+              </div>
+
+              <p class="future-conclusion">
+                Você não precisa mais esperar que decidam por você.
+                <strong
+                  >Participe das decisões que impactam a sua vida e a de quem
+                  você ama.</strong
+                >
+              </p>
             </div>
           </div>
         </div>

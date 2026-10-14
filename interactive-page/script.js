@@ -87,9 +87,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSupportProposal = document.getElementById("btn-support-proposal");
   const btnLoopRestart = document.getElementById("btn-loop-restart");
   const btnRestartTop = document.getElementById("btn-restart-top");
+  const btnToTools = document.getElementById("btn-to-tools");
   const btnToSecurity = document.getElementById("btn-to-security");
   const btnSecurityRestart = document.getElementById("btn-security-restart");
   const btnBackToConsensus = document.getElementById("btn-back-to-consensus");
+  const btnToFuture = document.getElementById("btn-to-future");
+  const btnRestartFinal = document.getElementById("btn-restart-final");
 
   // Elementos Dinâmicos de Tema & Diff
   const themeCommTag = document.getElementById("theme-comm-tag");
@@ -715,11 +718,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // ETAPA 6: NAVEGAÇÃO & AÇÕES DE SEGURANÇA
+  // ETAPA 6: NAVEGAÇÃO PARA FERRAMENTAS DO SOFTWARE
+  // ==========================================
+  if (btnToTools) {
+    btnToTools.addEventListener("click", () => {
+      scrollToStep("step-6", 5);
+    });
+  }
+
+  // ==========================================
+  // ETAPA 7: NAVEGAÇÃO & AÇÕES DE SEGURANÇA
   // ==========================================
   if (btnToSecurity) {
     btnToSecurity.addEventListener("click", () => {
-      scrollToStep("step-6", 5);
+      scrollToStep("step-7", 6);
     });
   }
 
@@ -732,6 +744,21 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnBackToConsensus) {
     btnBackToConsensus.addEventListener("click", () => {
       scrollToStep("step-5", 4);
+    });
+  }
+
+  // ==========================================
+  // ETAPA 8: O FUTURO DA DECISÃO
+  // ==========================================
+  if (btnToFuture) {
+    btnToFuture.addEventListener("click", () => {
+      scrollToStep("step-8", 7);
+    });
+  }
+
+  if (btnRestartFinal) {
+    btnRestartFinal.addEventListener("click", () => {
+      restartExperience("step-2");
     });
   }
 
