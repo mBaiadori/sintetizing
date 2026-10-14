@@ -140,9 +140,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       } else {
         if (window.gsap && window.ScrollToPlugin) {
+          const header = document.querySelector(".app-header");
+          const headerOffset = header ? header.offsetHeight : 56;
           gsap.to(window, {
             duration: 0.9,
-            scrollTo: { y: target, offsetY: 56 },
+            scrollTo: { y: target, offsetY: headerOffset },
             ease: "power2.inOut",
           });
         } else {

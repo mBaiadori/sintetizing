@@ -148,12 +148,23 @@ body {
 }
 
 .tracker-dot {
+  position: relative;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--border-subtle);
   transition: all 0.3s ease;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tracker-dot::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -8px;
+  right: -8px;
 }
 
 .tracker-dot.active {
@@ -170,6 +181,7 @@ body {
   width: 20px;
   height: 2px;
   background: var(--border-subtle);
+  flex-shrink: 1;
 }
 
 .btn-ghost {
@@ -1816,6 +1828,35 @@ p,
   :root {
     --app-padding-x: 14px;
     --app-padding-y: 14px;
+    --header-height: 82px;
+  }
+
+  /* Header em 2 linhas: Marca e Ação no topo, Navegação de passos centralizada abaixo */
+  .app-header {
+    height: auto;
+    min-height: var(--header-height);
+    padding: 8px 0 10px;
+  }
+
+  .header-container {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .logo {
+    order: 1;
+  }
+
+  #btn-restart-top,
+  .btn-ghost {
+    order: 2;
+  }
+
+  .journey-tracker {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding-top: 4px;
   }
 
   .layout-wrapper,
@@ -1958,6 +1999,14 @@ p,
 }
 /* Telas muito estreitas (<= 480px) */
 @media (max-width: 480px) {
+  .journey-tracker {
+    gap: 6px;
+  }
+
+  .tracker-line {
+    width: 14px;
+  }
+
   .comm-card {
     flex-direction: column;
     align-items: flex-start;
