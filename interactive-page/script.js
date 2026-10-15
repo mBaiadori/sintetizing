@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
       icon: "apartment",
       members: 186,
       quorum: 75,
-      cycleDays: 3,
+      cycleDays: 7,
       themeIcon: "garage_door",
       themeTitle: "Portão da Garagem",
       themeDesc: "Trocar o motor antigo e melhorar a segurança da entrada.",
@@ -117,8 +117,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const trackerDots = document.querySelectorAll(".tracker-dot");
 
-  // Função utilitária para scroll suave
+  // Estado de controle de rolagem programática vs. rolagem manual
+  let isProgrammaticScrolling = false;
+  let programmaticScrollTween = null;
+
+  // Interrompe qualquer animação de rolagem ativa assim que o usuário interfere manualmente
+  function stopProgrammaticScroll() {
+    if (isProgrammaticScrolling) {
+      if (programmaticScrollTween) {
+        programmaticScrollTween.kill();
+        programmaticScrollTween = null;
+      }
+      if (window.gsap) {
+        gsap.killTweensOf(window);
+      }
+      document.documentElement.style.scrollBehavior = "";
+      isProgrammaticScrolling = false;
+    }
+  }
+
+  // Escuta intenções de rolagem manual do usuário (roda do mouse, trackpad, toque móvel ou teclas)
+  const manualScrollEvents = ["wheel", "touchmove", "pointerdown"];
+  manualScrollEvents.forEach((evt) => {
+    window.addEventListener(evt, stopProgrammaticScroll, { passive: true });
+  });
+
+  window.addEventListener(
+    "keydown",
+    (e) => {
+      const scrollKeys = [
+        "ArrowUp",
+        "ArrowDown",
+        "PageUp",
+        "PageDown",
+        "Home",
+        "End",
+        " ",
+      ];
+      if (scrollKeys.includes(e.key)) {
+        stopProgrammaticScroll();
+      }
+    },
+    { passive: true },
+  );
+
+  // Função utilitária para scroll suave acionado por cliques
   function scrollToStep(stepId, dotIndex) {
+    // Interrompe qualquer tween anterior
+    stopProgrammaticScroll();
+
     if (dotIndex !== undefined && dotIndex >= 0) {
       updateTracker(dotIndex);
     }
@@ -130,29 +177,48 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const target = document.getElementById(stepId);
-    if (target) {
-      if (stepId === "intro") {
-        if (window.gsap && window.ScrollToPlugin) {
-          gsap.to(window, {
-            duration: 0.9,
-            scrollTo: { y: 0 },
-            ease: "power2.inOut",
-          });
-        } else {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
+    if (!target) return;
+
+    isProgrammaticScrolling = true;
+
+    // Desativa temporariamente o scroll-behavior do CSS para não conflitar com os 60fps do GSAP
+    document.documentElement.style.scrollBehavior = "auto";
+
+    const finishScroll = () => {
+      document.documentElement.style.scrollBehavior = "";
+      isProgrammaticScrolling = false;
+      programmaticScrollTween = null;
+    };
+
+    if (stepId === "intro") {
+      if (window.gsap && window.ScrollToPlugin) {
+        gsap.killTweensOf(window);
+        programmaticScrollTween = gsap.to(window, {
+          duration: 0.85,
+          scrollTo: { y: 0 },
+          ease: "power2.inOut",
+          onComplete: finishScroll,
+          onInterrupt: finishScroll,
+        });
       } else {
-        if (window.gsap && window.ScrollToPlugin) {
-          const header = document.querySelector(".app-header");
-          const headerOffset = header ? header.offsetHeight : 56;
-          gsap.to(window, {
-            duration: 0.9,
-            scrollTo: { y: target, offsetY: headerOffset },
-            ease: "power2.inOut",
-          });
-        } else {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        setTimeout(finishScroll, 850);
+      }
+    } else {
+      if (window.gsap && window.ScrollToPlugin) {
+        const header = document.querySelector(".app-header");
+        const headerOffset = header ? header.offsetHeight : 56;
+        gsap.killTweensOf(window);
+        programmaticScrollTween = gsap.to(window, {
+          duration: 0.85,
+          scrollTo: { y: target, offsetY: headerOffset },
+          ease: "power2.inOut",
+          onComplete: finishScroll,
+          onInterrupt: finishScroll,
+        });
+      } else {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        setTimeout(finishScroll, 850);
       }
     }
   }
@@ -250,9 +316,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Atualizar dados do tema e quórum conforme a comunidade selecionada
   function applyCommunityTheme(key) {
+    currentCommunityKey = key;
     const data = communitiesData[key] || communitiesData.condo;
+
+    // Sincroniza visualmente a seleção do card para quem navega por scroll ou por clique
+    commCards.forEach((c) => {
+      const matchKey = c.getAttribute("data-community") || "condo";
+      const isSelected = matchKey === key;
+      c.classList.toggle("is-selected", isSelected);
+      c.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
 
     // Atualiza Etapa 3
     if (themeCommName) themeCommName.textContent = data.name;
@@ -302,7 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ETAPA 3: CONTAGEM REGRESSIVA DO PRAZO & ENVIO
   // ==========================================
   let proposalCountdownInterval = null;
-  let remainingDays = 3;
+  let remainingDays = 7;
 
   function formatDeadlineDate(days) {
     const dayWord = days === 1 ? "dia" : "dias";
@@ -368,7 +442,17 @@ document.addEventListener("DOMContentLoaded", () => {
         pulseDeadlineCard(true);
         stopProposalCountdown();
         setTimeout(() => {
-          advanceToStep4(false);
+          // Só avança para a Etapa 4 se o usuário ainda estiver ativamente na Etapa 3
+          const step3El = document.getElementById("step-3");
+          if (step3El) {
+            const rect = step3El.getBoundingClientRect();
+            const inView =
+              rect.top < window.innerHeight * 0.75 &&
+              rect.bottom > window.innerHeight * 0.25;
+            if (inView) {
+              advanceToStep4(false);
+            }
+          }
         }, 800);
       }
     }, 2000);
@@ -666,6 +750,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
   function restartExperience(target = "intro") {
     stopProposalCountdown();
+    hasTriggeredScrollFusion = false;
     const dotIdx = target === "intro" ? -1 : target === "step-2" ? 1 : 0;
     scrollToStep(target, dotIdx);
     setTimeout(() => {
@@ -762,11 +847,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ==========================================
+  // RODAPÉ: LINKS DE NAVEGAÇÃO E VOLTAR AO TOPO
+  // ==========================================
+  const footerStepLinks = document.querySelectorAll(".footer-step-link");
+  footerStepLinks.forEach((linkBtn) => {
+    linkBtn.addEventListener("click", () => {
+      const targetStep = linkBtn.getAttribute("data-step-target");
+      const stepIdx = parseInt(linkBtn.getAttribute("data-step-index"), 10);
+      if (targetStep) {
+        scrollToStep(targetStep, isNaN(stepIdx) ? 0 : stepIdx);
+      }
+    });
+  });
+
+  const btnBackToTop = document.getElementById("btn-back-to-top");
+  if (btnBackToTop) {
+    btnBackToTop.addEventListener("click", () => {
+      scrollToStep("intro", -1);
+    });
+  }
+
   // Sincronização automática do rastreador durante rolagem livre (IntersectionObserver)
   const stageSections = document.querySelectorAll(".flow-stage");
+  let hasTriggeredScrollFusion = false;
+
   if ("IntersectionObserver" in window && stageSections.length > 0) {
     const observer = new IntersectionObserver(
       (entries) => {
+        // Se estiver em meio a uma rolagem suave iniciada por clique, ignora disparos intermediários
+        if (isProgrammaticScrolling) return;
+
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const id = entry.target.id;
@@ -774,15 +885,37 @@ document.addEventListener("DOMContentLoaded", () => {
             if (match) {
               const stepNum = parseInt(match[1], 10);
               updateTracker(stepNum - 1);
+
+              // Gerenciamento inteligente do countdown da etapa 3 durante a rolagem
+              if (id === "step-3") {
+                if (!proposalCountdownInterval) {
+                  startProposalCountdown();
+                }
+              } else {
+                stopProposalCountdown();
+              }
+
+              // Se o usuário rolou até a Etapa 4 e a fusão ainda não rodou, executa a síntese visual
+              if (
+                id === "step-4" &&
+                !hasTriggeredScrollFusion &&
+                !isFusionRunning
+              ) {
+                if (diffCard && diffCard.style.display === "none") {
+                  hasTriggeredScrollFusion = true;
+                  runFusionAnimation();
+                }
+              }
             } else if (id === "intro") {
               updateTracker(-1);
+              stopProposalCountdown();
             }
           }
         });
       },
       {
-        rootMargin: "-25% 0px -40% 0px",
-        threshold: 0.1,
+        rootMargin: "-20% 0px -35% 0px",
+        threshold: 0.15,
       },
     );
 

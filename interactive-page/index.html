@@ -22,14 +22,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
 
     <!-- Estilos da Jornada Interativa -->
-    <link rel="stylesheet" href="styles.css?v=3.4" />
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="stylesheet" href="styles.css?v=3.5" />
   </head>
   <body>
     <!-- Topo Minimalista -->
     <header class="app-header">
       <div class="header-container">
         <div class="logo">
-          <span class="material-symbols-rounded logo-icon">auto_awesome</span>
+          <img src="assets/logo.svg" alt="Sintetizando" class="logo-icon-svg" />
           <span class="logo-text">Sintetizando</span>
         </div>
         <div class="journey-tracker">
@@ -80,9 +81,9 @@
           <div class="intro-hero-header">
             <h1 class="intro-hero-title">Decisões eficientes sem desgaste.</h1>
             <p class="intro-hero-desc">
-              O Sintetizando organiza as ideias de vizinhos, bairros e
-              cooperativas <strong>sintetizando</strong> opiniões e promovendo o
-              consenso de forma democrática.
+              O organizar as ideias de vizinhos, bairros e cooperativas
+              <strong>sintetizando</strong> opiniões e promovendo o consenso de
+              forma democrática.
             </p>
           </div>
 
@@ -94,6 +95,13 @@
               class="intro-hero-img"
             />
           </figure>
+
+          <div class="intro-hero-header">
+            <p class="intro-hero-desc">
+              Um software livre, com código aberto, auditável, criptografado e
+              impossível de fraudar.
+            </p>
+          </div>
 
           <!-- Seta sutil apontando para baixo -->
           <div class="scroll-cue">
@@ -122,7 +130,7 @@
               <div class="identity-header">
                 <h2 class="stage-title">Sua Identidade</h2>
                 <p class="stage-sub">
-                  Uma pessoa real. Uma voz única. Sem bots.
+                  Uma pessoa real. Uma voz única. Sem farsantes.
                 </p>
               </div>
               <div class="identity-info-block">
@@ -131,8 +139,8 @@
                   <span>1 Pessoa = 1 Voz</span>
                 </div>
                 <p>
-                  Sua chave criptográfica garante que ninguém vota duas vezes e
-                  ninguém fala por você.
+                  Sua chave criptográfica garante que ninguém ninguém fala por
+                  você.
                 </p>
               </div>
             </div>
@@ -172,7 +180,10 @@
           <header class="stage-header">
             <h2 class="stage-title">Comunidades</h2>
             <p class="stage-sub">
-              Onde você vive e faz a diferença de forma segura e auditável.
+              Onde você vive e faz a diferença de forma horizontal, sem
+              privilégios.
+              <br />
+              Todos e apenas membros tem uma cópia identica dos dados.
             </p>
           </header>
 
@@ -222,7 +233,7 @@
                         >
                         <span class="comm-meta-dot">•</span>
                         <span class="comm-meta-item"
-                          ><strong>3 dias</strong> <span>ciclo</span></span
+                          ><strong>7 dias</strong> <span>ciclo</span></span
                         >
                       </div>
                     </div>
@@ -275,56 +286,6 @@
                         <span class="comm-meta-dot">•</span>
                         <span class="comm-meta-item"
                           ><strong>5 dias</strong> <span>ciclo</span></span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                  <div class="comm-action-pill" aria-hidden="true">
-                    <span class="state-idle"
-                      >Selecionar
-                      <span class="material-symbols-rounded"
-                        >arrow_forward</span
-                      ></span
-                    >
-                    <span class="state-active"
-                      ><span class="material-symbols-rounded">check</span>
-                      Ativa</span
-                    >
-                  </div>
-                </article>
-
-                <!-- Opção 3: Cooperativa -->
-                <article
-                  class="card comm-card"
-                  data-community="coop"
-                  tabindex="0"
-                  role="button"
-                  aria-pressed="false"
-                  aria-label="Selecionar Cooperativa Solar, Cooperativa de Trabalho"
-                >
-                  <div class="comm-card-main">
-                    <div class="comm-icon-box theme-coop">
-                      <span class="material-symbols-rounded">handshake</span>
-                    </div>
-                    <div class="comm-details">
-                      <div class="comm-heading">
-                        <h3 class="comm-title">Cooperativa Solar</h3>
-                        <span class="comm-category-tag">Cooperativa</span>
-                      </div>
-                      <p class="comm-desc">
-                        Compras coletivas e alocação de ferramentas
-                      </p>
-                      <div class="comm-meta-row">
-                        <span class="comm-meta-item"
-                          ><strong>84</strong> <span>membros</span></span
-                        >
-                        <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>80%</strong> <span>apoio</span></span
-                        >
-                        <span class="comm-meta-dot">•</span>
-                        <span class="comm-meta-item"
-                          ><strong>2 dias</strong> <span>ciclo</span></span
                         >
                       </div>
                     </div>
@@ -418,7 +379,7 @@
                     <div class="stat-content">
                       <span class="stat-label">Prazo Final</span>
                       <span class="stat-main-text" id="theme-deadline-text"
-                        >3 dias</span
+                        >7 dias</span
                       >
                     </div>
                   </div>
@@ -447,8 +408,8 @@
           <header class="stage-header">
             <h2 class="stage-title">Síntese & Diferenças</h2>
             <p class="stage-sub">
-              Unimos o que há em comum e destacamos apenas onde as ideias
-              divergem. Você pode apoiar a melhor versão ou criar uma nova.
+              Unimos o que há em comum e destacamos apenas os pontos
+              divergentes. Você pode apoiar a melhor versão ou criar uma nova.
             </p>
           </header>
 
@@ -476,7 +437,7 @@
             />
             <div class="fusion-center-core" id="fusion-core">
               <img
-                src="assets/sintetizor.png"
+                src="assets/sintetizor.svg"
                 alt="Sintetizador"
                 id="fusion-doc-processing"
                 class="fusion-sintetizor-img"
@@ -537,10 +498,11 @@
           <header class="stage-header">
             <h2 class="stage-title">Consenso Alcançado</h2>
             <p class="stage-sub">
-              Ranking final das propostas pela quantidade de apoios da
+              O Ranking final será composto pelas propostas mais apoiadas pela
               comunidade.
               <br />
-              Sem privilégios, quem vence é a melhor proposta!
+              Sem privilégios, apenas o consenso comunitário pode escolher a
+              melhor proposta!
             </p>
           </header>
 
@@ -638,9 +600,10 @@
               <div class="box tool-text-col">
                 <h3 class="tool-feature-title">Categorias & Templates</h3>
                 <p class="tool-feature-desc">
-                  Propor uma melhoria não deve ser um processo burocrático.
-                  Organizados em categorias e modelos de documentos é facil ter
-                  propostas completas e claras em poucos minutos.
+                  Propostas de melhorias pode ser feita de forma simples e
+                  dinâmicas. Temos diversos tempaltes e modelos de documentos
+                  organizados em categorias para facilitar a elaboração de
+                  propostas completas e claras.
                 </p>
               </div>
             </div>
@@ -681,9 +644,11 @@
               <div class="box tool-text-col">
                 <h3 class="tool-feature-title">Chat & Proposta</h3>
                 <p class="tool-feature-desc">
-                  Organize e troque ideias livremente no chat. O assistente
-                  sintetiza o debate coletivo e cria a proposta. Sem scroll
-                  desorganizado e ideias dispersas. Apenas conversas produtivas
+                  Debates podem (e devem) ser feitos livremente no chat. O
+                  assistente organiza e sintetiza as ideias do coletivo,
+                  transformando-as em uma proposta clara e consisa. Conversas
+                  dispersas dão lugar a conversas produtivas com tempo
+                  otimizado.
                 </p>
               </div>
             </div>
@@ -714,7 +679,7 @@
           <header class="stage-header">
             <h2 class="stage-title">Criptografia & Descentralização</h2>
             <p class="stage-sub">
-              Decisões matemáticas, transparentes e invioláveis. O poder de
+              Decisões transparentes, invioláveis e soberanas. O poder de
               decidir permanece sempre com a comunidade.
             </p>
           </header>
@@ -815,9 +780,9 @@
               </h2>
 
               <p class="future-lead">
-                O sistema representativo tradicional foi criado para uma época
-                em que ouvir milhares de pessoas ao mesmo tempo era impossível.
-                <strong>Com a tecnologia esse tempo passou.</strong>
+                O sistema representativo tradicional foi criado em uma época que
+                ouvir milhares de pessoas ao mesmo tempo era impossível.
+                <strong>A tecnologia mudou esse cenário.</strong>
               </p>
 
               <div class="box future-media-col">
@@ -832,10 +797,10 @@
 
               <p class="future-conclusion">
                 Você não precisa mais esperar que decidam por você.
-                <strong
-                  >Participe das decisões que impactam a sua vida e a de quem
-                  você ama.</strong
-                >
+                <br />
+                
+                <h3>Decida o que impacta a sua vida &</h3>
+                 <h3>A vida de quem você ama.</h3>
               </p>
             </div>
           </div>
@@ -843,12 +808,87 @@
       </section>
     </main>
 
-    <!-- Rodapé Semântico -->
+    <!-- Rodapé Semântico Redesenhado -->
     <footer class="bottom-footer app-footer">
-      <div class="footer-wrapper">
-        <p>
-          Sintetizando • O caminho mais simples para pessoas decidirem juntas.
-        </p>
+      <div class="footer-container">
+        <!-- Grid Principal do Rodapé -->
+        <div class="footer-grid">
+          <!-- Coluna 1: Marca & Manifesto -->
+          <div class="footer-brand-col">
+            <div class="footer-brand-header">
+              <img src="assets/logo.svg" alt="Sintetizando" class="footer-logo-svg" />
+              <span class="footer-brand-name">Sintetizando</span>
+            </div>
+
+            <p class="footer-tagline">
+              O caminho mais simples para pessoas decidirem juntas.
+            </p>
+
+            <p class="footer-description">
+              Plataforma cívica desenhada para compilar ideias e opiniões com clareza, transparência e autonomia, promovendo o consenso democrático.
+            </p>
+          </div>
+
+          <!-- Coluna 2: Navegação Expandida da Jornada -->
+          <div class="footer-nav-col">
+            <div class="footer-nav-header">
+              <h4 class="footer-col-title">Etapas da Jornada Interativa</h4>
+              <p class="footer-nav-subtitle">Explore ou revisite qualquer etapa da simulação:</p>
+            </div>
+
+            <div class="footer-steps-grid">
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-1" data-step-index="0">
+                <span class="footer-step-num">01</span>
+                <span class="footer-step-name">Identidade</span>
+              </button>
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-2" data-step-index="1">
+                <span class="footer-step-num">02</span>
+                <span class="footer-step-name">Comunidade</span>
+              </button>
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-3" data-step-index="2">
+                <span class="footer-step-num">03</span>
+                <span class="footer-step-name">Propostas</span>
+              </button>
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-4" data-step-index="3">
+                <span class="footer-step-num">04</span>
+                <span class="footer-step-name">Síntese & Diffs</span>
+              </button>
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-5" data-step-index="4">
+                <span class="footer-step-num">05</span>
+                <span class="footer-step-name">Consenso</span>
+              </button>
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-6" data-step-index="5">
+                <span class="footer-step-num">06</span>
+                <span class="footer-step-name">Ferramentas</span>
+              </button>
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-7" data-step-index="6">
+                <span class="footer-step-num">07</span>
+                <span class="footer-step-name">Segurança</span>
+              </button>
+              <button type="button" class="footer-step-link footer-step-card" data-step-target="step-8" data-step-index="7">
+                <span class="footer-step-num">08</span>
+                <span class="footer-step-name">Futuro</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Linha Inferior / Assinatura & Volta ao Topo -->
+        <div class="footer-bottom-bar">
+          <div class="footer-bottom-info">
+            <p class="footer-copyright">
+              © 2026 <strong>Sintetizando</strong> • Construído para aproximar pessoas.
+            </p>
+            <p class="footer-disclaimer">
+              Tecnologia cívica e aberta para a democracia participativa contemporânea.
+            </p>
+          </div>
+
+          <button id="btn-back-to-top" class="btn-footer-back-to-top" title="Voltar ao início da jornada" aria-label="Voltar ao início">
+            <span class="material-symbols-rounded">arrow_upward</span>
+            <span>Voltar ao Início</span>
+          </button>
+        </div>
       </div>
     </footer>
 
