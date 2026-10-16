@@ -1174,6 +1174,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
+  // PERGUNTAS FREQUENTES (FAQ)
+  // ==========================================
+  const btnToFaq = document.getElementById("btn-to-faq");
+  if (btnToFaq) {
+    btnToFaq.addEventListener("click", () => {
+      scrollToStep("faq", -1);
+    });
+  }
+
+  const btnFooterFaq = document.getElementById("btn-footer-faq");
+  if (btnFooterFaq) {
+    btnFooterFaq.addEventListener("click", () => {
+      scrollToStep("faq", -1);
+    });
+  }
+
+  // ==========================================
   // RODAPÉ: LINKS DE NAVEGAÇÃO E VOLTAR AO TOPO
   // ==========================================
   const footerStepLinks = document.querySelectorAll(".footer-step-link");
@@ -1234,6 +1251,9 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             } else if (id === "intro") {
               updateTracker(-1);
+              stopProposalCountdown();
+            } else if (id === "faq") {
+              updateTracker(7);
               stopProposalCountdown();
             }
           }

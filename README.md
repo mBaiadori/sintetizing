@@ -5,12 +5,12 @@
 
 ## 📖 Visão Geral
 
-O **PFS-CD** é uma infraestrutura de coordenação social desenhada para substituir o atrito retórico e a polarização das redes tradicionais pela destilação de texto convergente em pequenos grupos.
+O **PFS-CD** é uma infraestrutura de coordenação social desenhada para substituir o atrito retórico e a polarização das redes tradicionais pela destilação de texto convergente assistida por inteligência artificial neutra, com participação direta de todos os membros.
 
 O protocolo opera sobre três pilares de inovação institucional:
-1. **Topologia Celular ($K=10$):** O debate ocorre em células pequenas de 10 cidadãos convocados por Função Pseudoaleatória Verificável (VRF). Células pequenas domesticam o conflito e forçam a civilidade.
-2. **Timelock Dinâmico $T(v)$:** O tempo de aprovação de uma proposta é elástico: quanto maior a adesão, mais rápido o cronômetro fecha; quanto mais contestada, mais a janela de deliberação se abre.
-3. **Contestação Construtiva Estrita com Diffs:** O protocolo não possui "downvote" passivo. Para contestar uma ideia, o dissidente propõe uma emenda pontual (*branch/diff*) e convence os membros a migrarem de voto.
+1. **Participação Universal com Síntese por IA:** Todos os membros participam diretamente do debate sem intermediários. A Inteligência Artificial neutra atua como secretária: analisa as contribuições de todos, identifica pontos de convergência e redige versões unificadas (as sínteses) para avaliação da comunidade.
+2. **Escala Multinível Soberana (Comunidades, Sociedades e Federação):** A governança se articula organicamente a partir da base local (**Comunidades**), agrupando-se regionalmente (**Sociedades**) e conectando-se em larga escala (**Federação**), preservando a autonomia direta em qualquer escala.
+3. **Contestação Construtiva Estrita com Comparativo Visual:** O protocolo não possui rejeição passiva. Para contestar uma ideia, o dissidente propõe uma alteração pontual no texto (com alterações em verde e exclusões em vermelho) e convence os membros a migrarem seu apoio.
 
 ---
 
