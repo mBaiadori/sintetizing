@@ -24,6 +24,72 @@ document.addEventListener("DOMContentLoaded", () => {
       myProposal: "Motor Rápido + Luz Noturna",
       synthAdd: "Motor de 3 segundos com bateria de backup",
       synthMod: "Iluminação em LED integrada ao fechamento automático",
+      semanticDiff: {
+        propAName: "Minha Proposta",
+        propBName: "Sua Proposta",
+        commonBefore: [
+          { label: "Finalidade", val: "Troca e automação do portão da garagem" },
+          { label: "Local de Aplicação", val: "Acesso principal do edifício" },
+        ],
+        fields: [
+          {
+            label: "Orçamento Total",
+            icon: "payments",
+            propA: "1.200 €",
+            propADesc: "Básico e sem extras",
+            propB: "1.800 €",
+            propBDesc: "Completo com opcionais",
+            cycles: {
+              1: {
+                val: "1.550 €",
+                desc: "Ajuste preliminar (negociando itens)",
+                tag: "Em Negociação",
+              },
+              2: {
+                val: "1.450 €",
+                desc: "Equilíbrio justo com garantia de 1 ano",
+                tag: "Convergência Forte",
+              },
+              3: {
+                val: "1.450 €",
+                desc: "Consenso total com garantia estendida",
+                tag: "Consenso Aprovado",
+              },
+            },
+          },
+          {
+            label: "Motor & Abertura",
+            icon: "speed",
+            propA: "Motor Padrão (10s)",
+            propADesc: "Abertura lenta, sem bateria",
+            propB: "Motor Turbo (3s)",
+            propBDesc: "Anti-arrastão de alta velocidade",
+            cycles: {
+              1: {
+                val: "Motor Rápido (5s)",
+                desc: "Velocidade intermediária",
+                tag: "Em Avaliação",
+              },
+              2: {
+                val: "Motor Turbo (3s) + Bateria",
+                desc: "Segurança com backup elétrico",
+                tag: "Convergência Forte",
+              },
+              3: {
+                val: "Motor Turbo (3s) + Bateria de Backup",
+                desc: "Funciona mesmo sem energia pública",
+                tag: "Consenso Aprovado",
+              },
+            },
+          },
+        ],
+        commonAfter: [
+          { label: "Garantia Técnica", val: "12 meses com assistência especializada" },
+          { label: "Manutenção Preventiva", val: "2 revisões semestrais inclusas no contrato" },
+          { label: "Prazo de Execução", val: "Instalação em até 5 dias úteis" },
+          { label: "Condição de Aprovação", val: "Quórum comunitário (75%)" },
+        ],
+      },
     },
     bairro: {
       name: "Vila Esperança",
@@ -40,6 +106,72 @@ document.addEventListener("DOMContentLoaded", () => {
       myProposal: "Postes Solares na Pista",
       synthAdd: "Instalação de 14 postes solares autônomos",
       synthMod: "Reforço de iluminação ao redor do parquinho infantil",
+      semanticDiff: {
+        propAName: "Minha Proposta",
+        propBName: "Sua Proposta",
+        commonBefore: [
+          { label: "Finalidade", val: "Iluminação pública e segurança noturna da praça" },
+          { label: "Área Atendida", val: "Pista de caminhada e parquinho infantil" },
+        ],
+        fields: [
+          {
+            label: "Orçamento Total",
+            icon: "payments",
+            propA: "3.500 €",
+            propADesc: "Rede convencional com cabeamento",
+            propB: "5.800 €",
+            propBDesc: "Postes solares autônomos",
+            cycles: {
+              1: {
+                val: "4.800 €",
+                desc: "Custo inicial contestado em plenária",
+                tag: "Em Negociação",
+              },
+              2: {
+                val: "4.200 €",
+                desc: "Desconto direto com fabricante parceiro",
+                tag: "Convergência Forte",
+              },
+              3: {
+                val: "4.200 €",
+                desc: "Financiado com zero consumo de eletricidade",
+                tag: "Consenso Aprovado",
+              },
+            },
+          },
+          {
+            label: "Tecnologia de Iluminação",
+            icon: "wb_sunny",
+            propA: "Postes de Rede Elétrica",
+            propADesc: "Exige quebra de piso e valas",
+            propB: "Postes Fotovoltaicos",
+            propBDesc: "100% autônomos com painel solar",
+            cycles: {
+              1: {
+                val: "Híbrido Solar/Rede",
+                desc: "Solução mista com obras parciais",
+                tag: "Em Avaliação",
+              },
+              2: {
+                val: "14 Postes Solares",
+                desc: "Elimina escavações e quebras na praça",
+                tag: "Convergência Forte",
+              },
+              3: {
+                val: "14 Postes Solares Autônomos",
+                desc: "Bateria de longa duração e zero cabeamento",
+                tag: "Consenso Aprovado",
+              },
+            },
+          },
+        ],
+        commonAfter: [
+          { label: "Garantia Técnica", val: "24 meses nos módulos solares e baterias" },
+          { label: "Manutenção Preventiva", val: "Inspeção e limpeza semestral dos módulos" },
+          { label: "Prazo de Execução", val: "Conclusão em até 15 dias corridos" },
+          { label: "Condição de Aprovação", val: "Quórum comunitário (60%)" },
+        ],
+      },
     },
     coop: {
       name: "Cooperativa Solar",
@@ -56,6 +188,72 @@ document.addEventListener("DOMContentLoaded", () => {
       myProposal: "Compra Conjunta com Desconto",
       synthAdd: "Aquisição de lote profissional com garantia estendida",
       synthMod: "Escala compartilhada de uso e manutenção preventiva",
+      semanticDiff: {
+        propAName: "Minha Proposta",
+        propBName: "Sua Proposta",
+        commonBefore: [
+          { label: "Finalidade", val: "Aquisição de ferramental para oficina coletiva" },
+          { label: "Regime de Uso", val: "Compartilhamento e escala entre cooperados" },
+        ],
+        fields: [
+          {
+            label: "Investimento Total",
+            icon: "payments",
+            propA: "2.800 €",
+            propADesc: "Compra avulsa no comércio local",
+            propB: "4.000 €",
+            propBDesc: "Linha industrial de alta potência",
+            cycles: {
+              1: {
+                val: "3.600 €",
+                desc: "Custo acima da reserva aprovada",
+                tag: "Em Negociação",
+              },
+              2: {
+                val: "3.300 €",
+                desc: "Desconto de 15% em lote para cooperativas",
+                tag: "Convergência Forte",
+              },
+              3: {
+                val: "3.300 €",
+                desc: "Rateado com sobra de caixa garantida",
+                tag: "Consenso Aprovado",
+              },
+            },
+          },
+          {
+            label: "Equipamento & Baterias",
+            icon: "handyman",
+            propA: "Kit Básico Monobateria",
+            propADesc: "Apenas 1 bateria por ferramenta",
+            propB: "Kit Industrial 18V",
+            propBDesc: "Máquinas reforçadas para uso diário",
+            cycles: {
+              1: {
+                val: "Kit Semiprofissional",
+                desc: "Capacidade de carga limitada",
+                tag: "Em Avaliação",
+              },
+              2: {
+                val: "Lote Profissional + Baterias",
+                desc: "Trabalho contínuo sem interrupção",
+                tag: "Convergência Forte",
+              },
+              3: {
+                val: "Lote Profissional com Baterias Duplas",
+                desc: "Atende 4 cooperados simultâneos",
+                tag: "Consenso Aprovado",
+              },
+            },
+          },
+        ],
+        commonAfter: [
+          { label: "Garantia Técnica", val: "3 anos de garantia direta do fabricante" },
+          { label: "Plano de Manutenção", val: "Revisão preventiva semestral na assistência técnica" },
+          { label: "Prazo de Entrega", val: "Disponível na sede em até 7 dias úteis" },
+          { label: "Condição de Aprovação", val: "Quórum comunitário (80%)" },
+        ],
+      },
     },
   };
 
@@ -80,7 +278,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const fusionDocProcessing = document.getElementById("fusion-doc-processing");
   const fusionDocApproved = document.getElementById("fusion-doc-approved");
   const diffCard = document.getElementById("diff-card");
-  const synthesisDocsContainer = document.getElementById("synthesis-docs-container");
+  const synthesisDocsContainer = document.getElementById(
+    "synthesis-docs-container",
+  );
+  const btnViewDiff = document.getElementById("btn-view-diff");
+  const modalDiff = document.getElementById("modal-diff");
+  const btnCloseDiffModal = document.getElementById("btn-close-diff-modal");
+  const modalDiffContent = document.getElementById("modal-diff-content");
   const supportCountText = document.getElementById("support-count-text");
   const supportTargetText = document.getElementById("support-target-text");
   const btnNewProposal = document.getElementById("btn-new-proposal");
@@ -629,6 +833,128 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
+  // ETAPA 4: MODAL DE DIFERENÇAS (DOCUMENTOS LADO A LADO)
+  // ==========================================
+  function openDiffModal() {
+    if (!modalDiff || !modalDiffContent) return;
+
+    const commKey = currentCommunityKey || "condo";
+    const data = communitiesData[commKey] || communitiesData.condo;
+    const diffData = data.semanticDiff;
+    if (!diffData || !diffData.fields) return;
+
+    const currentCycleKey =
+      currentScenario === 1 ? 3 : Math.min(3, Math.max(1, scenario2Cycle));
+
+    const rightDocTitle =
+      currentScenario === 1 || scenario2Cycle >= 3
+        ? "Síntese"
+        : `Síntese (Ciclo ${currentCycleKey})`;
+
+    let leftLines = "";
+    let rightLines = "";
+
+    // 1. Linhas em comum iniciais (Cinza / is-equal)
+    if (diffData.commonBefore && diffData.commonBefore.length > 0) {
+      diffData.commonBefore.forEach((item) => {
+        const line = `
+          <div class="diff-sheet-line is-equal">
+            <span class="diff-line-label">${item.label}</span>
+            <span class="diff-line-val">${item.val}</span>
+          </div>
+        `;
+        leftLines += line;
+        rightLines += line;
+      });
+    }
+
+    // 2. Apenas as DUAS linhas de diferenças (Preço e Motor / Equipamento)
+    diffData.fields.forEach((field) => {
+      const cycleInfo = field.cycles[currentCycleKey] || field.cycles[3];
+
+      leftLines += `
+        <div class="diff-sheet-line is-diff-old">
+          <span class="diff-line-label">${field.label}</span>
+          <span class="diff-line-val">${field.propA}</span>
+        </div>
+      `;
+
+      rightLines += `
+        <div class="diff-sheet-line is-diff-new">
+          <span class="diff-line-label">${field.label}</span>
+          <span class="diff-line-val">${cycleInfo.val}</span>
+        </div>
+      `;
+    });
+
+    // 3. Linhas em comum finais (Garantia mantida, Manutenção, Prazo, Aprovação - Cinza / is-equal)
+    if (diffData.commonAfter && diffData.commonAfter.length > 0) {
+      diffData.commonAfter.forEach((item) => {
+        const line = `
+          <div class="diff-sheet-line is-equal">
+            <span class="diff-line-label">${item.label}</span>
+            <span class="diff-line-val">${item.val}</span>
+          </div>
+        `;
+        leftLines += line;
+        rightLines += line;
+      });
+    }
+
+    modalDiffContent.innerHTML = `
+      <div class="diff-docs-comparison">
+        <!-- Documento 1: Proposta Anterior -->
+        <div class="diff-doc-sheet">
+          <div class="diff-doc-sheet-header">
+            <span class="material-symbols-rounded doc-sheet-icon">article</span>
+            <span class="doc-sheet-name">${diffData.propAName}</span>
+          </div>
+          <div class="diff-sheet-lines">
+            ${leftLines}
+          </div>
+        </div>
+
+        <!-- Documento 2: Síntese Consensual -->
+        <div class="diff-doc-sheet is-synth">
+          <div class="diff-doc-sheet-header is-synth">
+            <span class="material-symbols-rounded doc-sheet-icon">verified</span>
+            <span class="doc-sheet-name">${rightDocTitle}</span>
+          </div>
+          <div class="diff-sheet-lines">
+            ${rightLines}
+          </div>
+        </div>
+      </div>
+    `;
+
+    modalDiff.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeDiffModal() {
+    if (!modalDiff) return;
+    modalDiff.style.display = "none";
+    document.body.style.overflow = "";
+  }
+
+  if (btnViewDiff) {
+    btnViewDiff.addEventListener("click", openDiffModal);
+  }
+  if (btnCloseDiffModal) {
+    btnCloseDiffModal.addEventListener("click", closeDiffModal);
+  }
+  if (modalDiff) {
+    modalDiff.addEventListener("click", (e) => {
+      if (e.target === modalDiff) closeDiffModal();
+    });
+  }
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalDiff && modalDiff.style.display !== "none") {
+      closeDiffModal();
+    }
+  });
+
+  // ==========================================
   // ETAPA 4: RENDERIZAÇÃO DOS CENÁRIOS 1 E 2
   // ==========================================
   function renderSynthesisOutcome() {
@@ -922,6 +1248,7 @@ document.addEventListener("DOMContentLoaded", () => {
     stageSections.forEach((sec) => observer.observe(sec));
   }
 
-  // Inicializa o tema padrão (Condomínio)
+  // Inicializa o tema padrão (Condomínio) e renderiza a síntese inicial
   applyCommunityTheme("condo");
+  renderSynthesisOutcome();
 });

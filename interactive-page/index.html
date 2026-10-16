@@ -23,7 +23,7 @@
 
     <!-- Estilos da Jornada Interativa -->
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
-    <link rel="stylesheet" href="styles.css?v=3.5" />
+    <link rel="stylesheet" href="styles.css?v=3.9" />
   </head>
   <body>
     <!-- Topo Minimalista -->
@@ -461,6 +461,17 @@
               <!-- Preenchido dinamicamente via JS -->
             </div>
 
+            <!-- Botão Ver Diferenças (Abre Modal Minimalista Lado a Lado) -->
+            <button
+              id="btn-view-diff"
+              class="btn-view-diff"
+              type="button"
+              aria-haspopup="dialog"
+            >
+              <span class="material-symbols-rounded">compare_arrows</span>
+              <span>Ver diferenças</span>
+            </button>
+
             <!-- Linha de Apoios e Percentagem Mínima Centralizada -->
             <div class="synthesis-support-info" id="synthesis-support-info">
               <span id="support-count-text" class="support-count-highlight"
@@ -888,7 +899,38 @@
       </div>
     </footer>
 
+    <!-- Modal Side-by-Side: Ver Diferenças -->
+    <div id="modal-diff" class="diff-modal-backdrop" style="display: none">
+      <div
+        class="diff-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-diff-title"
+      >
+        <header class="diff-modal-header">
+          <div class="diff-modal-heading">
+            <span class="material-symbols-rounded">compare_arrows</span>
+            <h3 id="modal-diff-title" class="diff-modal-title">
+              Diferenças Entre Propostas
+            </h3>
+          </div>
+          <button
+            id="btn-close-diff-modal"
+            class="btn-close-modal"
+            type="button"
+            aria-label="Fechar"
+          >
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </header>
+
+        <div class="diff-modal-body" id="modal-diff-content">
+          <!-- Preenchido dinamicamente via JS: 2 documentos lado a lado -->
+        </div>
+      </div>
+    </div>
+
     <!-- Lógica Interativa e Animações GSAP -->
-    <script src="script.js"></script>
+    <script src="script.js?v=3.9"></script>
   </body>
 </html>
