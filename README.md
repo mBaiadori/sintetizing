@@ -32,8 +32,8 @@ O projeto é guiado por uma abordagem **Contract-First** e **Spec-Driven**, com 
 ### 3. Especificações Detalhadas por Fase de Implementação
 * **[docs/01_fase1_fundacao_pura.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/01_fase1_fundacao_pura.md):** Fase 1 — Núcleo determinístico sem efeitos colaterais (cálculo de $T(v)$, clivagem $\beta$-split, esquemas Zod e chaves Ed25519).
 * **[docs/02_fase2_integridade_local.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/02_fase2_integridade_local.md):** Fase 2 — Merkle DAG de eventos imutáveis, projeções relacionais em SQLite WASM e pipeline determinístico de validação em 5 passos.
-* **[docs/03_fase3_aplicacao_experiencia.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/03_fase3_aplicacao_experiencia.md):** Fase 3 — Câmara deliberativa efêmera (chat volátil descartável), editor Tiptap com diffs visuais humanizados, co-piloto de IA neutro (WebLLM via WebGPU) e simulador multi-persona local.
-* **[docs/04_fase4_descentralizacao_p2p.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/04_fase4_descentralizacao_p2p.md):** Fase 4 — Rede descentralizada libp2p GossipSub, arquitetura em duas camadas (Light Clients + Relays neutros sem custódia) e reconciliação offline-first.
+* **[docs/03_fase3_aplicacao_experiencia.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/03_fase3_aplicacao_experiencia.md):** Fase 3 — PWA leve e instalável direto do navegador, câmara deliberativa efêmera, editor Tiptap com diffs visuais, IA sintetizadora plugável (Ollama / APIs com Zod) e simulador multi-persona.
+* **[docs/04_fase4_descentralizacao_p2p.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/04_fase4_descentralizacao_p2p.md):** Fase 4 — Rede P2P WebRTC (comunicação direta celular-celular) + Nós Relays Cegos via WebSockets (Docker em 1 comando) e sincronização offline-first do Merkle DAG.
 
 ### 4. Telas do Aplicativo e Experiência do Cidadão (em `docs/views/`)
 * **[docs/views/README.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/views/README.md):** Mapa completo de navegação e telas em linguagem simples:
@@ -59,12 +59,13 @@ O projeto é guiado por uma abordagem **Contract-First** e **Spec-Driven**, com 
 
 | Camada | Tecnologia Selecionada | Papel no PFS-CD |
 | :--- | :--- | :--- |
-| **Criptografia & Identidade** | `@noble/ed25519` + `@simplewebauthn` | Assinaturas sem dependências e Passkeys com biometria nativa |
-| **Componentes Base & Estado** | `shadcn/ui` + `Radix` + `Zustand` | Base acessível (WCAG AA), botões, modais e estado reativo leve (<1KB) |
-| **Edição & Diffs de Texto** | `Tiptap` + `Yjs` (CRDT) | Sugestões colaborativas de emendas e branches sem conflito |
-| **Persistência Local** | `@sqlite.org/sqlite-wasm` | Projeções de estado no navegador via Origin Private File System |
-| **Rede P2P & Relays** | `libp2p` (GossipSub) + `nostr-tools` | Difusão de commits assinados e relays leves descentralizados |
-| **Inteligência Artificial** | `@mlc-ai/web-llm` | Síntese de deliberações rodando localmente na GPU via WebGPU (R$ 0,00) |
+| **Frontend / App** | `PWA (Progressive Web App)` + `Vite` | Instalação instantânea pelo navegador, soberana, sem taxas nem bloqueios de Apple Store / Google Play |
+| **Identidade & Criptografia** | `WebAuthn / Passkeys` + `@noble/ed25519` | Biometria no hardware (TouchID/FaceID) destrancando chaves determinísticas Ed25519 |
+| **Componentes Base & Estado** | `shadcn/ui` + `Radix` + `Zustand` | Base acessível (WCAG AA), botões, modais e estado reativo ultraleve (<1KB) |
+| **Versionamento & Diffs** | `Merkle DAG` (JSON) + `Yjs` (CRDT) | Grafo imutável de commits assinados + colaboração e convergência em tempo real sem conflito |
+| **Persistência Local** | `@sqlite.org/sqlite-wasm` / `IndexedDB` | Projeções de estado no navegador via Origin Private File System com persistência offline |
+| **Rede P2P & Relays** | `WebRTC` + `WebSockets` (Nós Relays Cegos) | Comunicação celular-a-celular direta + difusão via relays neutros (qualquer pessoa sobe via 1 comando Docker) |
+| **IA Sintetizadora** | `Plugável via Interface Padrão` (Ollama / APIs) | Síntese neutra orientada a JSON Schemas estritos (Zod), com total soberania humana e zero vendor lock-in |
 
 ---
 

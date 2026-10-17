@@ -48,8 +48,11 @@ Para superar a toxicidade da "seção de comentários" das redes sociais da Web 
 
 ## 5. Arquitetura Técnica P2P
 
-- Verificação Client-Side (sem servidores centrais de API): Cada cliente/dispositivo móvel roda um daemon local verificador.
-- Event-Sourced Merkle DAG: Cada voto, merge ou proposta é um commit assinado com SHA-256 e Ed25519, propagado via rede Gossip (libp2p). Se alguém adulterar as regras localmente, os nós vizinhos rejeitam deterministicamente os blocos inválidos.
+- PWA Super Leve: Instalação direta do navegador sem dependência das lojas Apple Store ou Google Play, resistente à censura.
+- Identidade no Hardware: WebAuthn + Ed25519 (chaves protegidas pela biometria do celular, autorizando ações sem frases mnemônicas de 12 palavras).
+- Dados e Versionamento: JSONs estruturados em Merkle DAG (commits de estado imutáveis com SHA-256) sincronizados via CRDTs (Yjs para rascunhos concorrentes em tempo real).
+- Rede P2P e Relays: WebRTC (comunicação direta celular-a-celular para a célula ativa) + WebSockets com Nós Relays Cegos (qualquer pessoa sobe um relay em 1 comando Docker).
+- IA Sintetizadora Plugável: Módulo de IA neutro via interface padrão (Ollama local ou APIs externas) que recebe os JSONs concorrentes e devolve o JSON unificado estrito respeitando o Schema Zod, com soberania e voto exclusivamente humanos.
 - Ingestão a Frio (Cold Start): O protocolo prevê a ingestão de toda a legislação pública existente (municipal, estadual, federal), traduzida por IA para linguagem cotidiana e disposta no template padrão de proposta (Problema, Solução, Recursos, Métricas), permitindo que a população faça "forks" e melhorias em leis reais.
 
 ## 6. Estado Atual do Projeto

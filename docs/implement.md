@@ -32,11 +32,11 @@ flowchart TD
     end
 
     subgraph NetworkLayer [Comunicação Descentralizada]
-        B4["Bloco 4: Rede P2P Gossip, Relays & Chat Efêmero"]
+        B4["Bloco 4: Rede P2P WebRTC, Relays Docker & WebSockets"]
     end
 
     subgraph ApplicationLayer [Usuário Final & Ergonomia]
-        B6["Bloco 6: UI, Chat Descartável, Diffs & Assistente IA"]
+        B6["Bloco 6: PWA, Diffs, Chat Efêmero & IA Plugável"]
     end
 
     B1 --> B2
@@ -103,15 +103,15 @@ flowchart TD
 
 ### Bloco 4: Camada de Rede P2P, Relays e Comunicação Efêmera (`Networking & Gossip`)
 
-* **Responsabilidade:** Descoberta de pares, transporte de mensagens e propagação de eventos sem intermediários centrais.
+* **Responsabilidade:** Descoberta de pares, transporte de mensagens e propagação de eventos sem intermediários centrais ou dependência de lojas corporativas.
 * **Componentes Principais:**
-  * **Arquitetura de Duas Camadas:**
-    * **Light Clients (Mobile/Browser):** Sincronizam deltas sob demanda sem drenar bateria nem manter conexões 24/7.
-    * **Relays Descentralizados:** Servidores comunitários neutros mantendo a difusão GossipSub viva.
-  * **GossipSub (libp2p):** Protocolo de difusão epidêmica de commits de estado organizado em tópicos.
-  * **Canal Deliberativo Efêmero:** Transporte P2P volátil para o chat da célula de 10 participantes, com expiração automática de mensagens após o encerramento do nó.
-  * **Protocolo de Sincronização (DAG Sync):** Reconciliação rápida de ramos do Merkle DAG quando nós se reconectam.
-  * **Cálculo de MTP (Median Time Past):** Proteção contra fraudes no relógio local.
+  * **Arquitetura Resiliente em Duas Camadas:**
+    * **Light Clients (PWA no Smartphone/Browser):** Sincronizam deltas do Merkle DAG sob demanda sem drenar bateria e sem exigir conexão P2P persistente 24/7.
+    * **Nós Relays Cegos (Blind Relays via WebSockets):** Servidores comunitários neutros e sem custódia. Qualquer pessoa sobe um relay com **1 comando Docker** (`docker run -d -p 8080:8080 sintetizing/relay`) para manter a rede online e tolerante a censura.
+  * **Comunicação Direta WebRTC:** Conexão direta celular-a-celular para os 10 membros da célula deliberativa ativa, com latência zero e custo nulo, utilizando os Relays WebSockets apenas para sinalização inicial (troca de SDP/ICE).
+  * **Transporte Efêmero sem Custódia:** O bate-papo de 10 pessoas é transmitido de forma volátil e criptografada, expirando imediatamente após a consolidação da célula, sem poluir o Merkle DAG.
+  * **Protocolo de Sincronização (DAG Sync):** Reconciliação rápida de branches e commits faltantes quando nós móveis se reconectam (Offline-First).
+  * **Cálculo de MTP (Median Time Past):** Proteção contra adulterações no relógio local.
 
 ---
 
@@ -132,14 +132,11 @@ flowchart TD
 
 * **Responsabilidade:** Proporcionar uma experiência humana fluida, sem jargões criptográficos, reduzindo drasticamente o esforço cognitivo do cidadão.
 * **Componentes Principais:**
-  * **Autenticação Biométrica Invisível (Passkeys):** Assinatura de transações via FaceID/TouchID sem necessidade de anotar sementes de 12 palavras.
-  * **Câmara Deliberativa Efêmera (Chat da Célula $N_1$):**
-    * Sala de conversa informal, com suporte a mensagens rápidas e áudios curtos.
-    * Totalmente descartável (auto-destrutível após a consolidação da célula).
-  * **Visualizador de Diffs Humanizado:**
-    * Renderização de emendas e ramificações como sugestões colaborativas visuais (estilo Word/Google Docs), permitindo comparar propostas alternativas instantaneamente.
-  * **Co-Piloto de IA Neutro para Síntese:**
-    * Assistente local sob demanda capaz de analisar o chat efêmero e propor um rascunho de síntese unificada para aprovação dos membros da célula.
+  * **PWA Super Leve (Progressive Web App):** Instalação direta do navegador sem aprovação da Apple Store ou Google Play, resistente à censura e com cache offline nativo.
+  * **Autenticação Biométrica Invisível (Passkeys + Ed25519):** O hardware do smartphone (TouchID/FaceID) protege a semente criptográfica local, assinando transações com Ed25519 sem exigir anotação de frases mnemônicas de 12 palavras.
+  * **Câmara Deliberativa Efêmera (Chat da Célula $N_1$):** Sala de conversa informal, com texto e áudios curtos, totalmente descartável (auto-destrutível após a consolidação).
+  * **Visualizador de Diffs Humanizado:** Renderização de emendas e ramificações como sugestões visuais (verde para inclusões, vermelho para exclusões), permitindo comparar e migrar votos com 1 clique.
+  * **IA Sintetizadora Plugável (Interface Padrão):** Módulo desacoplado com suporte a modelos locais via **Ollama** (Llama 3, Mistral, Qwen) ou APIs externas padronizadas. A IA recebe os JSONs concorrentes e devolve um JSON unificado estrito validado por Schema (Zod), atuando exclusivamente como secretária neutra sem poder decisório.
   * **Monitor de Consenso em Tempo Real:** Cronômetro dinâmico exibindo $T(v)$ e o impacto visual de cada novo voto ou migração.
 
 ---
@@ -150,12 +147,12 @@ O PFS-CD não exige pesquisa e desenvolvimento de baixo nível do zero. A arquit
 
 | Bloco Arquitetural                            | O Que Precisamos Resolver                                                                                                               | Ferramentas Open Source Selecionadas                                                                                                                                                                                                        | Justificativa Técnica                                                                                                                                                                                                                                                               |
 | :-------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Bloco 1: Cripto & Identidade**        | • Chaves Ed25519• Passkeys / Biometria• Validação de Schemas                                                                       | •**`@noble/ed25519`** & **`@noble/hashes`**• **`@simplewebauthn`**• **`Zod`** / **`Ajv`**                                                                                                        | • As libs`@noble` são padrão ouro (auditadas, zero dependências).• `@simplewebauthn` conecta ao Secure Enclave (TouchID/FaceID).• `Zod`/`Ajv` validam schemas JSON em microssegundos.                                                                                  |
-| **Bloco 2: Diffs, Branches & Consenso** | • Comparação de texto (Diffs)• Versionamento sem conflito• Máquina de Estados da Proposta                                         | •**`Yjs`** ou **`Automerge`** (CRDTs)• **`diff-match-patch`** (Google)• **`XState`**                                                                                                                     | • CRDTs (`Yjs`/`Automerge`) resolvem branches, merges e histórico sem conflito.• `diff-match-patch` calcula diffs semânticos legíveis para leigos.• `XState` formaliza a máquina de estados das propostas.                                                            |
-| **Bloco 3: Merkle DAG & Storage**       | • Armazenamento Append-Only• Merkle DAG de commits• Banco de dados local                                                             | •**`isomorphic-git`** ou **`IPLD / Multiformats`**• **`SQLite WASM`** (com OPFS) ou **`Dexie.js`**                                                                                                        | •`isomorphic-git` implementa Git 100% em TypeScript (browser e Node).• SQLite WASM roda localmente no navegador via Origin Private File System.                                                                                                                                  |
-| **Bloco 4: Rede P2P, Relays & Chat**    | • Difusão Gossip entre nós• Relays sem custódia• Chat efêmero da célula                                                         | •**`libp2p`** (GossipSub / WebRTC)• **Protocolo `Nostr`** (`nostr-tools`)• **`Waku`**                                                                                                                          | •`libp2p` é a base do IPFS e Ethereum.• Relays do Nostr são ultra-leves e eficientes para transporte WebSocket.• `Waku` viabiliza chat efêmero P2P mobile sem consumo de bateria.                                                                                          |
-| **Bloco 5: Validador do Cliente**       | • Pipeline de checagem determinística                                                                                                 | • TypeScript puro + Middleware funcional (estilo**`tRPC`** / **`Koa`**)                                                                                                                                                          | • Cadeia de validações puras (*pipes*): assinatura, quórum, MTP e invariantes.                                                                                                                                                                                                 |
-| **Bloco 6: UI, Editor & Assistente IA** | • Componentes base acessíveis• Gestão de estado reativo• Notificações e ícones• Editor com sugestões• IA local para síntese | •**`shadcn/ui`** + **`Radix UI`**• **`Zustand`**• **`Sonner`** + **`Lucide Icons`**• **`Tiptap`** / **`ProseMirror`** + **`Yjs`**• **`WebLLM`** (WebGPU local) | •`shadcn/ui` e `Radix` economizam 80% do código de UI com WCAG nativo.• `Zustand` gerencia a mesa dos 10 e votos com reatividade leve (<1KB).• `Tiptap` oferece emendas visuais colaborativas com `Yjs`.• `WebLLM` roda IA localmente na GPU sem custo de servidor. |
+| **Bloco 1: Cripto & Identidade**        | • Chaves Ed25519<br>• Passkeys / Biometria<br>• Validação de Schemas                                                                       | • **`@noble/ed25519`** & **`@noble/hashes`**<br>• **`@simplewebauthn`**<br>• **`Zod`** / **`Ajv`**                                                                                                        | • As libs `@noble` são padrão ouro (auditadas, zero dependências).<br>• `@simplewebauthn` conecta ao Secure Enclave/KeyStore.<br>• `Zod` valida schemas JSON com tipagem estrita total.                                                            |
+| **Bloco 2: Diffs, Branches & Consenso** | • Comparação de texto (Diffs)<br>• Versionamento sem conflito<br>• Máquina de Estados da Proposta                                         | • **`Yjs`** / **`Automerge`** (CRDTs)<br>• **`diff-match-patch`** (Google)<br>• **`XState`**                                                                                                                     | • CRDTs resolvem branches, merges e edição colaborativa em tempo real.<br>• `diff-match-patch` calcula diffs semânticos visuais.<br>• `XState` formaliza a máquina de estados das propostas.                                                            |
+| **Bloco 3: Merkle DAG & Storage**       | • Armazenamento Append-Only<br>• Merkle DAG de commits<br>• Banco de dados local                                                             | • **`isomorphic-git`** / **Merkle DAG Core**<br>• **`SQLite WASM`** (com OPFS) ou **`IndexedDB`**                                                                                                        | • Estrutura em Merkle DAG garante imutabilidade e integridade matemática.<br>• SQLite WASM / IndexedDB mantém o estado materializado no dispositivo com persistência offline.                                                                         |
+| **Bloco 4: Rede P2P, Relays & Chat**    | • Conexão direta na célula<br>• Relays sem custódia 24/7<br>• Chat efêmero descartável                                                         | • **`WebRTC DataChannels`**<br>• **`WebSockets`** (Nós Relays Cegos)<br>• **`Docker`** (deploy em 1 comando)                                                                                              | • WebRTC permite troca direta celular-a-celular sem custo de tráfego.<br>• Relays Cegos WebSockets roteiam envelopes assinados sem inspecionar ou alterar dados.<br>• Docker viabiliza descentralização comunitária instantânea.                  |
+| **Bloco 5: Validador do Cliente**       | • Pipeline de checagem determinística                                                                                                 | • TypeScript puro + Middleware funcional (estilo **`tRPC`** / **`Koa`**)                                                                                                                                                          | • Cadeia de validações puras (*pipes*): assinatura, quórum, MTP e invariantes.                                                                                                                                                                                                 |
+| **Bloco 6: UI, PWA & IA Sintetizadora** | • PWA super leve e soberano<br>• Componentes base acessíveis<br>• Gestão de estado reativo<br>• Editor com sugestões<br>• IA sintetizadora plugável | • **`PWA`** (Vite + Service Workers)<br>• **`shadcn/ui`** + **`Radix`**<br>• **`Zustand`**<br>• **`Tiptap`** + **`Yjs`**<br>• **`Ollama`** / **APIs REST** (Interface padronizada com Zod) | • PWA instala direto do navegador sem dependência de App Stores.<br>• `shadcn/ui` + `Radix` garantem acessibilidade WCAG AA.<br>• `Zustand` gerencia estado reativo (<1KB).<br>• IA plugável via JSON Schemas garante síntese neutra e zero vendor lock-in. |
 
 ### Diferencial Exclusivo do Projeto (Regras Proprietárias)
 
@@ -180,20 +177,21 @@ gantt
     Bloco 3 (Merkle DAG & Projeções)       :active, 2026-10-21, 10d
     Bloco 5 (Pipeline de Validação)        :active, 2026-10-26, 8d
     section Fase 3: Experiência & Chat
-    Bloco 6 (UI Web, Chat Efêmero & IA)    :2026-11-03, 14d
+    Bloco 6 (PWA, Chat Efêmero & IA Plugável) :2026-11-03, 14d
     section Fase 4: Descentralização
-    Bloco 4 (Rede P2P, Relays & Gossip)    :2026-11-17, 14d
+    Bloco 4 (WebRTC, Relays Docker & Sync) :2026-11-17, 14d
 ```
 
 ### Detalhamento e Documentos Específicos por Fase
 
-Cada etapa possui agora um documento técnico próprio de especificação com dependências, código de exemplo, interfaces TypeScript e critérios de aceite:
+Cada etapa possui um documento técnico próprio de especificação com dependências, código de exemplo, interfaces TypeScript e critérios de aceite:
 
 1. **[Fase 1 — Fundação Pura](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/01_fase1_fundacao_pura.md):**
    * Schemas canônicos com Zod, assinaturas `Ed25519` via `@noble`, Passkeys (`@simplewebauthn`), cálculo determinístico do timelock $T(v)$ e regras de divisão celular $K=10, \beta=3$.
 2. **[Fase 2 — Integridade Local e Event Sourcing](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/02_fase2_integridade_local.md):**
-   * Append-only Merkle DAG, projeções relacionais em SQLite WASM, pipeline determinístico de validação em 5 passos e isolamento de forks em quarentena.
-3. **[Fase 3 — Aplicação do Cidadão, Chat Efêmero e Simulador](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/03_fase3_aplicacao_experiencia.md):**
-   * Interface sem jargões criptográficos, editor Tiptap + Yjs para diffs amigáveis de contrapropostas, sala de chat descartável da célula, co-piloto de IA neutro rodando no navegador (WebLLM) e simulador multi-persona.
-4. **[Fase 4 — Rede P2P, Relays e Descentralização](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/04_fase4_descentralizacao_p2p.md):**
-   * Arquitetura em duas camadas (Light Clients em smartphones + Relays neutros sem custódia 24/7), difusão GossipSub via `libp2p`, transporte efêmero e reconciliação offline-first.
+   * Append-only Merkle DAG, projeções relacionais em SQLite WASM / IndexedDB, pipeline determinístico de validação em 5 passos e isolamento de forks em quarentena.
+3. **[Fase 3 — Aplicação do Cidadão, PWA, Chat Efêmero e IA Plugável](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/03_fase3_aplicacao_experiencia.md):**
+   * PWA super leve instalável direto do navegador sem App Stores, editor Tiptap + Yjs para diffs amigáveis de contrapropostas, sala de chat descartável da célula, IA sintetizadora plugável via interface padrão (Ollama ou APIs com Schemas Zod) e simulador multi-persona.
+4. **[Fase 4 — Rede P2P, Relays Cegos Docker e Descentralização](file:///Users/MarcosBaiadori/Desktop/sintetizing/docs/04_fase4_descentralizacao_p2p.md):**
+   * Arquitetura em duas camadas (Light Clients PWA em smartphones + Relays neutros cegos via Docker), comunicação direta WebRTC entre participantes da célula, difusão WebSocket resiliente e reconciliação offline-first do Merkle DAG.
+

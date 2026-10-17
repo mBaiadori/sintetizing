@@ -229,21 +229,26 @@ O encerramento de uma Community decorre de cumprimento de objetivo ou inércia e
 
 ## 7. Arquitetura Técnica P2P e Execução sem Autoridade Central
 
-O PFS-CD rejeita servidores centrais de controle e silos corporativos de nuvem. Toda a infraestrutura opera sob os princípios de **Verificação pelo Cliente (Client-Side Verification)**, **Grafos Acíclicos Dirigidos Baseados em Eventos (Event-Sourced Merkle DAG)** e **Redes de Difusão P2P**.
+O PFS-CD rejeita servidores centrais de controle, silos corporativos de nuvem e aprovações arbitrárias de lojas de aplicativos. Toda a infraestrutura opera sob os princípios de **PWA Super Leve**, **Identidade Soberana no Hardware (WebAuthn + Ed25519)**, **Grafos Acíclicos Dirigidos Baseados em Eventos (Merkle DAG)** sincronizados via **CRDTs**, **Rede P2P WebRTC** assistida por **Nós Relays Cegos** (Docker) e **IA Sintetizadora Plugável**.
 
-    ┌──────────────────────────────────────────────────┐
-            │          Dispositivo do Cidadão (Mobile/Web)     │
-            │  - Interface Local (UI Limpa)                    │
-            │  - Chaves Assimétricas Ed25519 (Armazenamento)   │
-            │  - Daemon de Validação Local (RPC / Client-Side) │
-            └─────────────────────────┬────────────────────────┘
-                                      │
-                    Emissão de Ações  │  Leitura / Ingestão
-                   (Commits Assinados)│  de Estado Validado
-                                      ▼
- ═════════════════════════════════════════════════════════════════════
-                   CAMADA DE REDE P2P GOSSIP (libp2p)
- ═════════════════════════════════════════════════════════════════════
+```
+┌──────────────────────────────────────────────────────────────┐
+│           Dispositivo do Cidadão (PWA Super Leve)            │
+│  - Interface Local Limpa (Zero Jargão Criptográfico)         │
+│  - Chaves Assimétricas Ed25519 no Hardware (WebAuthn/Passkey)│
+│  - Validador Determinístico Local (Client-Side Verification) │
+│  - Edição Concorrente sem Conflito via CRDTs (Yjs)           │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+             Comunicação P2P   │   Sincronização sob Demanda
+             Direta na Célula  │   (Envelopes Assinados Ed25519)
+             (WebRTC)          │   (WebSockets)
+                               ▼
+ ═══════════════════════════════════════════════════════════════
+   CAMADA DE NÓS RELAYS CEGOS (Comunitários / Docker 1 Comando)
+   • Zero custódia / Servidores neutros 24/7 sem chaves privadas
+   • Roteamento cego de envelopes assinados e sinalização WebRTC
+ ═══════════════════════════════════════════════════════════════
      ▲                               ▲                         ▲
      │                               │                         │
      ▼                               ▼                         ▼
@@ -252,37 +257,49 @@ O PFS-CD rejeita servidores centrais de controle e silos corporativos de nuvem. 
 │  (Cópia Local do │   Sync    │  (Cópia Local do │ Sync │  (Cópia Local do │
 │    Merkle DAG)   │           │    Merkle DAG)   │      │    Merkle DAG)   │
 └──────────────────┘           └──────────────────┘      └──────────────────┘
+```
 
-### 7.1. Infraestrutura Invisível: Light Clients e Rede de Relays
+### 7.1. Infraestrutura Invisível: PWA, Light Clients e Relays Cegos em Docker
 
-Para conciliar a soberania criptográfica com as limitações reais dos sistemas operacionais móveis (iOS/Android — restrições de bateria e suspensão de processos em segundo plano):
+Para conciliar soberania criptográfica com as limitações reais dos dispositivos móveis (iOS/Android — restrições de bateria e suspensão em segundo plano):
 
-1. **Gestão de Chaves Sem Fricção (Passkeys / WebAuthn):**
-   * O usuário não lida com frases mnemônicas de recuperação de 12 palavras nem com interfaces complexas de carteiras Web3.
-   * O par de chaves `Ed25519` é gerado e protegido pelo enclave de segurança do aparelho celular (TouchID / FaceID) por meio do padrão W3C WebAuthn/Passkeys.
-   * A experiência para o cidadão é idêntica à de um aplicativo moderno convencional: ele autoriza votos com a biometria nativa em frações de segundo.
-2. **Separação entre Nós Leves e Relays de Fofoca:**
-   * **Nós Leves (Mobile / Browser):** Não mantêm conexões P2P contínuas nem processam toda a rede 24/7. Ao abrir o aplicativo, solicitam o delta dos commits criptográficos de sua comunidade diretamente da rede, validam localmente as assinaturas e desligam.
-   * **Nós de Retransmissão (Relays Comunitários / Validadores Dedicados):** Servidores domésticos leves (Raspberry Pi, VPS comunitárias ou nós de entidades civis) mantêm a rede *GossipSub* viva 24/7. **Propriedade de Segurança:** Os relays são cegos e sem custódia; não possuem chaves privadas e não podem alterar ou forjar nenhum voto assinado pelos clientes.
+1. **PWA Super Leve (Sem Dependência de App Stores):**
+   * O aplicativo instala direto do navegador sem necessitar de aprovação da Apple Store ou Google Play, mantendo-se imune à censura institucional ou taxas predatórias.
+2. **Gestão de Chaves Sem Fricção (Passkeys / WebAuthn + Ed25519):**
+   * O usuário não anota frases mnemônicas de 12 palavras nem gerencia carteiras complexas.
+   * A biometria nativa (TouchID / FaceID) destranca o par de chaves `Ed25519` armazenado com segurança no cofre local do dispositivo, autorizando ações e votos com zero fricção.
+3. **Nós de Retransmissão Cegos (Blind Relays em 1 Comando Docker):**
+   * Qualquer cidadão ou coletivo sobe um nó de retransmissão com `docker run -d -p 8080:8080 sintetizing/relay` em servidores domésticos (Raspberry Pi) ou VPS comunitárias.
+   * **Propriedade de Segurança Estrita:** Os relays são cegos e sem custódia; não possuem chaves privadas e transmitem apenas envelopes assinados digitalmente. Qualquer tentativa de alteração invalida a assinatura matemática `Ed25519` e é descartada pelos clientes.
+4. **Comunicação Direta WebRTC:**
+   * Entre os 10 participantes de uma célula ativa, a deliberação rápida e o bate-papo efêmero trafegam de celular para celular via WebRTC DataChannels, usando os relays apenas para sinalização inicial.
 
-### 7.2. Validação Descentralizada pelo Cliente
+### 7.2. IA Sintetizadora Plugável (Interface Padrão)
+
+A inteligência artificial atua exclusivamente como **secretária neutra** da governança:
+* **Interface Aberta e Desacoplada:** Pode conectar a modelos locais via **Ollama** (Llama 3, Qwen, Mistral) ou APIs REST padronizadas.
+* **Saída Estruturada Obrigatória (Structured Outputs):** Recebe os JSONs concorrentes e o histórico de deliberações e devolve um JSON unificado estrito validado pelo schema Zod (`ProposalObject`).
+* **Soberania Humana Integral:** A síntese produzida pela IA é um mero rascunho (*draft*); nenhuma proposta tem valor legal ou validade de consenso sem que humanos a assinem com suas chaves criptográficas e votem nela.
+
+### 7.3. Validação Descentralizada pelo Cliente
 
 Toda operação no sistema é um evento atômico imutável assinado digitalmente:
 
 1. Quando uma Persona interage, o cliente local gera um pacote JSON canônico, assina-o com a chave privada `Ed25519` do usuário e calcula seu hash `SHA-256`.
-2. O evento é transmitido via protocolo Gossip (libp2p).
+2. O evento é transmitido através dos Relays Cegos para a rede.
 3. Cada nó par que recebe o evento executa deterministicamente o pipeline de verificação:
    * Validação criptográfica da assinatura contra a chave pública da Persona;
    * Validação de pertencimento à Comunidade e convocação no Nó de 10 via semente VRF;
    * Checagem temporal da janela $T(v)$ contra a mediana dos timestamps dos nós pares (*Median Time Past - MTP*);
    * Conformidade estrita com o template JSON correspondente.
-4. Se o evento violar qualquer invariante, ele é imediatamente expurgado da rede local dos pares. Trapaceiros que modificam seu cliente open-source ficam confinados em ramificações isoladas que nenhum outro nó aceita.
+4. Se o evento violar qualquer invariante, ele é imediatamente expurgado. Nós maliciosos ficam confinados em ramificações isoladas que nenhum outro participante aceita.
 
-### 7.3. O Grafo de Eventos (Merkle DAG)
+### 7.4. O Grafo de Eventos (Merkle DAG) e Sincronização via CRDTs
 
-O histórico de cada comunidade funciona como um repositório distribuído:
+O histórico e a deliberação operam em duas camadas complementares:
 
-* Cada transição de estado referencia os hashes criptográficos de seus eventos pais (`parent_hashes`).
+* **CRDTs (ex: Yjs / Automerge):** Gerenciam os rascunhos concorrentes, sugestões de emendas e textos colaborativos em tempo real dentro da célula, resolvendo edições simultâneas sem conflito.
+* **Merkle DAG:** Registra exclusivamente os **Commits de Estado Consolidados** (propostas assinadas e votos). Cada transição de estado referencia os hashes criptográficos dos eventos pais (`parent_hashes`).
 * A manipulação retroativa de qualquer voto ou proposta exige alterar o hash de toda a cadeia subsequente, o que quebra a validação perante os outros pares.
 
 ---
