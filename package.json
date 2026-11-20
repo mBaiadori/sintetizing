@@ -7,10 +7,21 @@
   "scripts": {
     "test": "pnpm --filter @sintetizing/core test",
     "test:coverage": "pnpm --filter @sintetizing/core test:coverage",
+    "test:wire": "pnpm --filter @sintetizing/wire test",
+    "test:wire:coverage": "pnpm --filter @sintetizing/wire test:coverage",
+    "simular": "pnpm --filter @sintetizing/wire simular",
+    "simular:rapido": "pnpm --filter @sintetizing/wire simular:rapido",
+    "estresse": "pnpm --filter @sintetizing/wire estresse",
+    "painel": "pnpm --filter @sintetizing/wire painel",
+    "rede:criar": "pnpm --filter @sintetizing/wire rede:criar",
+    "inspecionar": "pnpm --filter @sintetizing/wire inspecionar",
+    "arvore": "pnpm --filter @sintetizing/wire arvore",
+    "test:all": "pnpm --recursive run test",
     "typecheck": "pnpm --recursive exec tsc --noEmit",
     "build": "pnpm --recursive --filter \"./packages/*\" run build"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "typescript": "^5.7.3"
   }
 }

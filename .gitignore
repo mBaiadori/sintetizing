@@ -1,2 +1,14 @@
 show.mermaid
 node_modules
+.claude
+.env
+/graphify-out
+
+# Test outputs and simulations
+packages/wire/test-output/
+packages/wire/dist/
+packages/wire/coverage/
+*.stz
+simulacao-rede-resultado.json
+teste-carga-resultado.json
+rede-local/
