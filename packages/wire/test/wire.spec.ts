@@ -31,7 +31,7 @@ async function makeTestKeyPair() {
   return { priv, pub };
 }
 
-describe("Fase 1: Motor Binário Posicional & Fita TLV (.stz)", () => {
+describe("Fase 1: Motor Binário Posicional & Fita TLV (.stze)", () => {
   it("Teste 1: Empacota um PICK e comprova tamanho ultra-compacto (106 a 110 bytes)", async () => {
     const { priv, pub } = await makeTestKeyPair();
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sintetize Protocol - Navegador de Assuntos, Versões e Consenso (.stz)</title>
+  <title>Sintetize Protocol - Navegador de Assuntos, Versões e Consenso (.stze)</title>
   <style>
     :root {
       --bg: #fbfcfd;
@@ -229,7 +229,7 @@
     }
 
     /* Painel Lateral / Drawer */
-    .stz-drawer {
+    .stze-drawer {
       width: 480px;
       background: #ffffff;
       border-left: 1px solid var(--border);
@@ -244,7 +244,7 @@
       right: 0;
       top: 0;
     }
-    .stz-drawer.open {
+    .stze-drawer.open {
       transform: translateX(0);
       position: relative;
     }
@@ -446,27 +446,27 @@
       </div>
 
       <div class="bottom-info-pill">
-        💡 <strong>Clique em qualquer versão</strong> da árvore para inspecionar os <strong>Picks</strong>, <strong>Footprints</strong>, <strong>Artigos</strong> e o <strong>.stz</strong>
+        💡 <strong>Clique em qualquer versão</strong> da árvore para inspecionar os <strong>Picks</strong>, <strong>Footprints</strong>, <strong>Artigos</strong> e o <strong>.stze</strong>
       </div>
     </div>
 
     <!-- Drawer Lateral com Abas -->
-    <div class="stz-drawer" id="stzDrawer">
+    <div class="stze-drawer" id="stzeDrawer">
       <div class="drawer-head">
         <div class="drawer-title" id="dTitle">Versão Selecionada</div>
         <button class="btn-close" onclick="closeDrawer()">✕</button>
       </div>
 
       <div class="drawer-nav-tabs">
-        <button class="d-tab-btn active" onclick="switchDrawerTab('stz')">📦 Pacote .stz</button>
+        <button class="d-tab-btn active" onclick="switchDrawerTab('stze')">📦 Pacote .stze</button>
         <button class="d-tab-btn" onclick="switchDrawerTab('artigos')">📜 Artigos de Lei</button>
         <button class="d-tab-btn" onclick="switchDrawerTab('picks')">👍 Picks (<span id="tabPickCount">0</span>)</button>
         <button class="d-tab-btn" onclick="switchDrawerTab('footprints')">👣 Footprints</button>
       </div>
 
       <div class="drawer-content">
-        <!-- ABA 1: PACOTE .STZ -->
-        <div class="d-section active" id="sec-stz">
+        <!-- ABA 1: PACOTE .STZE -->
+        <div class="d-section active" id="sec-stze">
           <div class="info-block">
             <div class="info-label">Arquivo Físico no Disco</div>
             <div class="info-val mono" id="dFilePath">-</div>
@@ -498,7 +498,7 @@
           </div>
 
           <div>
-            <div class="info-label" style="margin-bottom: 6px;">Dump Hexadecimal (.stz)</div>
+            <div class="info-label" style="margin-bottom: 6px;">Dump Hexadecimal (.stze)</div>
             <div class="hex-box" id="dHex">-</div>
           </div>
         </div>
@@ -718,7 +718,7 @@
         fpCont.appendChild(div);
       }
 
-      document.getElementById('stzDrawer').classList.add('open');
+      document.getElementById('stzeDrawer').classList.add('open');
     }
 
     let currentActiveSupporters = [];
@@ -771,7 +771,7 @@
     }
 
     function closeDrawer() {
-      document.getElementById('stzDrawer').classList.remove('open');
+      document.getElementById('stzeDrawer').classList.remove('open');
       document.querySelectorAll('.node-wrap').forEach(el => el.classList.remove('selected'));
     }
 

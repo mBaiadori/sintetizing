@@ -34,7 +34,7 @@ async function makeKeys(name: string) {
 async function createLocalNetworkEnvironment() {
   console.log(`\n\x1b[1m\x1b[36m╔═══════════════════════════════════════════════════════════════════════════════════╗\x1b[0m`);
   console.log(`\x1b[1m\x1b[36m║  SINTETIZE PROTOCOL - MATERIALIZANDO REDE LOCAL FÍSICA NO DISCO                   ║\x1b[0m`);
-  console.log(`\x1b[1m\x1b[36m║  Criando pastas, arquivos binários .stz, identidades e estados individuais        ║\x1b[0m`);
+  console.log(`\x1b[1m\x1b[36m║  Criando pastas, arquivos binários .stze, identidades e estados individuais        ║\x1b[0m`);
   console.log(`\x1b[1m\x1b[36m╚═══════════════════════════════════════════════════════════════════════════════════╝\x1b[0m\n`);
 
   // Limpa diretório anterior se existir para criar tudo limpo e palpável
@@ -64,7 +64,7 @@ async function createLocalNetworkEnvironment() {
 
   for (const n of nodes) {
     const nodePath = path.join(networkDir, n.id);
-    const packetsPath = path.join(nodePath, "pacotes_stz");
+    const packetsPath = path.join(nodePath, "pacotes_stze");
     fs.mkdirSync(packetsPath, { recursive: true });
 
     // Grava identidade criptográfica física
@@ -74,7 +74,7 @@ async function createLocalNetworkEnvironment() {
       endereco_rede: n.addr,
       chave_publica_ed25519_hex: n.keys.pubHex,
       chave_privada_ed25519_hex: n.keys.privHex,
-      descricao: "Chave criptográfica soberana. Usada para assinar e verificar pacotes binários .stz.",
+      descricao: "Chave criptográfica soberana. Usada para assinar e verificar pacotes binários .stze.",
     };
     fs.writeFileSync(path.join(nodePath, "identidade.json"), JSON.stringify(identData, null, 2), "utf-8");
   }
@@ -82,7 +82,7 @@ async function createLocalNetworkEnvironment() {
   console.log(`📁 Pastas de máquinas e identidades criadas em:\n   \x1b[32m${networkDir}\x1b[0m\n`);
 
   // =========================================================================
-  // 2. CRIAÇÃO DOS PACOTES BINÁRIOS REAIS (.stz) NO DISCO
+  // 2. CRIAÇÃO DOS PACOTES BINÁRIOS REAIS (.stze) NO DISCO
   // =========================================================================
 
   // PROPOSTA A (Ana)
@@ -180,37 +180,37 @@ async function createLocalNetworkEnvironment() {
   // =========================================================================
 
   // No Celular da Ana:
-  fs.writeFileSync(path.join(networkDir, "celular-ana/pacotes_stz/01_minha_proposta_solar.stz"), propAPacket);
-  fs.writeFileSync(path.join(networkDir, "celular-ana/pacotes_stz/02_meu_apoio_proposta_solar.stz"), pickAna);
+  fs.writeFileSync(path.join(networkDir, "celular-ana/pacotes_stze/01_minha_proposta_solar.stze"), propAPacket);
+  fs.writeFileSync(path.join(networkDir, "celular-ana/pacotes_stze/02_meu_apoio_proposta_solar.stze"), pickAna);
 
   // No Celular do Carlos:
-  fs.writeFileSync(path.join(networkDir, "celular-carlos/pacotes_stz/01_minha_proposta_baterias.stz"), propBPacket);
-  fs.writeFileSync(path.join(networkDir, "celular-carlos/pacotes_stz/02_meu_apoio_baterias.stz"), pickCarlos);
+  fs.writeFileSync(path.join(networkDir, "celular-carlos/pacotes_stze/01_minha_proposta_baterias.stze"), propBPacket);
+  fs.writeFileSync(path.join(networkDir, "celular-carlos/pacotes_stze/02_meu_apoio_baterias.stze"), pickCarlos);
 
   // No Celular do Bruno (com histórico visível nos arquivos!):
-  fs.writeFileSync(path.join(networkDir, "celular-bruno/pacotes_stz/01_proposta_solar_recebida.stz"), propAPacket);
-  fs.writeFileSync(path.join(networkDir, "celular-bruno/pacotes_stz/02_meu_primeiro_apoio_solar.stz"), pickBrunoA);
-  fs.writeFileSync(path.join(networkDir, "celular-bruno/pacotes_stz/03_minha_remocao_de_apoio.stz"), pickBrunoRetira);
+  fs.writeFileSync(path.join(networkDir, "celular-bruno/pacotes_stze/01_proposta_solar_recebida.stze"), propAPacket);
+  fs.writeFileSync(path.join(networkDir, "celular-bruno/pacotes_stze/02_meu_primeiro_apoio_solar.stze"), pickBrunoA);
+  fs.writeFileSync(path.join(networkDir, "celular-bruno/pacotes_stze/03_minha_remocao_de_apoio.stze"), pickBrunoRetira);
 
   // No Celular do Eduardo (armazenado offline no elevador):
-  fs.writeFileSync(path.join(networkDir, "celular-eduardo/pacotes_stz/01_proposta_baterias_recebida.stz"), propBPacket);
-  fs.writeFileSync(path.join(networkDir, "celular-eduardo/pacotes_stz/02_meu_apoio_retido_offline.stz"), pickEduardoOffline);
+  fs.writeFileSync(path.join(networkDir, "celular-eduardo/pacotes_stze/01_proposta_baterias_recebida.stze"), propBPacket);
+  fs.writeFileSync(path.join(networkDir, "celular-eduardo/pacotes_stze/02_meu_apoio_retido_offline.stze"), pickEduardoOffline);
 
   // Na VPS São Paulo (todos os pacotes públicos consolidados):
   const vpsSPPackets = [propAPacket, propBPacket, pickAna, pickCarlos, pickBrunoA, pickBrunoRetira, pickEduardoOffline];
   const fileNames = [
-    "01_proposta_solar_ana.stz",
-    "02_proposta_baterias_carlos.stz",
-    "03_apoio_ana_solar.stz",
-    "04_apoio_carlos_baterias.stz",
-    "05_apoio_antigo_bruno_solar.stz",
-    "06_remocao_apoio_bruno.stz",
-    "07_apoio_eduardo_sincronizado.stz",
+    "01_proposta_solar_ana.stze",
+    "02_proposta_baterias_carlos.stze",
+    "03_apoio_ana_solar.stze",
+    "04_apoio_carlos_baterias.stze",
+    "05_apoio_antigo_bruno_solar.stze",
+    "06_remocao_apoio_bruno.stze",
+    "07_apoio_eduardo_sincronizado.stze",
   ];
 
   for (let i = 0; i < vpsSPPackets.length; i++) {
-    fs.writeFileSync(path.join(networkDir, "vps-sao-paulo/pacotes_stz", fileNames[i]), vpsSPPackets[i]);
-    fs.writeFileSync(path.join(networkDir, "vps-rio-de-janeiro/pacotes_stz", fileNames[i]), vpsSPPackets[i]);
+    fs.writeFileSync(path.join(networkDir, "vps-sao-paulo/pacotes_stze", fileNames[i]), vpsSPPackets[i]);
+    fs.writeFileSync(path.join(networkDir, "vps-rio-de-janeiro/pacotes_stze", fileNames[i]), vpsSPPackets[i]);
   }
 
   // =========================================================================
@@ -227,7 +227,7 @@ async function createLocalNetworkEnvironment() {
   const vpsState = {
     nome_servidor: "VPS São Paulo (Relay Neutro)",
     status_conexao: "ONLINE",
-    total_pacotes_stz_armazenados: vpsSPPackets.length,
+    total_pacotes_stze_armazenados: vpsSPPackets.length,
     placar_apoios_propostas: {
       "Proposta A (Usina Solar)": engineSP.getTally()[propADocIdHex] ?? 0,
       "Proposta B (Baterias Backup)": engineSP.getTally()[propBDocIdHex] ?? 0,
@@ -259,7 +259,7 @@ async function createLocalNetworkEnvironment() {
         acao: "APOIOU_PROPOSTA_A",
         alvo_hash_hex: propADocIdHex,
         doc_id_hex: bytesToHex(brunoFootprint[0].docId),
-        arquivo_correspondente: "pacotes_stz/02_meu_primeiro_apoio_solar.stz",
+        arquivo_correspondente: "pacotes_stze/02_meu_primeiro_apoio_solar.stze",
         explicacao: "Bruno assinou apoio para a Proposta A.",
       },
       {
@@ -267,7 +267,7 @@ async function createLocalNetworkEnvironment() {
         acao: "REMOÇÃO_DE_APOIO",
         alvo_hash_hex: "0",
         doc_id_hex: bytesToHex(brunoFootprint[1].docId),
-        arquivo_correspondente: "pacotes_stz/03_minha_remocao_de_apoio.stz",
+        arquivo_correspondente: "pacotes_stze/03_minha_remocao_de_apoio.stze",
         explicacao: "Bruno retirou o apoio. O placar ativo foi decrementado, mas este pacote comprova a mudança de posição sem apagar o passado.",
       },
     ],
@@ -279,7 +279,7 @@ async function createLocalNetworkEnvironment() {
   );
 
   // =========================================================================
-  // 5. GERAÇÃO DA ÁRVORE FRACTAL COM OS DOCUMENTOS REAIS DOS TESTES (.stz)
+  // 5. GERAÇÃO DA ÁRVORE FRACTAL COM OS DOCUMENTOS REAIS DOS TESTES (.stze)
   // =========================================================================
   function makeHexDump(bytes: Uint8Array): string {
     const preview = bytes.subarray(0, 64);
@@ -307,7 +307,7 @@ async function createLocalNetworkEnvironment() {
         subTitle: "Gênese do Consenso Comunitário",
         color: "blue",
         count: 0,
-        fileName: "inicio_rede.stz",
+        fileName: "inicio_rede.stze",
         filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/estado_consenso.json",
         docIdHex: "genesis-0000000000000000000000000000000000000000000000000000000000000000",
         sizeBytes: 0,
@@ -326,8 +326,8 @@ async function createLocalNetworkEnvironment() {
         subTitle: "feat(solar): Usina Solar Central no Telhado",
         color: "purple",
         count: 1, // 1 apoio ativo
-        fileName: "01_proposta_solar_ana.stz",
-        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/01_proposta_solar_ana.stz",
+        fileName: "01_proposta_solar_ana.stze",
+        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/01_proposta_solar_ana.stze",
         sizeBytes: propAPacket.length,
         docTypeName: "PROPOSTA",
         seq: 1,
@@ -344,8 +344,8 @@ async function createLocalNetworkEnvironment() {
         subTitle: "feat(apoio): Ana apoia Proposta Solar (seq #2)",
         color: "orange",
         count: 1,
-        fileName: "03_apoio_ana_solar.stz",
-        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/03_apoio_ana_solar.stz",
+        fileName: "03_apoio_ana_solar.stze",
+        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/03_apoio_ana_solar.stze",
         sizeBytes: pickAna.length,
         docTypeName: "PICK / APOIO",
         seq: 2,
@@ -362,8 +362,8 @@ async function createLocalNetworkEnvironment() {
         subTitle: "feat(apoio): Bruno apoiou Solar (seq #1)",
         color: "orange",
         count: 1,
-        fileName: "05_apoio_antigo_bruno_solar.stz",
-        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/05_apoio_antigo_bruno_solar.stz",
+        fileName: "05_apoio_antigo_bruno_solar.stze",
+        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/05_apoio_antigo_bruno_solar.stze",
         sizeBytes: pickBrunoA.length,
         docTypeName: "PICK / APOIO",
         seq: 1,
@@ -380,8 +380,8 @@ async function createLocalNetworkEnvironment() {
         subTitle: "feat(remocao): Bruno retira apoio (alvo: 0, seq #2)",
         color: "green",
         count: 0,
-        fileName: "06_remocao_apoio_bruno.stz",
-        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/06_remocao_apoio_bruno.stz",
+        fileName: "06_remocao_apoio_bruno.stze",
+        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/06_remocao_apoio_bruno.stze",
         sizeBytes: pickBrunoRetira.length,
         docTypeName: "PICK / REMOÇÃO",
         seq: 2,
@@ -399,8 +399,8 @@ async function createLocalNetworkEnvironment() {
         subTitle: "feat(baterias): Backup & Iluminação LED",
         color: "purple",
         count: 2, // 2 apoios ativos
-        fileName: "02_proposta_baterias_carlos.stz",
-        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/02_proposta_baterias_carlos.stz",
+        fileName: "02_proposta_baterias_carlos.stze",
+        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/02_proposta_baterias_carlos.stze",
         sizeBytes: propBPacket.length,
         docTypeName: "PROPOSTA",
         seq: 1,
@@ -417,8 +417,8 @@ async function createLocalNetworkEnvironment() {
         subTitle: "feat(apoio): Carlos apoia Baterias (seq #2)",
         color: "orange",
         count: 1,
-        fileName: "04_apoio_carlos_baterias.stz",
-        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/04_apoio_carlos_baterias.stz",
+        fileName: "04_apoio_carlos_baterias.stze",
+        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/04_apoio_carlos_baterias.stze",
         sizeBytes: pickCarlos.length,
         docTypeName: "PICK / APOIO",
         seq: 2,
@@ -435,8 +435,8 @@ async function createLocalNetworkEnvironment() {
         subTitle: "feat(offline): Apoio do elevador sincronizado (seq #1)",
         color: "orange",
         count: 1,
-        fileName: "07_apoio_eduardo_sincronizado.stz",
-        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/07_apoio_eduardo_sincronizado.stz",
+        fileName: "07_apoio_eduardo_sincronizado.stze",
+        filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/07_apoio_eduardo_sincronizado.stze",
         sizeBytes: pickEduardoOffline.length,
         docTypeName: "PICK / APOIO (OFFLINE)",
         seq: 1,
@@ -476,20 +476,20 @@ Você pode abrir e inspecionar cada pasta e arquivo diretamente pelo editor ou t
 - ☁️ \`vps-sao-paulo/\`: Servidor central de revezamento.
   - \`identidade.json\`: Chaves criptográficas do servidor.
   - \`estado_consenso.json\`: Placar consolidado e Raiz Merkle de 32 bytes.
-  - \`pacotes_stz/\`: Todos os pacotes binários reais (.stz) recebidos da rede.
+  - \`pacotes_stze/\`: Todos os pacotes binários reais (.stze) recebidos da rede.
 - ☁️ \`vps-rio-de-janeiro/\`: Servidor secundário espelhado.
 - 📱 \`celular-ana/\`: Aparelho da criadora da Proposta A (Solar).
 - 📱 \`celular-carlos/\`: Aparelho do criador da Proposta B (Baterias).
 - 📱 \`celular-bruno/\`: Aparelho do morador que apoiou e depois retirou o apoio.
   - \`meu_footprint.json\`: Histórico sequencial auditável das decisões do Bruno.
 - 📱 \`celular-eduardo/\`: Aparelho que esteve offline no elevador.
-  - \`02_meu_apoio_retido_offline.stz\`: Pacote binário retido localmente no 4G instável.
+  - \`02_meu_apoio_retido_offline.stze\`: Pacote binário retido localmente no 4G instável.
 
-## Como Inspecionar Qualquer Pacote .stz:
+## Como Inspecionar Qualquer Pacote .stze:
 
 Execute no terminal:
 \`\`\`bash
-pnpm inspecionar rede-local/celular-bruno/pacotes_stz/03_minha_remocao_de_apoio.stz
+pnpm inspecionar rede-local/celular-bruno/pacotes_stze/03_minha_remocao_de_apoio.stze
 \`\`\`
 `;
   fs.writeFileSync(path.join(networkDir, "README.md"), readmeContent, "utf-8");
@@ -498,14 +498,14 @@ pnpm inspecionar rede-local/celular-bruno/pacotes_stz/03_minha_remocao_de_apoio.
   console.log(`Todos os arquivos foram salvos na pasta isolada (ignorada pelo git):`);
   console.log(`  📂 \x1b[36mpackages/wire/test-output/rede-local/\x1b[0m\n`);
   console.log(`Pastas criadas:`);
-  console.log(`  📂 packages/wire/test-output/rede-local/vps-sao-paulo/       (7 pacotes .stz + estado_consenso.json)`);
-  console.log(`  📂 packages/wire/test-output/rede-local/vps-rio-de-janeiro/   (7 pacotes .stz + estado_consenso.json)`);
-  console.log(`  📂 packages/wire/test-output/rede-local/celular-ana/          (chave de Ana + proposta solar .stz)`);
-  console.log(`  📂 packages/wire/test-output/rede-local/celular-carlos/       (chave de Carlos + proposta baterias .stz)`);
+  console.log(`  📂 packages/wire/test-output/rede-local/vps-sao-paulo/       (7 pacotes .stze + estado_consenso.json)`);
+  console.log(`  📂 packages/wire/test-output/rede-local/vps-rio-de-janeiro/   (7 pacotes .stze + estado_consenso.json)`);
+  console.log(`  📂 packages/wire/test-output/rede-local/celular-ana/          (chave de Ana + proposta solar .stze)`);
+  console.log(`  📂 packages/wire/test-output/rede-local/celular-carlos/       (chave de Carlos + proposta baterias .stze)`);
   console.log(`  📂 packages/wire/test-output/rede-local/celular-bruno/        (meu_footprint.json + pacotes de apoio e remoção)`);
   console.log(`  📂 packages/wire/test-output/rede-local/celular-eduardo/      (pacote retido offline no elevador)`);
-  console.log(`\nPara inspecionar qualquer pacote binário .stz:`);
-  console.log(`  \x1b[1m\x1b[33mpnpm inspecionar packages/wire/test-output/rede-local/celular-bruno/pacotes_stz/03_minha_remocao_de_apoio.stz\x1b[0m\n`);
+  console.log(`\nPara inspecionar qualquer pacote binário .stze:`);
+  console.log(`  \x1b[1m\x1b[33mpnpm inspecionar packages/wire/test-output/rede-local/celular-bruno/pacotes_stze/03_minha_remocao_de_apoio.stze\x1b[0m\n`);
 }
 
 createLocalNetworkEnvironment().catch((err) => {

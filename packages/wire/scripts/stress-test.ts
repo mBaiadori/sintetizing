@@ -163,7 +163,7 @@ async function runStressTest() {
 
   const tSignDuration = performance.now() - tSignStart;
   const signsPerSec = (TOTAL_CITIZENS / (tSignDuration / 1000)).toFixed(0);
-  console.log(`  ⚡ ${TOTAL_CITIZENS} pacotes binários (.stz) gerados e assinados em ${tSignDuration.toFixed(1)}ms (${signsPerSec} assinaturas/s)`);
+  console.log(`  ⚡ ${TOTAL_CITIZENS} pacotes binários (.stze) gerados e assinados em ${tSignDuration.toFixed(1)}ms (${signsPerSec} assinaturas/s)`);
 
   // 5. INGESTÃO DE ALTA CARGA NO MOTOR DE ESTADO (SUBJECT STATE ENGINE)
   console.log(`\n${c.bold}${c.yellow}▶ ETAPA 5: INGESTÃO NO MOTOR DE ESTADO E PROCESSAMENTO DE PLACAR${c.reset}`);
@@ -269,7 +269,7 @@ async function runStressTest() {
   console.log(`${c.bold}${c.green}╠═════════════════════════════════════════════════════════════════════════════════════════════╣${c.reset}`);
   console.log(`${c.bold}${c.green}║${c.reset}  • Cidadãos Simultâneos:      ${c.bold}${TOTAL_CITIZENS} identidades móveis soberanas${c.reset}                         ${c.bold}${c.green}║${c.reset}`);
   console.log(`${c.bold}${c.green}║${c.reset}  • Servidores no Cluster:     ${c.bold}4 nós VPS (SP, RJ, Brasília, Recife)${c.reset}                          ${c.bold}${c.green}║${c.reset}`);
-  console.log(`${c.bold}${c.green}║${c.reset}  • Total de Pacotes na Rede:  ${c.bold}${primaryVps.getStoredPacketCount()} pacotes binários .stz${c.reset}                                 ${c.bold}${c.green}║${c.reset}`);
+  console.log(`${c.bold}${c.green}║${c.reset}  • Total de Pacotes na Rede:  ${c.bold}${primaryVps.getStoredPacketCount()} pacotes binários .stze${c.reset}                                 ${c.bold}${c.green}║${c.reset}`);
   console.log(`${c.bold}${c.green}║${c.reset}  • Volume Total Trafegado:    ${c.bold}${c.cyan}${(totalWireBytes / 1024).toFixed(1)} KB${c.reset} (Média de ${avgPacketSize} bytes/pacote)                         ${c.bold}${c.green}║${c.reset}`);
   console.log(`${c.bold}${c.green}║${c.reset}  • Vazão de Assinatura Ed255: ${c.bold}${c.yellow}${signsPerSec} assinaturas/segundo${c.reset}                                       ${c.bold}${c.green}║${c.reset}`);
   console.log(`${c.bold}${c.green}║${c.reset}  • Vazão de Ingestão P2P:     ${c.bold}${c.yellow}${ingestThroughput} pacotes/segundo${c.reset}                                          ${c.bold}${c.green}║${c.reset}`);

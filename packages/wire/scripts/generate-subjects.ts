@@ -113,7 +113,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
   );
   const docIdSolarBase = calculateDocId(propSolarBase);
   await engineEnergia.ingestBinaryPacket(propSolarBase);
-  fs.writeFileSync(path.join(subject1Dir, "01_prop_solar_base.stz"), propSolarBase);
+  fs.writeFileSync(path.join(subject1Dir, "01_prop_solar_base.stze"), propSolarBase);
 
   // 1.2 Proposta Base Alternativa: Baterias & Iluminação LED
   carlos.seq++;
@@ -133,7 +133,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
   );
   const docIdBateriasBase = calculateDocId(propBateriasBase);
   await engineEnergia.ingestBinaryPacket(propBateriasBase);
-  fs.writeFileSync(path.join(subject1Dir, "02_prop_baterias_base.stz"), propBateriasBase);
+  fs.writeFileSync(path.join(subject1Dir, "02_prop_baterias_base.stze"), propBateriasBase);
 
   // 1.3 Emenda à Proposta Solar: 80 Placas nos Blocos A e B
   daniela.seq++;
@@ -153,7 +153,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
   );
   const docIdSolarEmenda = calculateDocId(propSolarEmenda);
   await engineEnergia.ingestBinaryPacket(propSolarEmenda);
-  fs.writeFileSync(path.join(subject1Dir, "03_prop_solar_emenda.stz"), propSolarEmenda);
+  fs.writeFileSync(path.join(subject1Dir, "03_prop_solar_emenda.stze"), propSolarEmenda);
 
   // 1.4 Síntese Unificada: Solar Híbrida com Bateria
   ana.seq++;
@@ -175,7 +175,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
   );
   const docIdSinteseEnergia = calculateDocId(propSinteseEnergia);
   await engineEnergia.ingestBinaryPacket(propSinteseEnergia);
-  fs.writeFileSync(path.join(subject1Dir, "04_prop_sintese_hibrida.stz"), propSinteseEnergia);
+  fs.writeFileSync(path.join(subject1Dir, "04_prop_sintese_hibrida.stze"), propSinteseEnergia);
 
   // =========================================================================
   // EMISSÃO DE CENTENAS DE PICKS (APOIOS CRIPTOGRÁFICOS)
@@ -259,7 +259,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
   );
   const docIdCiclovia = calculateDocId(propCicloviaBase);
   await engineMobilidade.ingestBinaryPacket(propCicloviaBase);
-  fs.writeFileSync(path.join(subject2Dir, "01_prop_ciclovia.stz"), propCicloviaBase);
+  fs.writeFileSync(path.join(subject2Dir, "01_prop_ciclovia.stze"), propCicloviaBase);
 
   const propCamerasBase = await packDocument(
     {
@@ -276,7 +276,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
   );
   const docIdCameras = calculateDocId(propCamerasBase);
   await engineMobilidade.ingestBinaryPacket(propCamerasBase);
-  fs.writeFileSync(path.join(subject2Dir, "02_prop_cameras.stz"), propCamerasBase);
+  fs.writeFileSync(path.join(subject2Dir, "02_prop_cameras.stze"), propCamerasBase);
 
   // 150 cidadãos votam na Mobilidade
   for (let i = 0; i < 150; i++) {
@@ -393,8 +393,8 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
           subTitle: "Ponto inicial de convergência deste assunto",
           color: "blue",
           count: 0,
-          fileName: "inicio_genese.stz",
-          filePathRel: `packages/wire/test-output/assuntos/${id}/inicio.stz`,
+          fileName: "inicio_genese.stze",
+          filePathRel: `packages/wire/test-output/assuntos/${id}/inicio.stze`,
           sizeBytes: 0,
           docTypeName: "GÊNESE",
           seq: 0,
@@ -427,7 +427,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
         color: "purple",
         docId: docIdSolarBase,
         rawBytes: propSolarBase,
-        fileName: "01_prop_solar_base.stz",
+        fileName: "01_prop_solar_base.stze",
         author: ana,
         seq: 1,
       },
@@ -438,7 +438,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
         color: "purple",
         docId: docIdBateriasBase,
         rawBytes: propBateriasBase,
-        fileName: "02_prop_baterias_base.stz",
+        fileName: "02_prop_baterias_base.stze",
         author: carlos,
         seq: 1,
       },
@@ -449,7 +449,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
         color: "orange",
         docId: docIdSolarEmenda,
         rawBytes: propSolarEmenda,
-        fileName: "03_prop_solar_emenda.stz",
+        fileName: "03_prop_solar_emenda.stze",
         author: daniela,
         seq: 1,
       },
@@ -460,7 +460,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
         color: "green",
         docId: docIdSinteseEnergia,
         rawBytes: propSinteseEnergia,
-        fileName: "04_prop_sintese_hibrida.stz",
+        fileName: "04_prop_sintese_hibrida.stze",
         author: ana,
         seq: 1,
       },
@@ -489,7 +489,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
         color: "purple",
         docId: docIdCiclovia,
         rawBytes: propCicloviaBase,
-        fileName: "01_prop_ciclovia.stz",
+        fileName: "01_prop_ciclovia.stze",
         author: bruno,
         seq: 1,
       },
@@ -500,7 +500,7 @@ export async function buildLargeScaleSubjectsData(TOTAL_USERS = 350) {
         color: "orange",
         docId: docIdCameras,
         rawBytes: propCamerasBase,
-        fileName: "02_prop_cameras.stz",
+        fileName: "02_prop_cameras.stze",
         author: carlos,
         seq: 1,
       },

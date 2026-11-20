@@ -29,7 +29,7 @@ if (!fs.existsSync(testOutputDir)) {
   process.exit(1);
 }
 
-interface StzFileInfo {
+interface StzeFileInfo {
   fileName: string;
   sizeBytes: number;
   docTypeName: string;
@@ -42,10 +42,10 @@ interface NodeFolder {
   nodeName: string;
   nodeType: "VPS" | "CELULAR";
   address: string;
-  files: StzFileInfo[];
+  files: StzeFileInfo[];
 }
 
-async function parseStz(filePath: string): Promise<StzFileInfo> {
+async function parseStze(filePath: string): Promise<StzeFileInfo> {
   const bytes = fs.readFileSync(filePath);
   const docIdHex = bytesToHex(calculateDocId(bytes)).slice(0, 8);
   const fileName = path.basename(filePath);
@@ -92,14 +92,14 @@ async function parseStz(filePath: string): Promise<StzFileInfo> {
       docTypeName: "ARQUIVO_BINÁRIO",
       seq: 0,
       docIdHex,
-      summary: "Binário .stz não parseado",
+      summary: "Binário .stze não parseado",
     };
   }
 }
 
 async function renderTree() {
   console.log(`\n${c.bold}${c.cyan}╔═══════════════════════════════════════════════════════════════════════════════════════════╗${c.reset}`);
-  console.log(`${c.bold}${c.cyan}║  GERENCIADOR DE ARQUIVOS BINÁRIOS (.stz) - MALHA SINTETIZE LOCAL                          ║${c.reset}`);
+  console.log(`${c.bold}${c.cyan}║  GERENCIADOR DE ARQUIVOS BINÁRIOS (.stze) - MALHA SINTETIZE LOCAL                          ║${c.reset}`);
   console.log(`${c.bold}${c.cyan}╚═══════════════════════════════════════════════════════════════════════════════════════════╝${c.reset}\n`);
 
   console.log(`📂 ${c.bold}packages/wire/test-output/rede-local/${c.reset}`);
@@ -132,38 +132,38 @@ async function renderTree() {
 
     console.log(`${nodePrefix}${icon} ${c.bold}${nodeDir}${c.reset} ${typeLabel} ${c.dim}(${address})${c.reset}`);
 
-    const packetsDir = path.join(testOutputDir, nodeDir, "pacotes_stz");
+    const packetsDir = path.join(testOutputDir, nodeDir, "pacotes_stze");
     if (fs.existsSync(packetsDir)) {
-      const files = fs.readdirSync(packetsDir).filter((f) => f.endsWith(".stz")).sort();
+      const files = fs.readdirSync(packetsDir).filter((f) => f.endsWith(".stze")).sort();
 
       for (let j = 0; j < files.length; j++) {
         const file = files[j];
         const isLastFile = j === files.length - 1;
         const filePrefix = isLastFile ? "└── " : "├── ";
-        const stzInfo = await parseStz(path.join(packetsDir, file));
+        const stzeInfo = await parseStze(path.join(packetsDir, file));
 
         const typeBadge =
-          stzInfo.docTypeName === "PROPOSTA"
+          stzeInfo.docTypeName === "PROPOSTA"
             ? `${c.magenta}[PROPOSTA]${c.reset}`
-            : stzInfo.summary.includes("REMOÇÃO")
+            : stzeInfo.summary.includes("REMOÇÃO")
             ? `${c.yellow}[DESAPOIO]${c.reset}`
             : `${c.green}[APOIO]${c.reset}`;
 
-        const sizeStr = `${c.cyan}${String(stzInfo.sizeBytes).padStart(3)}B${c.reset}`;
-        const seqStr = `${c.dim}seq #${stzInfo.seq}${c.reset}`;
-        const hashStr = `${c.dim}docId: ${stzInfo.docIdHex}${c.reset}`;
+        const sizeStr = `${c.cyan}${String(stzeInfo.sizeBytes).padStart(3)}B${c.reset}`;
+        const seqStr = `${c.dim}seq #${stzeInfo.seq}${c.reset}`;
+        const hashStr = `${c.dim}docId: ${stzeInfo.docIdHex}${c.reset}`;
 
         console.log(
-          `${childPrefix}${filePrefix}📄 ${c.bold}${stzInfo.fileName.padEnd(35)}${c.reset} ${sizeStr} ${typeBadge} ${seqStr} | ${c.dim}"${stzInfo.summary}"${c.reset}`
+          `${childPrefix}${filePrefix}📄 ${c.bold}${stzeInfo.fileName.padEnd(35)}${c.reset} ${sizeStr} ${typeBadge} ${seqStr} | ${c.dim}"${stzeInfo.summary}"${c.reset}`
         );
       }
     } else {
-      console.log(`${childPrefix}└── ${c.dim}(sem arquivos .stz)${c.reset}`);
+      console.log(`${childPrefix}└── ${c.dim}(sem arquivos .stze)${c.reset}`);
     }
   }
 
   console.log(`\n${c.dim}Para abrir e inspecionar os bytes internos de qualquer um deles:${c.reset}`);
-  console.log(`${c.yellow}pnpm inspecionar rede-local/<pasta-da-maquina>/pacotes_stz/<arquivo.stz>${c.reset}\n`);
+  console.log(`${c.yellow}pnpm inspecionar rede-local/<pasta-da-maquina>/pacotes_stze/<arquivo.stze>${c.reset}\n`);
 }
 
 renderTree().catch((err) => {

@@ -33,7 +33,7 @@ function buildSignedPayload(
 }
 
 /**
- * Empacota e assina um documento no formato binário (.stz) com cabeçalho de 102 bytes e fita TLV.
+ * Empacota e assina um documento no formato binário (.stze) com cabeçalho de 102 bytes e fita TLV.
  */
 export async function packDocument(
   doc: UnsignedBinaryDocument,
@@ -82,7 +82,7 @@ export async function packDocument(
 }
 
 /**
- * Desempacota e valida na porta de entrada um pacote binário (.stz).
+ * Desempacota e valida na porta de entrada um pacote binário (.stze).
  * Verifica cabeçalho de 102 bytes, autenticidade da assinatura Ed25519 e limites da fita TLV.
  */
 export async function unpackAndVerifyDocument(bytes: Uint8Array): Promise<BinaryDocument> {

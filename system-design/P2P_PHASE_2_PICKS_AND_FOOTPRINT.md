@@ -1,8 +1,8 @@
 # Fase 2: Motor de Estado, Pulo de Picks (`A -> B -> A`) e Escada de Federação
 
 **Arquivo:** `system-design/P2P_PHASE_2_PICKS_AND_FOOTPRINT.md`  
-**Status:** Planejado (Executar após a Fase 1)  
-**Onde será implementado:** `packages/core/src/state/` e `packages/core/test/state.spec.ts`
+**Status:** Implementado  
+**Onde foi implementado:** `packages/wire/src/state/` e `packages/wire/test/state.spec.ts`
 
 ---
 
@@ -47,17 +47,17 @@ Quando um pacote `PICK` (`docType = 2`) chega para um determinado Assunto:
 
 ---
 
-## 3. O que será criado quando executarmos a Fase 2
+## 3. O que foi criado quando executamos a Fase 2
 
-1. **`packages/core/src/state/merkle.ts`**
+1. **`packages/wire/src/state/merkle.ts`**
    * Calculador leve de Raiz Merkle (32 bytes) e Prova Merkle (para qualquer morador provar que seu voto está dentro do resumo da comunidade).
-2. **`packages/core/src/state/subject-engine.ts`**
+2. **`packages/wire/src/state/subject-engine.ts`**
    * Classe `SubjectStateEngine`:
      * `ingestBinaryPacket(bytes)`
      * `getTally()` (retorna o placar exato de cada proposta em tempo real)
      * `getPersonFootprint(authorPub)` (retorna a fita `seq: 1, 2, 3...` do cidadão)
      * `exportCommunityRollupPick()` (gera o pacote resumido da comunidade para subir à Sociedade/Federação).
-3. **`packages/core/test/state.spec.ts` (Bateria de Testes no Terminal)**
+3. **`packages/wire/test/state.spec.ts` (Bateria de Testes no Terminal)**
    * **Teste 1 (Vai e Volta de Voto `A -> B -> A`):** João vota em `A (seq 1)`, pula para `B (seq 2)` e volta para `A (seq 3)`. Comprova que o placar de `A` é `1`, `B` é `0`, e o Footprint do João mostra os 3 passos.
    * **Teste 2 (Ataque de Replay):** Tenta injetar novamente o pacote `seq 2 (B)` do João após ele já estar no `seq 3 (A)` e comprova que o motor bloqueia.
    * **Teste 3 (Emenda de Lei e Síntese):** Cria uma Lei com 5 artigos na Comunidade A, manda para a Sociedade, a Comunidade B altera só o Artigo 3, a IA sintetiza e devolve.

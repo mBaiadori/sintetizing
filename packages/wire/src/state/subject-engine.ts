@@ -55,7 +55,7 @@ export class SubjectStateEngine {
   private readonly tally = new Map<string, number>();
 
   /**
-   * Ingere qualquer pacote binário validado (.stz).
+   * Ingere qualquer pacote binário validado (.stze).
    * Desempacota, checa assinatura Ed25519, previne ataques de replay
    * e atualiza o placar e footprint atomicamente.
    */

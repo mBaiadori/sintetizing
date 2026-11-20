@@ -28,12 +28,12 @@ const c = {
 const targetFile = process.argv[2];
 
 if (!targetFile) {
-  console.log(`\n\x1b[31mErro: Nenhum arquivo .stz informado.\x1b[0m`);
+  console.log(`\n\x1b[31mErro: Nenhum arquivo .stze informado.\x1b[0m`);
   console.log(`Uso correto:`);
-  console.log(`  pnpm inspecionar <caminho-do-arquivo.stz>\n`);
+  console.log(`  pnpm inspecionar <caminho-do-arquivo.stze>\n`);
   console.log(`Exemplos:`);
-  console.log(`  pnpm inspecionar rede-local/celular-ana/pacotes_stz/01_minha_proposta_solar.stz`);
-  console.log(`  pnpm inspecionar rede-local/celular-bruno/pacotes_stz/03_minha_remocao_de_apoio.stz\n`);
+  console.log(`  pnpm inspecionar rede-local/celular-ana/pacotes_stze/01_minha_proposta_solar.stze`);
+  console.log(`  pnpm inspecionar rede-local/celular-bruno/pacotes_stze/03_minha_remocao_de_apoio.stze\n`);
   process.exit(1);
 }
 
@@ -81,7 +81,7 @@ async function inspect() {
       : "EXECUTION (4)";
 
   console.log(`\n${c.bold}${c.cyan}╔═══════════════════════════════════════════════════════════════════════════════════╗${c.reset}`);
-  console.log(`${c.bold}${c.cyan}║  SINTETIZE PROTOCOL - INSPEÇÃO FORENSE DE PACOTE BINÁRIO (.stz)                   ║${c.reset}`);
+  console.log(`${c.bold}${c.cyan}║  SINTETIZE PROTOCOL - INSPEÇÃO FORENSE DE PACOTE BINÁRIO (.stze)                   ║${c.reset}`);
   console.log(`${c.bold}${c.cyan}╚═══════════════════════════════════════════════════════════════════════════════════╝${c.reset}\n`);
 
   console.log(`📁 Arquivo Físico no Disco:`);

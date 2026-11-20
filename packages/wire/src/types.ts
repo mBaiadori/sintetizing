@@ -1,5 +1,5 @@
 /**
- * Tipos e constantes do protocolo binário posicional e fita TLV do Sintetize (.stz).
+ * Tipos e constantes do protocolo binário posicional e fita TLV do Sintetize (.stze).
  */
 
 export const WIRE_CONSTANTS = {

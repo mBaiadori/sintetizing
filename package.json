@@ -5,8 +5,8 @@
   "description": "Protocol Fractal of Synthesis and Dynamic Consensus ",
   "packageManager": "pnpm@12.3.4",
   "scripts": {
-    "test": "pnpm --filter @sintetizing/core test",
-    "test:coverage": "pnpm --filter @sintetizing/core test:coverage",
+    "test": "pnpm --filter @sintetizing/wire test",
+    "test:coverage": "pnpm --filter @sintetizing/wire test:coverage",
     "test:wire": "pnpm --filter @sintetizing/wire test",
     "test:wire:coverage": "pnpm --filter @sintetizing/wire test:coverage",
     "simular": "pnpm --filter @sintetizing/wire simular",

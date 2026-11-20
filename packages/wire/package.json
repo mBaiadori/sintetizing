@@ -22,7 +22,7 @@
     "painel": "npx tsx scripts/serve-dashboard.ts",
     "rede:criar": "npx tsx scripts/build-local-network.ts",
     "inspecionar": "npx tsx scripts/inspect-packet.ts",
-    "arvore": "npx tsx scripts/tree-stz.ts"
+    "arvore": "npx tsx scripts/tree-stze.ts"
   },
   "dependencies": {
     "@noble/ed25519": "^2.2.3",

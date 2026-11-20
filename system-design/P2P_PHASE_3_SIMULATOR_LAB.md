@@ -1,8 +1,8 @@
 # Fase 3: Laboratório de Simulação P2P e Teste de Desastre Duplo
 
 **Arquivo:** `system-design/P2P_PHASE_3_SIMULATOR_LAB.md`  
-**Status:** Planejado (Executar após a Fase 2)  
-**Onde será implementado:** `packages/core/src/p2p/` e `packages/core/test/p2p-disaster-lab.spec.ts`
+**Status:** Implementado  
+**Onde foi implementado:** `packages/wire/src/p2p/` e `packages/wire/test/p2p-disaster-lab.spec.ts`
 
 ---
 
@@ -40,14 +40,14 @@ O protocolo inclui o documento especial `KEY_RECOVERY` (Recuperação Social M-d
 
 ---
 
-## 4. O que será criado quando executarmos a Fase 3
+## 4. O que foi criado quando executamos a Fase 3
 
-1. **`packages/core/src/p2p/node-peer.ts`**
+1. **`packages/wire/src/p2p/node-peer.ts`**
    * Representa um Nó completo (pode operar como `MOBILE_CITIZEN` ou `VPS_RELAY_AI`).
    * Possui fila de saída offline (`outbox`) para quando estiver desconectado e método `syncWith(otherNode)`.
-2. **`packages/core/src/p2p/social-recovery.ts`**
+2. **`packages/wire/src/p2p/social-recovery.ts`**
    * Validador do pacote de recuperação de chave com $M$ de $N$ assinaturas de vizinhos.
-3. **`packages/core/test/p2p-disaster-lab.spec.ts` (O Grande Teste no Terminal)**
+3. **`packages/wire/test/p2p-disaster-lab.spec.ts` (O Grande Teste no Terminal)**
    * **Cenário 1 — Queda de Internet no Meio do Envio:** Morador vota offline no elevador, tenta sincronizar, a conexão cai na metade, reconecta depois e comprova zero perda e zero voto duplicado.
    * **Cenário 2 — Desastre Total (VPS + Celular do João Destruídos):**
      1. Simula 200 moradores e 1 VPS. Todos votam e mudam de ideia 3 vezes.

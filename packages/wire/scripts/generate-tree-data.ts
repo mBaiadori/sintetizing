@@ -13,7 +13,7 @@ import {
 
 const wireDir = path.resolve(import.meta.dirname, "..");
 const testOutputDir = path.resolve(wireDir, "test-output");
-const packetsDir = path.resolve(testOutputDir, "rede-local/vps-sao-paulo/pacotes_stz");
+const packetsDir = path.resolve(testOutputDir, "rede-local/vps-sao-paulo/pacotes_stze");
 
 async function generateTreeFromRealTestFiles() {
   if (!fs.existsSync(packetsDir)) {
@@ -21,7 +21,7 @@ async function generateTreeFromRealTestFiles() {
     process.exit(1);
   }
 
-  const files = fs.readdirSync(packetsDir).filter((f) => f.endsWith(".stz")).sort();
+  const files = fs.readdirSync(packetsDir).filter((f) => f.endsWith(".stze")).sort();
   const parsedFiles: any[] = [];
 
   for (const fileName of files) {
@@ -83,7 +83,7 @@ async function generateTreeFromRealTestFiles() {
 
     parsedFiles.push({
       fileName,
-      filePathRel: `packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stz/${fileName}`,
+      filePathRel: `packages/wire/test-output/rede-local/vps-sao-paulo/pacotes_stze/${fileName}`,
       sizeBytes: rawBytes.length,
       docType: doc.docType,
       docTypeName,
@@ -122,7 +122,7 @@ async function generateTreeFromRealTestFiles() {
         subTitle: "Gênese do Consenso Comunitário",
         color: "blue",
         count: 0,
-        fileName: "inicio_rede.stz",
+        fileName: "inicio_rede.stze",
         filePathRel: "packages/wire/test-output/rede-local/vps-sao-paulo/estado_consenso.json",
         docIdHex: "genesis-0000000000000000000000000000000000000000000000000000000000000000",
         sizeBytes: 0,
@@ -211,7 +211,7 @@ async function generateTreeFromRealTestFiles() {
 
   const outputPath = path.join(testOutputDir, "arvore_grafo.json");
   fs.writeFileSync(outputPath, JSON.stringify(treeGraphData, null, 2), "utf-8");
-  console.log(`✔ Árvore fractal gerada com sucesso a partir dos 7 arquivos .stz reais em: ${outputPath}`);
+  console.log(`✔ Árvore fractal gerada com sucesso a partir dos 7 arquivos .stze reais em: ${outputPath}`);
 }
 
 generateTreeFromRealTestFiles().catch((err) => {

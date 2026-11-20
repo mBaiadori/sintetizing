@@ -1,9 +1,9 @@
 
-# Fase 1: Motor Binário Posicional & Fita TLV (`.stz`)
+# Fase 1: Motor Binário Posicional & Fita TLV (`.stze`)
 
 **Arquivo:** `system-design/P2P_PHASE_1_BINARY_TLV.md`
-**Status:** Pronto para Execução
-**Onde será implementado:** `packages/core/src/wire/` e `packages/core/test/wire.spec.ts`
+**Status:** Implementado
+**Onde foi implementado:** `packages/wire/src/` e `packages/wire/test/wire.spec.ts`
 
 ---
 
@@ -61,16 +61,16 @@ Cada bloco na fila tem o formato:
 
 ---
 
-## 5. O que será criado quando executarmos a Fase 1
+## 5. O que foi criado quando executamos a Fase 1
 
-1. **`packages/core/src/wire/tlv.ts`**
+1. **`packages/wire/src/tlv.ts`**
    * Funções `encodeTLVBlocks(blocks)` e `decodeTLVBlocks(bytes)` que leem e gravam a fila de blocos `[TAG][LENGTH][VALUE]` com proteção contra tamanhos corrompidos.
-2. **`packages/core/src/wire/binary-envelope.ts`**
+2. **`packages/wire/src/envelope.ts`**
    * Funções `packDocument(doc, privateKey)` e `unpackAndVerifyDocument(bytes)`:
      * Monta o cabeçalho de 102 bytes;
      * Assina com `Ed25519`;
      * Valida a assinatura e passa cada bloco TLV pelo validador de limites antes de aceitar.
-3. **`packages/core/test/wire.spec.ts` (Bateria de Testes no Terminal)**
+3. **`packages/wire/test/wire.spec.ts` (Bateria de Testes no Terminal)**
    * **Teste 1:** Empacota um `PICK` e comprova tamanho ultra-compacto (**106 a 110 bytes**).
    * **Teste 2:** Empacota uma Proposta contendo um texto de **2.000 caracteres** + **dois campos de Valor (`Tag 12`: "Material" e "Mão de Obra")** e comprova que ambos são lidos de volta na ordem exata sem colisão.
    * **Teste 3:** Altera 1 único byte no meio do pacote e comprova que o validador rejeita imediatamente na porta de entrada.
@@ -80,5 +80,5 @@ Cada bloco na fila tem o formato:
 
 ## 6. Critério de Pronto (Definition of Done)
 
-* Todos os testes de `packages/core/test/wire.spec.ts` passando em verde no comando `pnpm --filter @sintetizing/core test`.
+* Todos os testes de `packages/wire/test/wire.spec.ts` passando em verde no comando `pnpm --filter @sintetizing/wire test`.
 * Zero dependências pesadas adicionadas.

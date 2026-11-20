@@ -51,7 +51,7 @@ export class NodePeer {
   ) {}
 
   /**
-   * Ingere e armazena um pacote binário (.stz) validado no nó.
+   * Ingere e armazena um pacote binário (.stze) validado no nó.
    */
   public async ingestPacket(rawBytes: Uint8Array): Promise<boolean> {
     const docId = calculateDocId(rawBytes);

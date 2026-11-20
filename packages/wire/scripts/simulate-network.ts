@@ -212,12 +212,12 @@ async function runSimulation() {
   console.log(`  📜 ${c.bold}Proposta A${c.reset} publicada por ${ana.name}:`);
   console.log(`     - Título: "Usina Solar Central no Telhado"`);
   console.log(`     - DocID Hash: ${c.magenta}${propADocIdHex}${c.reset}`);
-  console.log(`     - Tamanho do pacote binário .stz: ${c.bold}${propAPacket.length} bytes${c.reset}`);
+  console.log(`     - Tamanho do pacote binário .stze: ${c.bold}${propAPacket.length} bytes${c.reset}`);
 
   console.log(`\n  📜 ${c.bold}Proposta B${c.reset} publicada por ${carlos.name}:`);
   console.log(`     - Título: "Baterias de Backup e Eficiência LED"`);
   console.log(`     - DocID Hash: ${c.magenta}${propBDocIdHex}${c.reset}`);
-  console.log(`     - Tamanho do pacote binário .stz: ${c.bold}${propBPacket.length} bytes${c.reset}`);
+  console.log(`     - Tamanho do pacote binário .stze: ${c.bold}${propBPacket.length} bytes${c.reset}`);
 
   // Ingestão de ambas as propostas na VPS Central
   await vpsServers[0].node.ingestPacket(propAPacket);
