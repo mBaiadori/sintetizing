@@ -3,6 +3,7 @@ node_modules
 .claude
 .env
 /graphify-out
+/archive
 
 # Test outputs and simulations
 packages/wire/test-output/
