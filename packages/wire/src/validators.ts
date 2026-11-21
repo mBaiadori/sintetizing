@@ -5,10 +5,17 @@ import {
   ConfigKind,
   ConfigKindValue,
   CosignatureEntry,
+  DeliberationMode,
+  DeliberationModeValue,
   DocType,
   DocUniverse,
   InvitePolicy,
   InvitePolicyValue,
+  StructuredLinkField,
+  StructuredSubtitleField,
+  StructuredTableField,
+  StructuredTextField,
+  StructuredValueField,
   Tag,
   TLVBlock,
 } from "./types.js";
@@ -18,6 +25,17 @@ const textDecoder = new TextDecoder("utf-8", { fatal: true });
 
 const ACTIVE_MEMBER_ROW_SIZE = 40; // 32B pubKey + 8B lastActivityMs
 const COSIGNATURE_ROW_SIZE = 96; // 32B pubKey + 64B signature
+const MAX_FIELD_ID_BYTES = 32;
+const MAX_FIELD_LABEL_BYTES = 120;
+const MAX_SUBTITLE_LABEL_BYTES = 160;
+const MAX_FIELD_TEXT_BYTES = 4000;
+const MAX_VALUE_UNIT_BYTES = 16;
+const MIN_LINK_URL_BYTES = 8;
+const MAX_LINK_URL_BYTES = 1024;
+const MAX_TABLE_COLS = 12;
+const MAX_TABLE_ROWS = 200;
+const MAX_TABLE_CELL_BYTES = 500;
+const MAX_TABLE_BLOCK_BYTES = 16384;
 
 const DOC_TYPE_NAMES: Readonly<Record<number, string>> = {
   [DocType.CONFIG]: "CONFIG",
@@ -180,6 +198,30 @@ export function validateBlock(block: TLVBlock): void {
 
     case Tag.CATEGORY_HASH:
       assertExactBytes(value, 32, "CATEGORY_HASH (23)");
+      break;
+
+    case Tag.DELIBERATION_MODE:
+      readDeliberationModeBlock(block);
+      break;
+
+    case Tag.FIELD_SUBTITLE:
+      readFieldSubtitleBlock(block);
+      break;
+
+    case Tag.FIELD_TEXT:
+      readFieldTextBlock(block);
+      break;
+
+    case Tag.FIELD_VALUE:
+      readFieldValueBlock(block);
+      break;
+
+    case Tag.FIELD_LINK:
+      readFieldLinkBlock(block);
+      break;
+
+    case Tag.FIELD_TABLE:
+      readFieldTableBlock(block);
       break;
 
     case Tag.CUTOFF_HASH:
@@ -535,6 +577,240 @@ export function createCosignaturesBlock(entries: readonly CosignatureEntry[]): T
   return { tag: Tag.COSIGNATURES, value };
 }
 
+function decodeStrictUtf8(bytes: Uint8Array, label: string): string {
+  try {
+    return textDecoder.decode(bytes);
+  } catch {
+    throw new Error(`Tag ${label} deve conter texto UTF-8 válido.`);
+  }
+}
+
+function encodeFieldHeader(
+  fieldId: string,
+  label: string,
+  minLabelBytes: number,
+  maxLabelBytes: number,
+  tagLabel: string
+): Uint8Array {
+  const idBytes = textEncoder.encode(fieldId.trim());
+  if (idBytes.length < 1 || idBytes.length > MAX_FIELD_ID_BYTES) {
+    throw new Error(
+      `Tag ${tagLabel} inválida: fieldId deve ter entre 1 e ${MAX_FIELD_ID_BYTES} bytes.`
+    );
+  }
+  const labelBytes = textEncoder.encode(label.trim());
+  if (labelBytes.length < minLabelBytes || labelBytes.length > maxLabelBytes) {
+    throw new Error(
+      `Tag ${tagLabel} inválida: rótulo deve ter entre ${minLabelBytes} e ${maxLabelBytes} bytes.`
+    );
+  }
+  const header = new Uint8Array(2 + idBytes.length + labelBytes.length);
+  header[0] = idBytes.length;
+  header.set(idBytes, 1);
+  header[1 + idBytes.length] = labelBytes.length;
+  header.set(labelBytes, 2 + idBytes.length);
+  return header;
+}
+
+function decodeFieldHeader(
+  value: Uint8Array,
+  tagLabel: string,
+  minLabelBytes: number,
+  maxLabelBytes: number
+): { fieldId: string; label: string; payloadOffset: number } {
+  if (value.length < 3) {
+    throw new Error(`Tag ${tagLabel} corrompida: cabeçalho de campo truncado.`);
+  }
+  const idLen = value[0]!;
+  if (idLen < 1 || idLen > MAX_FIELD_ID_BYTES || 2 + idLen > value.length) {
+    throw new Error(`Tag ${tagLabel} inválida: tamanho de fieldId (${idLen}) fora do intervalo.`);
+  }
+  const fieldId = decodeStrictUtf8(value.subarray(1, 1 + idLen), tagLabel);
+  const labelLenOffset = 1 + idLen;
+  const labelLen = value[labelLenOffset]!;
+  if (
+    labelLen < minLabelBytes ||
+    labelLen > maxLabelBytes ||
+    labelLenOffset + 1 + labelLen > value.length
+  ) {
+    throw new Error(
+      `Tag ${tagLabel} inválida: tamanho de rótulo (${labelLen}) fora de [${minLabelBytes}..${maxLabelBytes}].`
+    );
+  }
+  const labelStart = labelLenOffset + 1;
+  const label = decodeStrictUtf8(value.subarray(labelStart, labelStart + labelLen), tagLabel);
+  return {
+    fieldId,
+    label,
+    payloadOffset: labelStart + labelLen,
+  };
+}
+
+function assertValidLinkUrl(url: string): void {
+  if (!url.startsWith("https://") && !url.startsWith("http://")) {
+    throw new Error("URL do bloco FIELD_LINK deve iniciar com http:// ou https://.");
+  }
+  if (/[\s\x00-\x1f\x7f]/.test(url)) {
+    throw new Error("URL do bloco FIELD_LINK não pode conter espaços ou caracteres de controle.");
+  }
+}
+
+export function createDeliberationModeBlock(mode: DeliberationModeValue): TLVBlock {
+  if (mode !== DeliberationMode.QUORUM && mode !== DeliberationMode.OPEN) {
+    throw new Error(`DELIBERATION_MODE inválido: ${String(mode)}.`);
+  }
+  return { tag: Tag.DELIBERATION_MODE, value: new Uint8Array([mode]) };
+}
+
+export function createFieldSubtitleBlock(field: StructuredSubtitleField): TLVBlock {
+  const value = encodeFieldHeader(
+    field.fieldId,
+    field.label,
+    1,
+    MAX_SUBTITLE_LABEL_BYTES,
+    "FIELD_SUBTITLE (25)"
+  );
+  return { tag: Tag.FIELD_SUBTITLE, value };
+}
+
+export function createFieldTextBlock(field: StructuredTextField): TLVBlock {
+  const header = encodeFieldHeader(
+    field.fieldId,
+    field.label,
+    0,
+    MAX_FIELD_LABEL_BYTES,
+    "FIELD_TEXT (26)"
+  );
+  const textBytes = textEncoder.encode(field.text);
+  if (textBytes.length < 1 || textBytes.length > MAX_FIELD_TEXT_BYTES) {
+    throw new Error(
+      `FIELD_TEXT (26) inválido: texto com ${textBytes.length} bytes fora de [1..${MAX_FIELD_TEXT_BYTES}].`
+    );
+  }
+  const value = new Uint8Array(header.length + textBytes.length);
+  value.set(header, 0);
+  value.set(textBytes, header.length);
+  return { tag: Tag.FIELD_TEXT, value };
+}
+
+export function createFieldValueBlock(field: StructuredValueField): TLVBlock {
+  if (!Number.isSafeInteger(field.amountCents)) {
+    throw new Error(`FIELD_VALUE (27) inválido: amountCents deve ser inteiro seguro.`);
+  }
+  const header = encodeFieldHeader(
+    field.fieldId,
+    field.label,
+    1,
+    MAX_FIELD_LABEL_BYTES,
+    "FIELD_VALUE (27)"
+  );
+  const unitBytes = textEncoder.encode(field.unit.trim());
+  if (unitBytes.length < 1 || unitBytes.length > MAX_VALUE_UNIT_BYTES) {
+    throw new Error(
+      `FIELD_VALUE (27) inválido: unidade com ${unitBytes.length} bytes fora de [1..${MAX_VALUE_UNIT_BYTES}].`
+    );
+  }
+  const value = new Uint8Array(header.length + 9 + unitBytes.length);
+  const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
+  value.set(header, 0);
+  view.setBigInt64(header.length, BigInt(field.amountCents), false);
+  value[header.length + 8] = unitBytes.length;
+  value.set(unitBytes, header.length + 9);
+  return { tag: Tag.FIELD_VALUE, value };
+}
+
+export function createFieldLinkBlock(field: StructuredLinkField): TLVBlock {
+  const header = encodeFieldHeader(
+    field.fieldId,
+    field.label,
+    0,
+    MAX_FIELD_LABEL_BYTES,
+    "FIELD_LINK (28)"
+  );
+  const cleanUrl = field.url.trim();
+  assertValidLinkUrl(cleanUrl);
+  const urlBytes = textEncoder.encode(cleanUrl);
+  if (urlBytes.length < MIN_LINK_URL_BYTES || urlBytes.length > MAX_LINK_URL_BYTES) {
+    throw new Error(
+      `FIELD_LINK (28) inválido: URL com ${urlBytes.length} bytes fora de [${MIN_LINK_URL_BYTES}..${MAX_LINK_URL_BYTES}].`
+    );
+  }
+  const value = new Uint8Array(header.length + urlBytes.length);
+  value.set(header, 0);
+  value.set(urlBytes, header.length);
+  return { tag: Tag.FIELD_LINK, value };
+}
+
+export function createFieldTableBlock(field: StructuredTableField): TLVBlock {
+  const header = encodeFieldHeader(
+    field.fieldId,
+    field.label,
+    0,
+    MAX_FIELD_LABEL_BYTES,
+    "FIELD_TABLE (29)"
+  );
+  const colCount = field.columns.length;
+  const rowCount = field.rows.length;
+  if (colCount < 1 || colCount > MAX_TABLE_COLS) {
+    throw new Error(`FIELD_TABLE (29) inválida: colunas (${colCount}) fora de [1..${MAX_TABLE_COLS}].`);
+  }
+  if (rowCount < 1 || rowCount > MAX_TABLE_ROWS) {
+    throw new Error(`FIELD_TABLE (29) inválida: linhas (${rowCount}) fora de [1..${MAX_TABLE_ROWS}].`);
+  }
+
+  const encodedCells: Uint8Array[] = [];
+  let cellsByteLength = 0;
+
+  const pushCell = (raw: string) => {
+    const bytes = textEncoder.encode(raw);
+    if (bytes.length > MAX_TABLE_CELL_BYTES) {
+      throw new Error(
+        `FIELD_TABLE (29) inválida: célula excede ${MAX_TABLE_CELL_BYTES} bytes.`
+      );
+    }
+    encodedCells.push(bytes);
+    cellsByteLength += 2 + bytes.length;
+  };
+
+  for (const col of field.columns) {
+    pushCell(col);
+  }
+  for (const row of field.rows) {
+    if (row.length !== colCount) {
+      throw new Error(
+        `FIELD_TABLE (29) inválida: linha com ${row.length} colunas, esperado ${colCount}.`
+      );
+    }
+    for (const cell of row) {
+      pushCell(cell);
+    }
+  }
+
+  const totalLength = header.length + 3 + cellsByteLength;
+  if (totalLength > MAX_TABLE_BLOCK_BYTES) {
+    throw new Error(
+      `FIELD_TABLE (29) inválida: tamanho total (${totalLength}B) excede ${MAX_TABLE_BLOCK_BYTES} bytes.`
+    );
+  }
+
+  const value = new Uint8Array(totalLength);
+  const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
+  value.set(header, 0);
+  let offset = header.length;
+  value[offset++] = colCount;
+  view.setUint16(offset, rowCount, false);
+  offset += 2;
+
+  for (const cellBytes of encodedCells) {
+    view.setUint16(offset, cellBytes.length, false);
+    offset += 2;
+    value.set(cellBytes, offset);
+    offset += cellBytes.length;
+  }
+
+  return { tag: Tag.FIELD_TABLE, value };
+}
+
 // -------------------------------------------------------------
 // Helpers utilitários para ler blocos padronizados
 // -------------------------------------------------------------
@@ -658,4 +934,149 @@ export function readCosignaturesBlock(block: TLVBlock): CosignatureEntry[] {
     });
   }
   return entries;
+}
+
+export function readDeliberationModeBlock(block: TLVBlock): DeliberationModeValue {
+  assertExactBytes(block.value, 1, "DELIBERATION_MODE (24)");
+  const mode = block.value[0]!;
+  if (mode !== DeliberationMode.QUORUM && mode !== DeliberationMode.OPEN) {
+    throw new Error(`Bloco DELIBERATION_MODE corrompido: modo ${mode} inválido.`);
+  }
+  return mode;
+}
+
+export function readFieldSubtitleBlock(block: TLVBlock): StructuredSubtitleField {
+  const { fieldId, label, payloadOffset } = decodeFieldHeader(
+    block.value,
+    "FIELD_SUBTITLE (25)",
+    1,
+    MAX_SUBTITLE_LABEL_BYTES
+  );
+  if (payloadOffset !== block.value.length) {
+    throw new Error("Bloco FIELD_SUBTITLE (25) contém bytes extras inesperados.");
+  }
+  return { fieldId, label };
+}
+
+export function readFieldTextBlock(block: TLVBlock): StructuredTextField {
+  const { fieldId, label, payloadOffset } = decodeFieldHeader(
+    block.value,
+    "FIELD_TEXT (26)",
+    0,
+    MAX_FIELD_LABEL_BYTES
+  );
+  const textBytes = block.value.subarray(payloadOffset);
+  if (textBytes.length < 1 || textBytes.length > MAX_FIELD_TEXT_BYTES) {
+    throw new Error(
+      `Bloco FIELD_TEXT (26) inválido: texto com ${textBytes.length} bytes fora de [1..${MAX_FIELD_TEXT_BYTES}].`
+    );
+  }
+  const text = decodeStrictUtf8(textBytes, "FIELD_TEXT (26)");
+  return { fieldId, label, text };
+}
+
+export function readFieldValueBlock(block: TLVBlock): StructuredValueField {
+  const { fieldId, label, payloadOffset } = decodeFieldHeader(
+    block.value,
+    "FIELD_VALUE (27)",
+    1,
+    MAX_FIELD_LABEL_BYTES
+  );
+  if (block.value.length < payloadOffset + 9) {
+    throw new Error("Bloco FIELD_VALUE (27) truncado.");
+  }
+  const view = new DataView(block.value.buffer, block.value.byteOffset, block.value.byteLength);
+  const amountCents = Number(view.getBigInt64(payloadOffset, false));
+  if (!Number.isSafeInteger(amountCents)) {
+    throw new Error("Bloco FIELD_VALUE (27) inválido: valor fora da faixa segura.");
+  }
+  const unitLen = block.value[payloadOffset + 8]!;
+  if (
+    unitLen < 1 ||
+    unitLen > MAX_VALUE_UNIT_BYTES ||
+    payloadOffset + 9 + unitLen !== block.value.length
+  ) {
+    throw new Error("Bloco FIELD_VALUE (27) corrompido: unidade com tamanho inválido.");
+  }
+  const unit = decodeStrictUtf8(block.value.subarray(payloadOffset + 9), "FIELD_VALUE (27)");
+  return { fieldId, label, amountCents, unit };
+}
+
+export function readFieldLinkBlock(block: TLVBlock): StructuredLinkField {
+  const { fieldId, label, payloadOffset } = decodeFieldHeader(
+    block.value,
+    "FIELD_LINK (28)",
+    0,
+    MAX_FIELD_LABEL_BYTES
+  );
+  const urlBytes = block.value.subarray(payloadOffset);
+  if (urlBytes.length < MIN_LINK_URL_BYTES || urlBytes.length > MAX_LINK_URL_BYTES) {
+    throw new Error(
+      `Bloco FIELD_LINK (28) inválido: URL com ${urlBytes.length} bytes fora de [${MIN_LINK_URL_BYTES}..${MAX_LINK_URL_BYTES}].`
+    );
+  }
+  const url = decodeStrictUtf8(urlBytes, "FIELD_LINK (28)");
+  assertValidLinkUrl(url);
+  return { fieldId, label, url };
+}
+
+export function readFieldTableBlock(block: TLVBlock): StructuredTableField {
+  if (block.value.length > MAX_TABLE_BLOCK_BYTES) {
+    throw new Error(
+      `Bloco FIELD_TABLE (29) excede o limite de ${MAX_TABLE_BLOCK_BYTES} bytes.`
+    );
+  }
+  const { fieldId, label, payloadOffset } = decodeFieldHeader(
+    block.value,
+    "FIELD_TABLE (29)",
+    0,
+    MAX_FIELD_LABEL_BYTES
+  );
+  if (block.value.length < payloadOffset + 3) {
+    throw new Error("Bloco FIELD_TABLE (29) truncado.");
+  }
+  const view = new DataView(block.value.buffer, block.value.byteOffset, block.value.byteLength);
+  const colCount = block.value[payloadOffset]!;
+  const rowCount = view.getUint16(payloadOffset + 1, false);
+  if (colCount < 1 || colCount > MAX_TABLE_COLS) {
+    throw new Error(`Bloco FIELD_TABLE (29) inválido: colunas (${colCount}).`);
+  }
+  if (rowCount < 1 || rowCount > MAX_TABLE_ROWS) {
+    throw new Error(`Bloco FIELD_TABLE (29) inválido: linhas (${rowCount}).`);
+  }
+
+  let offset = payloadOffset + 3;
+  const readCell = (): string => {
+    if (offset + 2 > block.value.length) {
+      throw new Error("Bloco FIELD_TABLE (29) corrompido: cabeçalho de célula truncado.");
+    }
+    const len = view.getUint16(offset, false);
+    offset += 2;
+    if (len > MAX_TABLE_CELL_BYTES || offset + len > block.value.length) {
+      throw new Error("Bloco FIELD_TABLE (29) corrompido: célula fora dos limites.");
+    }
+    const text = decodeStrictUtf8(block.value.subarray(offset, offset + len), "FIELD_TABLE (29)");
+    offset += len;
+    return text;
+  };
+
+  const columns: string[] = [];
+  for (let c = 0; c < colCount; c += 1) {
+    columns.push(readCell());
+  }
+
+  const rows: string[][] = [];
+  for (let r = 0; r < rowCount; r += 1) {
+    const row: string[] = [];
+    for (let c = 0; c < colCount; c += 1) {
+      row.push(readCell());
+    }
+    rows.push(row);
+  }
+
+  if (offset !== block.value.length) {
+    throw new Error("Bloco FIELD_TABLE (29) contém bytes extras inesperados.");
+  }
+
+  return { fieldId, label, columns, rows };
 }

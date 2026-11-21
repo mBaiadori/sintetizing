@@ -7,9 +7,17 @@ import {
   createBodyBlock,
   createCategoryHashBlock,
   createConfigKindBlock,
+  createDeadlineBlock,
+  createDeliberationModeBlock,
+  createFieldLinkBlock,
+  createFieldSubtitleBlock,
+  createFieldTableBlock,
+  createFieldTextBlock,
+  createFieldValueBlock,
   createInactivityDaysBlock,
   createInvitePolicyBlock,
   createInviteProofBlock,
+  createLawArticleBlock,
   createParentHashBlock,
   createPickTargetBlock,
   createQuorumPctBlock,
@@ -17,6 +25,7 @@ import {
   createSignedInvite,
   createTimestampBlock,
   createTitleBlock,
+  DeliberationMode,
   DocType,
   generateEd25519Keypair,
   InvitePolicy,
@@ -370,6 +379,14 @@ export async function generateSeedDataset(params: {
       author.seq += 1;
       const subjTs = commCreatedAt + 7_200_000 + sIdx * 60_000;
 
+      const isOpenSubject = sIdx % 4 === 0;
+      const subjDeadlineSec =
+        sIdx % 7 === 6
+          ? Math.floor(baseNow / 1000) - 3_600
+          : sIdx % 3 === 1
+            ? Math.floor(baseNow / 1000) + 86_400 * 5
+            : null;
+
       const blocks = [
         createScopeBlock(subjScope),
         createConfigKindBlock(ConfigKind.SUBJECT),
@@ -378,7 +395,10 @@ export async function generateSeedDataset(params: {
         createBodyBlock(
           `Discussão estruturada para definir a melhor abordagem sobre "${subjTitle}" na comunidade ${commTitle}.`
         ),
-        createQuorumPctBlock(45 + ((sIdx * 5) % 25)),
+        createDeliberationModeBlock(
+          isOpenSubject ? DeliberationMode.OPEN : DeliberationMode.QUORUM
+        ),
+        ...(subjDeadlineSec !== null ? [createDeadlineBlock(subjDeadlineSec)] : []),
         createAuthorNameBlock(author.displayName),
         createTimestampBlock(subjTs),
       ];
@@ -412,6 +432,75 @@ export async function generateSeedDataset(params: {
             ? subjectProposalIds[0]
             : undefined;
 
+        const isForkVariant = parentHash !== undefined;
+        const propStructuredBlocks = isForkVariant
+          ? [
+              createFieldSubtitleBlock({
+                fieldId: "sec-escopo",
+                label: "Escopo e Execução",
+              }),
+              createFieldTextBlock({
+                fieldId: "txt-resumo",
+                label: "Resumo Executivo",
+                text: `Versão sintetizada (${propTitle}) reduzindo custos operacionais e mantendo garantia estendida.`,
+              }),
+              createFieldValueBlock({
+                fieldId: "val-custo",
+                label: "Orçamento Estimado",
+                amountCents: (85 + ((sIdx + pIdx) % 6) * 15) * 10000,
+                unit: "BRL",
+              }),
+              createFieldTableBlock({
+                fieldId: "tbl-etapas",
+                label: "Cronograma de Entregas",
+                columns: ["Fase", "Duração", "Responsável"],
+                rows: [
+                  ["Diagnóstico", "3 dias", "Comitê Técnico"],
+                  ["Execução", "10 dias", "Fornecedor Local"],
+                ],
+              }),
+              createFieldTextBlock({
+                fieldId: "txt-melhoria",
+                label: "Melhoria desta Síntese",
+                text: "Inclui auditoria comunitária antes da liberação da última parcela.",
+              }),
+            ]
+          : [
+              createFieldSubtitleBlock({
+                fieldId: "sec-escopo",
+                label: "Escopo e Execução",
+              }),
+              createFieldTextBlock({
+                fieldId: "txt-resumo",
+                label: "Resumo Executivo",
+                text: `Proposta detalhada (${propTitle}) com cronograma de entregas, responsáveis claros e prestação de contas aberta à comunidade.`,
+              }),
+              createFieldValueBlock({
+                fieldId: "val-custo",
+                label: "Orçamento Estimado",
+                amountCents: (100 + ((sIdx + pIdx) % 6) * 20) * 10000,
+                unit: "BRL",
+              }),
+              createFieldTableBlock({
+                fieldId: "tbl-etapas",
+                label: "Cronograma de Entregas",
+                columns: ["Fase", "Duração", "Responsável"],
+                rows: [
+                  ["Diagnóstico", "5 dias", "Equipe A"],
+                  ["Execução", "14 dias", "Fornecedor B"],
+                ],
+              }),
+              createFieldLinkBlock({
+                fieldId: "lnk-ref",
+                label: "Referência Técnica",
+                url: "https://sintetize.org/referencias/escopo-base",
+              }),
+              createLawArticleBlock(
+                1,
+                "Toda entrega deve ser acompanhada de relatório fotográfico público."
+              ),
+            ];
+
         const propBytes = await packDocument(
           {
             docType: DocType.PROPOSAL,
@@ -422,8 +511,9 @@ export async function generateSeedDataset(params: {
               ...(parentHash ? [createParentHashBlock(parentHash)] : []),
               createTitleBlock(propTitle),
               createBodyBlock(
-                `Proposta detalhada (${propTitle}) com cronograma de entregas, responsáveis claros e prestação de contas aberta à comunidade.`
+                `Proposta (${propTitle}) com blocos estruturados de escopo, orçamento e entregas.`
               ),
+              ...propStructuredBlocks,
               createAuthorNameBlock(author.displayName),
               createTimestampBlock(propTs),
             ],

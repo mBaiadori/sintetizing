@@ -8,6 +8,7 @@ import type {
 import { useEffect, useMemo, useState } from "react";
 import {
   computeHeatInfo,
+  formatDeadlineShort,
   GENERAL_CATEGORY_ID,
   HeatInfo,
   shortHex,
@@ -18,6 +19,7 @@ export interface CommunityFeedViewProps {
   readonly myPubHex: string;
   readonly communityTitle: string;
   readonly projection: CommunityProjection | null;
+  readonly hiddenDocIds?: ReadonlySet<string> | undefined;
   readonly sidebarCollapsed: boolean;
   readonly busy: boolean;
   readonly onToggleSidebar: () => void;
@@ -116,6 +118,7 @@ export function CommunityFeedView({
   myPubHex,
   communityTitle,
   projection,
+  hiddenDocIds,
   sidebarCollapsed,
   busy,
   onToggleSidebar,
@@ -184,16 +187,23 @@ export function CommunityFeedView({
         }
       }
 
+      const visibleSubjectRecords = projection.subjects.filter(
+        (s) => !hiddenDocIds?.has(s.docIdHex)
+      );
+      const visibleProposalRecords = projection.proposals.filter(
+        (p) => !hiddenDocIds?.has(p.docIdHex) && p.supersededByDocIdHex === null
+      );
+
       const subjectByScope = new Map<string, SubjectSummaryView>();
       const lastActivityByScope = new Map<string, number>();
-      for (const subj of projection.subjects) {
+      for (const subj of visibleSubjectRecords) {
         subjectByScope.set(subj.scope, subj);
         lastActivityByScope.set(subj.scope, subj.timestampMs);
       }
 
       const lastActivityByProposal = new Map<string, number>();
       const proposalsByScope = new Map<string, ProposalSummaryView[]>();
-      for (const prop of projection.proposals) {
+      for (const prop of visibleProposalRecords) {
         lastActivityByProposal.set(prop.docIdHex, prop.timestampMs);
 
         const prevScopeTs = lastActivityByScope.get(prop.scope) ?? 0;
@@ -223,22 +233,19 @@ export function CommunityFeedView({
         }
       }
 
-      const activeMembers = projection.activeMemberCount;
-      const defaultQuorumPct = projection.activeConfig?.quorumPct ?? 51;
-
-      const builtSubjects: SubjectFeedItem[] = projection.subjects.map((subject) => {
+      const builtSubjects: SubjectFeedItem[] = visibleSubjectRecords.map((subject) => {
         const cat = resolveCategory(subject.categoryHashHex);
-        const requiredVotes = Math.max(
-          1,
-          Math.ceil((activeMembers * subject.quorumPct) / 100)
-        );
+        const requiredVotes = subject.requiredVotes;
         const sortedProposals = [...(proposalsByScope.get(subject.scope) ?? [])].sort(
           (a, b) => b.pickCount - a.pickCount || b.timestampMs - a.timestampMs
         );
         const leadingProposal = sortedProposals[0] ?? null;
         const myPickedProposal =
           sortedProposals.find((p) => p.supporterPubs.includes(myPubHex)) ?? null;
-        const heat = computeHeatInfo(leadingProposal?.pickCount ?? 0, requiredVotes);
+        const heat =
+          subject.quorumPct === null
+            ? { quorumProgressPct: 0, quorumReached: false }
+            : computeHeatInfo(leadingProposal?.pickCount ?? 0, requiredVotes);
         const lastActivityMs =
           lastActivityByScope.get(subject.scope) ?? subject.timestampMs;
 
@@ -255,12 +262,14 @@ export function CommunityFeedView({
         };
       });
 
-      const builtProposals: ProposalFeedItem[] = projection.proposals.map((proposal) => {
+      const builtProposals: ProposalFeedItem[] = visibleProposalRecords.map((proposal) => {
         const subject = subjectByScope.get(proposal.scope) ?? null;
         const cat = resolveCategory(subject?.categoryHashHex ?? null);
-        const quorumPct = subject?.quorumPct ?? defaultQuorumPct;
-        const requiredVotes = Math.max(1, Math.ceil((activeMembers * quorumPct) / 100));
-        const heat = computeHeatInfo(proposal.pickCount, requiredVotes);
+        const requiredVotes = proposal.requiredVotes;
+        const heat =
+          proposal.quorumPct === null
+            ? { quorumProgressPct: 0, quorumReached: false }
+            : computeHeatInfo(proposal.pickCount, requiredVotes);
         const authorLabel =
           proposal.authorName ??
           memberNameMap.get(proposal.authorPubHex) ??
@@ -287,7 +296,7 @@ export function CommunityFeedView({
         proposalItems: builtProposals,
         pendingConfigs: projection.configVersions.filter((v) => v.status === "PENDING"),
       };
-    }, [projection, myPubHex]);
+    }, [projection, myPubHex, hiddenDocIds]);
 
   const categories = projection?.categories ?? [];
 
@@ -875,22 +884,28 @@ export function CommunityFeedView({
                         </div>
 
                         <div className="feed-row__quorum">
-                          <div className="feed-row__progress">
-                            <div className="progress-track">
-                              <div
-                                className={
-                                  heat.quorumReached
-                                    ? "progress-fill progress-fill--consensus"
-                                    : "progress-fill"
-                                }
-                                style={{ width: `${heat.quorumProgressPct}%` }}
-                              />
-                            </div>
+                          {subject.quorumPct === null ? (
                             <span className="md-label-medium gov-tabular">
-                              {leadingProposal?.pickCount ?? 0}/{item.requiredVotes} (
-                              {heat.quorumProgressPct}%)
+                              Aberto · {leadingProposal?.pickCount ?? 0} apoio(s)
                             </span>
-                          </div>
+                          ) : (
+                            <div className="feed-row__progress">
+                              <div className="progress-track">
+                                <div
+                                  className={
+                                    heat.quorumReached
+                                      ? "progress-fill progress-fill--consensus"
+                                      : "progress-fill"
+                                  }
+                                  style={{ width: `${heat.quorumProgressPct}%` }}
+                                />
+                              </div>
+                              <span className="md-label-medium gov-tabular">
+                                {leadingProposal?.pickCount ?? 0}/{item.requiredVotes} (
+                                {heat.quorumProgressPct}%)
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <button
@@ -963,11 +978,21 @@ export function CommunityFeedView({
 
                             {isFork && <span className="feed-row__muted">Fork</span>}
 
-                            {heat.quorumReached && (
+                            {proposal.status === "APPROVED" ? (
+                              <span className="feed-status feed-status--consensus">
+                                Aprovada no prazo
+                              </span>
+                            ) : proposal.status === "EXPIRED" ? (
+                              <span className="feed-row__muted">Prazo encerrado</span>
+                            ) : heat.quorumReached ? (
                               <span className="feed-status feed-status--consensus">
                                 Quórum atingido
                               </span>
-                            )}
+                            ) : proposal.deadlineUnixSeconds !== null ? (
+                              <span className="feed-row__muted">
+                                Até {formatDeadlineShort(proposal.deadlineUnixSeconds)}
+                              </span>
+                            ) : null}
                           </div>
 
                           <div className="feed-row__subline">
@@ -979,22 +1004,28 @@ export function CommunityFeedView({
                         </div>
 
                         <div className="feed-row__quorum">
-                          <div className="feed-row__progress">
-                            <div className="progress-track">
-                              <div
-                                className={
-                                  heat.quorumReached
-                                    ? "progress-fill progress-fill--consensus"
-                                    : "progress-fill"
-                                }
-                                style={{ width: `${heat.quorumProgressPct}%` }}
-                              />
-                            </div>
+                          {proposal.quorumPct === null ? (
                             <span className="md-label-medium gov-tabular">
-                              {proposal.pickCount}/{item.requiredVotes} (
-                              {heat.quorumProgressPct}%)
+                              Aberto · {proposal.pickCount} apoio(s)
                             </span>
-                          </div>
+                          ) : (
+                            <div className="feed-row__progress">
+                              <div className="progress-track">
+                                <div
+                                  className={
+                                    heat.quorumReached
+                                      ? "progress-fill progress-fill--consensus"
+                                      : "progress-fill"
+                                  }
+                                  style={{ width: `${heat.quorumProgressPct}%` }}
+                                />
+                              </div>
+                              <span className="md-label-medium gov-tabular">
+                                {proposal.pickCount}/{item.requiredVotes} (
+                                {heat.quorumProgressPct}%)
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <button

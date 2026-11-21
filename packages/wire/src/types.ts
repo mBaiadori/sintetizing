@@ -46,6 +46,13 @@ export const InvitePolicy = {
 
 export type InvitePolicyValue = (typeof InvitePolicy)[keyof typeof InvitePolicy];
 
+export const DeliberationMode = {
+  QUORUM: 1,
+  OPEN: 2,
+} as const;
+
+export type DeliberationModeValue = (typeof DeliberationMode)[keyof typeof DeliberationMode];
+
 export const Tag = {
   SCOPE: 1,
   PARENT_HASH: 2,
@@ -64,6 +71,12 @@ export const Tag = {
   PARENT_COMMUNITY_HASH: 21,
   INVITE_PROOF: 22,
   CATEGORY_HASH: 23,
+  DELIBERATION_MODE: 24,
+  FIELD_SUBTITLE: 25,
+  FIELD_TEXT: 26,
+  FIELD_VALUE: 27,
+  FIELD_LINK: 28,
+  FIELD_TABLE: 29,
   CUTOFF_HASH: 30,
   ACTIVE_CMNT_HASH: 31,
   ACTIVE_MEMBERS_TABLE: 32,
@@ -71,6 +84,37 @@ export const Tag = {
 } as const;
 
 export type TagValue = (typeof Tag)[keyof typeof Tag] | number;
+
+export interface StructuredSubtitleField {
+  readonly fieldId: string;
+  readonly label: string;
+}
+
+export interface StructuredTextField {
+  readonly fieldId: string;
+  readonly label: string;
+  readonly text: string;
+}
+
+export interface StructuredValueField {
+  readonly fieldId: string;
+  readonly label: string;
+  readonly amountCents: number;
+  readonly unit: string;
+}
+
+export interface StructuredLinkField {
+  readonly fieldId: string;
+  readonly label: string;
+  readonly url: string;
+}
+
+export interface StructuredTableField {
+  readonly fieldId: string;
+  readonly label: string;
+  readonly columns: readonly string[];
+  readonly rows: readonly (readonly string[])[];
+}
 
 export interface TLVBlock {
   readonly tag: number;

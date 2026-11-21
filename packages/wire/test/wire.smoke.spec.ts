@@ -12,9 +12,17 @@ import {
   createConfigKindBlock,
   createCosignaturesBlock,
   createCutoffHashBlock,
+  createDeadlineBlock,
+  createDeliberationModeBlock,
+  createFieldLinkBlock,
+  createFieldSubtitleBlock,
+  createFieldTableBlock,
+  createFieldTextBlock,
+  createFieldValueBlock,
   createInactivityDaysBlock,
   createInvitePolicyBlock,
   createInviteProofBlock,
+  createLawArticleBlock,
   createParentHashBlock,
   createPickTargetBlock,
   createQuorumPctBlock,
@@ -22,11 +30,19 @@ import {
   createSignedInvite,
   createTimestampBlock,
   createTitleBlock,
+  DeliberationMode,
   DocType,
   getDocumentUniverse,
   InvitePolicy,
   packDocument,
   readActiveMembersTableBlock,
+  readDeadlineBlock,
+  readDeliberationModeBlock,
+  readFieldLinkBlock,
+  readFieldSubtitleBlock,
+  readFieldTableBlock,
+  readFieldTextBlock,
+  readFieldValueBlock,
   readInactivityDaysBlock,
   readInvitePolicyBlock,
   readTimestampBlock,
@@ -166,6 +182,7 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
     const categoryId = calculateDocId(categoryBytes);
 
     const subjectScope = `${communityId}/iluminacao`;
+    const deadlineSec = Math.floor(nowMs / 1000) + 86_400 * 7;
     const subjBytes = await packDocument(
       {
         docType: DocType.CONFIG,
@@ -177,7 +194,8 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
           createCategoryHashBlock(categoryId),
           createTitleBlock("Iluminação da Praça"),
           createBodyBlock("Definir lâmpadas LED"),
-          createQuorumPctBlock(51),
+          createDeliberationModeBlock(DeliberationMode.QUORUM),
+          createDeadlineBlock(deadlineSec),
           createTimestampBlock(nowMs + 4000),
         ],
       },
@@ -186,6 +204,10 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
     const subjDoc = await unpackAndVerifyDocument(subjBytes);
     expect(getDocumentUniverse(subjDoc)).toBe("stze");
     expect(subjDoc.blocks.find((b) => b.tag === Tag.CATEGORY_HASH)?.value).toEqual(categoryId);
+    expect(readDeliberationModeBlock(subjDoc.blocks.find((b) => b.tag === Tag.DELIBERATION_MODE)!)).toBe(
+      DeliberationMode.QUORUM
+    );
+    expect(readDeadlineBlock(subjDoc.blocks.find((b) => b.tag === Tag.DEADLINE)!)).toBe(deadlineSec);
 
     const propBytes = await packDocument(
       {
@@ -196,12 +218,70 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
           createScopeBlock(subjectScope),
           createTitleBlock("Instalar 12 postes solares"),
           createBodyBlock("Custo menor na manutenção mensal."),
+          createFieldSubtitleBlock({ fieldId: "sub-1", label: "Escopo Técnico" }),
+          createFieldTextBlock({
+            fieldId: "txt-1",
+            label: "Justificativa",
+            text: "Substituir postes antigos por LED solar autônomo.",
+          }),
+          createFieldValueBlock({
+            fieldId: "val-1",
+            label: "Orçamento de Materiais",
+            amountCents: 1250000,
+            unit: "BRL",
+          }),
+          createFieldLinkBlock({
+            fieldId: "lnk-1",
+            label: "Cotação Oficial",
+            url: "https://exemplo.org/cotacao.pdf",
+          }),
+          createFieldTableBlock({
+            fieldId: "tbl-1",
+            label: "Cronograma",
+            columns: ["Etapa", "Prazo"],
+            rows: [
+              ["Compra", "Semana 1"],
+              ["Instalação", "Semana 2"],
+            ],
+          }),
+          createLawArticleBlock(1, "Garantia mínima de 24 meses pelo fornecedor."),
+          createDeadlineBlock(deadlineSec),
           createTimestampBlock(nowMs + 5000),
         ],
       },
       alice.priv
     );
-    expect(getDocumentUniverse(await unpackAndVerifyDocument(propBytes))).toBe("stze");
+    const propDoc = await unpackAndVerifyDocument(propBytes);
+    expect(getDocumentUniverse(propDoc)).toBe("stze");
+    expect(readFieldSubtitleBlock(propDoc.blocks.find((b) => b.tag === Tag.FIELD_SUBTITLE)!)).toEqual({
+      fieldId: "sub-1",
+      label: "Escopo Técnico",
+    });
+    expect(readFieldTextBlock(propDoc.blocks.find((b) => b.tag === Tag.FIELD_TEXT)!)).toEqual({
+      fieldId: "txt-1",
+      label: "Justificativa",
+      text: "Substituir postes antigos por LED solar autônomo.",
+    });
+    expect(readFieldValueBlock(propDoc.blocks.find((b) => b.tag === Tag.FIELD_VALUE)!)).toEqual({
+      fieldId: "val-1",
+      label: "Orçamento de Materiais",
+      amountCents: 1250000,
+      unit: "BRL",
+    });
+    expect(readFieldLinkBlock(propDoc.blocks.find((b) => b.tag === Tag.FIELD_LINK)!)).toEqual({
+      fieldId: "lnk-1",
+      label: "Cotação Oficial",
+      url: "https://exemplo.org/cotacao.pdf",
+    });
+    expect(readFieldTableBlock(propDoc.blocks.find((b) => b.tag === Tag.FIELD_TABLE)!)).toEqual({
+      fieldId: "tbl-1",
+      label: "Cronograma",
+      columns: ["Etapa", "Prazo"],
+      rows: [
+        ["Compra", "Semana 1"],
+        ["Instalação", "Semana 2"],
+      ],
+    });
 
     const pickBytes = await packDocument(
       {
@@ -284,5 +364,13 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
     const badProof = new Uint8Array(proof);
     badProof[10] = badProof[10]! ^ 0x01;
     expect(await verifyInviteProof("comunidade-x", badProof)).toBeNull();
+
+    expect(() =>
+      createFieldLinkBlock({
+        fieldId: "lnk-bad",
+        label: "Inválido",
+        url: "javascript:alert(1)",
+      })
+    ).toThrow();
   });
 });

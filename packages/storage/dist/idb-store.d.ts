@@ -1,5 +1,5 @@
 import { DocUniverse } from "@sintetizing/wire";
-import { CommunityRecord, LocalIdentity, LocalStoreOptions, SavePacketResult, StoredPacketRecord } from "./types.js";
+import { CommunityRecord, HiddenDocRecord, LocalIdentity, LocalStoreOptions, ProposalDraftRecord, SavePacketResult, StoredPacketRecord } from "./types.js";
 /**
  * Repositório Local-First enxuto em IndexedDB para identidade local,
  * lista de relays por comunidade e armazenamento verificado de pacotes TLV.
@@ -24,6 +24,13 @@ export declare class SintetizeLocalStore {
         skippedCount: number;
     }>;
     clearAll(): Promise<void>;
+    saveDraft(draft: ProposalDraftRecord): Promise<void>;
+    listDraftsByCommunity(communityId: string): Promise<ProposalDraftRecord[]>;
+    deleteDraft(draftId: string): Promise<void>;
+    hideDocument(record: HiddenDocRecord): Promise<void>;
+    unhideDocument(docIdHex: string): Promise<void>;
+    listHiddenByCommunity(communityId: string): Promise<HiddenDocRecord[]>;
+    listAllPackets(): Promise<StoredPacketRecord[]>;
     listPacketsByCommunity(communityId: string, universe?: DocUniverse): Promise<StoredPacketRecord[]>;
     getNextSeq(communityId: string, authorPubHex: string): Promise<number>;
 }

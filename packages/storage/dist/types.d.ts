@@ -32,4 +32,54 @@ export interface LocalStoreOptions {
     readonly dbName?: string;
     readonly indexedDB?: IDBFactory;
 }
+export type DraftFieldInput = {
+    readonly kind: "SUBTITLE";
+    readonly fieldId: string;
+    readonly label: string;
+} | {
+    readonly kind: "TEXT";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly text: string;
+} | {
+    readonly kind: "VALUE";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly amountCents: number;
+    readonly unit: string;
+} | {
+    readonly kind: "LINK";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly url: string;
+} | {
+    readonly kind: "TABLE";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly columns: readonly string[];
+    readonly rows: readonly (readonly string[])[];
+} | {
+    readonly kind: "ARTICLE";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly articleNum: number;
+    readonly text: string;
+};
+export interface ProposalDraftRecord {
+    readonly draftId: string;
+    readonly communityId: string;
+    readonly subjectScope: string;
+    readonly parentHashHex: string | null;
+    readonly title: string;
+    readonly body: string;
+    readonly deadlineUnixSeconds: number | null;
+    readonly fields: readonly DraftFieldInput[];
+    readonly updatedAtMs: number;
+}
+export interface HiddenDocRecord {
+    readonly docIdHex: string;
+    readonly communityId: string;
+    readonly kind: "SUBJECT" | "PROPOSAL";
+    readonly hiddenAtMs: number;
+}
 //# sourceMappingURL=types.d.ts.map

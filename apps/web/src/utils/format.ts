@@ -59,3 +59,16 @@ export function computeHeatInfo(pickCount: number, requiredVotes: number): HeatI
     quorumReached: requiredVotes > 0 && pickCount >= requiredVotes,
   };
 }
+
+export function formatValueAmount(amountCents: number, unit: string): string {
+  const amount = amountCents / 100;
+  const formatted = amount.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${formatted} ${unit}`;
+}
+
+export function formatDeadlineShort(deadlineUnixSeconds: number): string {
+  return formatDateMs(deadlineUnixSeconds * 1000);
+}

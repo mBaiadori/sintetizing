@@ -1,10 +1,12 @@
 import * as ed25519 from "@noble/ed25519";
 import { bytesToHex } from "@noble/hashes/utils";
 import { calculateDocId, getDocumentUniverse, unpackAndVerifyDocument, } from "@sintetizing/wire";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_IDENTITY = "identity";
 const STORE_COMMUNITIES = "communities";
 const STORE_PACKETS = "packets";
+const STORE_DRAFTS = "drafts";
+const STORE_HIDDEN_DOCS = "hidden_docs";
 function awaitRequest(request) {
     return new Promise((resolve, reject) => {
         request.onsuccess = () => resolve(request.result);
@@ -71,6 +73,18 @@ export class SintetizeLocalStore {
                     });
                     packetStore.createIndex("by_community", "communityId", { unique: false });
                     packetStore.createIndex("by_universe", "universe", { unique: false });
+                }
+                if (!db.objectStoreNames.contains(STORE_DRAFTS)) {
+                    const draftStore = db.createObjectStore(STORE_DRAFTS, {
+                        keyPath: "draftId",
+                    });
+                    draftStore.createIndex("by_community", "communityId", { unique: false });
+                }
+                if (!db.objectStoreNames.contains(STORE_HIDDEN_DOCS)) {
+                    const hiddenStore = db.createObjectStore(STORE_HIDDEN_DOCS, {
+                        keyPath: "docIdHex",
+                    });
+                    hiddenStore.createIndex("by_community", "communityId", { unique: false });
                 }
             };
             request.onsuccess = () => {
@@ -237,13 +251,73 @@ export class SintetizeLocalStore {
     }
     async clearAll() {
         const db = await this.open();
-        const tx = db.transaction([STORE_IDENTITY, STORE_COMMUNITIES, STORE_PACKETS], "readwrite");
+        const tx = db.transaction([STORE_IDENTITY, STORE_COMMUNITIES, STORE_PACKETS, STORE_DRAFTS, STORE_HIDDEN_DOCS], "readwrite");
         await Promise.all([
             awaitRequest(tx.objectStore(STORE_IDENTITY).clear()),
             awaitRequest(tx.objectStore(STORE_COMMUNITIES).clear()),
             awaitRequest(tx.objectStore(STORE_PACKETS).clear()),
+            awaitRequest(tx.objectStore(STORE_DRAFTS).clear()),
+            awaitRequest(tx.objectStore(STORE_HIDDEN_DOCS).clear()),
         ]);
         await awaitTransaction(tx);
+    }
+    async saveDraft(draft) {
+        const db = await this.open();
+        const tx = db.transaction(STORE_DRAFTS, "readwrite");
+        await awaitRequest(tx.objectStore(STORE_DRAFTS).put({
+            ...draft,
+            fields: draft.fields.map((f) => f.kind === "TABLE"
+                ? {
+                    ...f,
+                    columns: [...f.columns],
+                    rows: f.rows.map((r) => [...r]),
+                }
+                : { ...f }),
+        }));
+        await awaitTransaction(tx);
+    }
+    async listDraftsByCommunity(communityId) {
+        const db = await this.open();
+        const tx = db.transaction(STORE_DRAFTS, "readonly");
+        const idx = tx.objectStore(STORE_DRAFTS).index("by_community");
+        const rows = (await awaitRequest(idx.getAll(communityId)));
+        await awaitTransaction(tx);
+        return rows.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+    }
+    async deleteDraft(draftId) {
+        const db = await this.open();
+        const tx = db.transaction(STORE_DRAFTS, "readwrite");
+        await awaitRequest(tx.objectStore(STORE_DRAFTS).delete(draftId));
+        await awaitTransaction(tx);
+    }
+    async hideDocument(record) {
+        const db = await this.open();
+        const tx = db.transaction(STORE_HIDDEN_DOCS, "readwrite");
+        await awaitRequest(tx.objectStore(STORE_HIDDEN_DOCS).put({ ...record }));
+        await awaitTransaction(tx);
+    }
+    async unhideDocument(docIdHex) {
+        const db = await this.open();
+        const tx = db.transaction(STORE_HIDDEN_DOCS, "readwrite");
+        await awaitRequest(tx.objectStore(STORE_HIDDEN_DOCS).delete(docIdHex));
+        await awaitTransaction(tx);
+    }
+    async listHiddenByCommunity(communityId) {
+        const db = await this.open();
+        const tx = db.transaction(STORE_HIDDEN_DOCS, "readonly");
+        const idx = tx.objectStore(STORE_HIDDEN_DOCS).index("by_community");
+        const rows = (await awaitRequest(idx.getAll(communityId)));
+        await awaitTransaction(tx);
+        return rows.sort((a, b) => b.hiddenAtMs - a.hiddenAtMs);
+    }
+    async listAllPackets() {
+        const db = await this.open();
+        const tx = db.transaction(STORE_PACKETS, "readonly");
+        const rows = (await awaitRequest(tx.objectStore(STORE_PACKETS).getAll()));
+        await awaitTransaction(tx);
+        return rows
+            .map(normalizePacketRecord)
+            .sort((a, b) => b.storedAtMs - a.storedAtMs || b.seq - a.seq);
     }
     async listPacketsByCommunity(communityId, universe) {
         const db = await this.open();

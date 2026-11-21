@@ -1,209 +1,144 @@
-function tokenizeWords(text) {
-    return text.match(/\S+|\s+/g) ?? [];
+function areTablesEqual(aCols, aRows, bCols, bRows) {
+    if (aCols.length !== bCols.length || aRows.length !== bRows.length) {
+        return false;
+    }
+    for (let i = 0; i < aCols.length; i += 1) {
+        if (aCols[i] !== bCols[i]) {
+            return false;
+        }
+    }
+    for (let r = 0; r < aRows.length; r += 1) {
+        const rowA = aRows[r];
+        const rowB = bRows[r];
+        if (rowA.length !== rowB.length) {
+            return false;
+        }
+        for (let c = 0; c < rowA.length; c += 1) {
+            if (rowA[c] !== rowB[c]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+function areFieldsEqual(a, b) {
+    if (a.kind !== b.kind || a.label !== b.label) {
+        return false;
+    }
+    switch (a.kind) {
+        case "SUBTITLE":
+            return true;
+        case "TEXT":
+            return b.kind === "TEXT" && a.text === b.text;
+        case "VALUE":
+            return b.kind === "VALUE" && a.amountCents === b.amountCents && a.unit === b.unit;
+        case "LINK":
+            return b.kind === "LINK" && a.url === b.url;
+        case "ARTICLE":
+            return b.kind === "ARTICLE" && a.articleNum === b.articleNum && a.text === b.text;
+        case "TABLE":
+            return b.kind === "TABLE" && areTablesEqual(a.columns, a.rows, b.columns, b.rows);
+    }
+}
+function normalizeLabel(label) {
+    return label.trim().toLowerCase();
 }
 /**
- * Calcula Diff por palavras (LCS) entre dois textos, coalescendo segmentos contíguos do mesmo tipo.
+ * Compara duas propostas (N x N) pareando blocos primeiro por fieldId (exato para Forks)
+ * e depois por (kind + rótulo normalizado) para propostas independentes.
  */
-export function diffWords(left, right) {
-    const leftTokens = tokenizeWords(left);
-    const rightTokens = tokenizeWords(right);
-    const m = leftTokens.length;
-    const n = rightTokens.length;
-    const cols = n + 1;
-    const dp = new Int32Array((m + 1) * cols);
-    for (let i = m - 1; i >= 0; i--) {
-        for (let j = n - 1; j >= 0; j--) {
-            if (leftTokens[i] === rightTokens[j]) {
-                dp[i * cols + j] = dp[(i + 1) * cols + (j + 1)] + 1;
+export function diffProposals(base, target) {
+    const matchedTargetIndices = new Set();
+    const baseMatches = new Map();
+    // Passo 1: pareamento exato por fieldId
+    for (let i = 0; i < base.fields.length; i += 1) {
+        const bField = base.fields[i];
+        const idx = target.fields.findIndex((tField, tIdx) => !matchedTargetIndices.has(tIdx) && tField.fieldId === bField.fieldId);
+        if (idx >= 0) {
+            matchedTargetIndices.add(idx);
+            baseMatches.set(i, idx);
+        }
+    }
+    // Passo 2: fallback por (kind + rótulo normalizado) para propostas sem parentesco
+    for (let i = 0; i < base.fields.length; i += 1) {
+        if (baseMatches.has(i)) {
+            continue;
+        }
+        const bField = base.fields[i];
+        const bNorm = normalizeLabel(bField.label);
+        const idx = target.fields.findIndex((tField, tIdx) => !matchedTargetIndices.has(tIdx) &&
+            tField.kind === bField.kind &&
+            normalizeLabel(tField.label) === bNorm);
+        if (idx >= 0) {
+            matchedTargetIndices.add(idx);
+            baseMatches.set(i, idx);
+        }
+    }
+    const entries = [];
+    let identical = 0;
+    let modified = 0;
+    let added = 0;
+    let removed = 0;
+    let nextTargetCursor = 0;
+    const flushAddedBefore = (limitIndex) => {
+        while (nextTargetCursor < limitIndex) {
+            if (!matchedTargetIndices.has(nextTargetCursor)) {
+                const tField = target.fields[nextTargetCursor];
+                entries.push({
+                    key: `add-${nextTargetCursor}-${tField.fieldId}`,
+                    status: "ADDED",
+                    baseField: null,
+                    targetField: tField,
+                });
+                added += 1;
             }
-            else {
-                const down = dp[(i + 1) * cols + j];
-                const rightScore = dp[i * cols + (j + 1)];
-                dp[i * cols + j] = down >= rightScore ? down : rightScore;
-            }
+            nextTargetCursor += 1;
         }
-    }
-    const raw = [];
-    let i = 0;
-    let j = 0;
-    while (i < m && j < n) {
-        if (leftTokens[i] === rightTokens[j]) {
-            raw.push({ kind: "equal", value: leftTokens[i] });
-            i++;
-            j++;
-        }
-        else if (dp[(i + 1) * cols + j] >= dp[i * cols + (j + 1)]) {
-            raw.push({ kind: "removed", value: leftTokens[i] });
-            i++;
-        }
-        else {
-            raw.push({ kind: "added", value: rightTokens[j] });
-            j++;
-        }
-    }
-    while (i < m) {
-        raw.push({ kind: "removed", value: leftTokens[i] });
-        i++;
-    }
-    while (j < n) {
-        raw.push({ kind: "added", value: rightTokens[j] });
-        j++;
-    }
-    const coalesced = [];
-    for (const segment of raw) {
-        const previous = coalesced[coalesced.length - 1];
-        if (previous && previous.kind === segment.kind) {
-            coalesced[coalesced.length - 1] = {
-                kind: previous.kind,
-                value: previous.value + segment.value,
-            };
-        }
-        else {
-            coalesced.push(segment);
-        }
-    }
-    return coalesced;
-}
-function buildCurrencyLookup(items) {
-    const counts = new Map();
-    const lookup = new Map();
-    for (const item of items) {
-        const normalized = item.label.trim().toLowerCase();
-        const index = counts.get(normalized) ?? 0;
-        counts.set(normalized, index + 1);
-        lookup.set(`${normalized}#${index}`, item);
-    }
-    return lookup;
-}
-function diffCurrencies(leftItems, rightItems) {
-    const leftMap = buildCurrencyLookup(leftItems);
-    const rightMap = buildCurrencyLookup(rightItems);
-    const seenKeys = new Set();
-    const orderedKeys = [];
-    for (const key of leftMap.keys()) {
-        seenKeys.add(key);
-        orderedKeys.push(key);
-    }
-    for (const key of rightMap.keys()) {
-        if (!seenKeys.has(key)) {
-            seenKeys.add(key);
-            orderedKeys.push(key);
-        }
-    }
-    const items = [];
-    let leftTotalCents = 0;
-    let rightTotalCents = 0;
-    for (const key of orderedKeys) {
-        const leftItem = leftMap.get(key);
-        const rightItem = rightMap.get(key);
-        if (leftItem && !rightItem) {
-            leftTotalCents += leftItem.cents;
-            items.push({
-                label: leftItem.label,
-                status: "removed",
-                leftCents: leftItem.cents,
-                rightCents: null,
-                deltaCents: -leftItem.cents,
-            });
-        }
-        else if (!leftItem && rightItem) {
-            rightTotalCents += rightItem.cents;
-            items.push({
-                label: rightItem.label,
-                status: "added",
-                leftCents: null,
-                rightCents: rightItem.cents,
-                deltaCents: rightItem.cents,
-            });
-        }
-        else {
-            const l = leftItem;
-            const r = rightItem;
-            leftTotalCents += l.cents;
-            rightTotalCents += r.cents;
-            items.push({
-                label: r.label,
-                status: l.cents === r.cents ? "unchanged" : "changed",
-                leftCents: l.cents,
-                rightCents: r.cents,
-                deltaCents: r.cents - l.cents,
-            });
-        }
-    }
-    return {
-        items,
-        leftTotalCents,
-        rightTotalCents,
-        totalDeltaCents: rightTotalCents - leftTotalCents,
     };
-}
-function diffArticles(leftArticles, rightArticles) {
-    const articleNums = Array.from(new Set([...leftArticles.keys(), ...rightArticles.keys()])).sort((a, b) => a - b);
-    return articleNums.map((articleNum) => {
-        const leftText = leftArticles.get(articleNum) ?? null;
-        const rightText = rightArticles.get(articleNum) ?? null;
-        if (leftText !== null && rightText === null) {
-            return {
-                articleNum,
-                status: "removed",
-                leftText,
-                rightText: null,
-                segments: diffWords(leftText, ""),
-            };
+    for (let i = 0; i < base.fields.length; i += 1) {
+        const bField = base.fields[i];
+        const matchedIdx = baseMatches.get(i);
+        if (matchedIdx === undefined) {
+            entries.push({
+                key: `rem-${i}-${bField.fieldId}`,
+                status: "REMOVED",
+                baseField: bField,
+                targetField: null,
+            });
+            removed += 1;
+            continue;
         }
-        if (leftText === null && rightText !== null) {
-            return {
-                articleNum,
-                status: "added",
-                leftText: null,
-                rightText,
-                segments: diffWords("", rightText),
-            };
+        flushAddedBefore(matchedIdx);
+        const tField = target.fields[matchedIdx];
+        if (matchedIdx === nextTargetCursor) {
+            nextTargetCursor += 1;
         }
-        const l = leftText;
-        const r = rightText;
-        return {
-            articleNum,
-            status: l === r ? "unchanged" : "changed",
-            leftText: l,
-            rightText: r,
-            segments: diffWords(l, r),
-        };
-    });
-}
-/**
- * Comparador Universal N x N: compara quaisquer duas propostas da árvore campo a campo.
- */
-export function diffProposals(left, right) {
-    const titleChanged = left.title !== right.title;
-    const titleSegments = diffWords(left.title, right.title);
-    const bodyChanged = left.body !== right.body;
-    const bodySegments = diffWords(left.body, right.body);
-    const currencyComparison = diffCurrencies(left.currencies, right.currencies);
-    const deadlineChanged = left.deadline !== right.deadline;
-    const articles = diffArticles(left.articles, right.articles);
-    const hasCurrencyChange = currencyComparison.items.some((c) => c.status !== "unchanged");
-    const hasArticleChange = articles.some((a) => a.status !== "unchanged");
+        const isEq = areFieldsEqual(bField, tField);
+        if (isEq) {
+            identical += 1;
+        }
+        else {
+            modified += 1;
+        }
+        entries.push({
+            key: `pair-${i}-${matchedIdx}-${bField.fieldId}`,
+            status: isEq ? "IDENTICAL" : "MODIFIED",
+            baseField: bField,
+            targetField: tField,
+        });
+    }
+    flushAddedBefore(target.fields.length);
     return {
-        leftDocIdHex: left.docIdHex,
-        rightDocIdHex: right.docIdHex,
-        titleChanged,
-        titleSegments,
-        bodyChanged,
-        bodySegments,
-        currencies: currencyComparison.items,
-        leftTotalCents: currencyComparison.leftTotalCents,
-        rightTotalCents: currencyComparison.rightTotalCents,
-        totalDeltaCents: currencyComparison.totalDeltaCents,
-        deadlineChanged,
-        leftDeadline: left.deadline,
-        rightDeadline: right.deadline,
-        articles,
-        hasAnyChange: titleChanged ||
-            bodyChanged ||
-            deadlineChanged ||
-            hasCurrencyChange ||
-            hasArticleChange,
+        baseDocIdHex: base.docIdHex,
+        targetDocIdHex: target.docIdHex,
+        titleChanged: base.title !== target.title,
+        baseTitle: base.title,
+        targetTitle: target.title,
+        deadlineChanged: base.deadlineUnixSeconds !== target.deadlineUnixSeconds,
+        baseDeadlineUnixSeconds: base.deadlineUnixSeconds,
+        targetDeadlineUnixSeconds: target.deadlineUnixSeconds,
+        fields: entries,
+        summary: { identical, modified, added, removed },
     };
 }
 //# sourceMappingURL=proposal-diff.js.map

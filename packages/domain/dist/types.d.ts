@@ -19,6 +19,41 @@ export interface InspectedDocument {
     readonly blocks: readonly DecodedBlockView[];
 }
 export type ConfigVersionStatus = "ACTIVE" | "SUPERSEDED" | "PENDING";
+export type DeliberationModeKind = "QUORUM" | "OPEN";
+export type ProposalStatus = "OPEN" | "CONSENSUS" | "APPROVED" | "EXPIRED";
+export type ProposalFieldView = {
+    readonly kind: "SUBTITLE";
+    readonly fieldId: string;
+    readonly label: string;
+} | {
+    readonly kind: "TEXT";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly text: string;
+} | {
+    readonly kind: "VALUE";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly amountCents: number;
+    readonly unit: string;
+} | {
+    readonly kind: "LINK";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly url: string;
+} | {
+    readonly kind: "TABLE";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly columns: readonly string[];
+    readonly rows: readonly (readonly string[])[];
+} | {
+    readonly kind: "ARTICLE";
+    readonly fieldId: string;
+    readonly label: string;
+    readonly articleNum: number;
+    readonly text: string;
+};
 export interface CommunityConfigVersion {
     readonly docIdHex: string;
     readonly versionIndex: number;
@@ -32,6 +67,7 @@ export interface CommunityConfigVersion {
     readonly invitePolicy: InvitePolicyValue;
     readonly parentCommunityHashHex: string | null;
     readonly timestampMs: number;
+    readonly activatedAtMs: number | null;
     readonly supportCount: number;
     readonly supporterPubs: readonly string[];
     readonly requiredSupports: number;
@@ -64,8 +100,11 @@ export interface SubjectSummaryView {
     readonly categoryHashHex: string | null;
     readonly title: string;
     readonly body: string;
-    readonly quorumPct: number;
+    readonly deliberationMode: DeliberationModeKind;
+    readonly quorumPct: number | null;
+    readonly requiredVotes: number;
     readonly deadlineUnixSeconds: number | null;
+    readonly isExpired: boolean;
     readonly authorPubHex: string;
     readonly timestampMs: number;
     readonly proposalCount: number;
@@ -75,10 +114,18 @@ export interface ProposalSummaryView {
     readonly scope: string;
     readonly title: string;
     readonly body: string;
+    readonly fields: readonly ProposalFieldView[];
     readonly authorPubHex: string;
     readonly authorName: string | null;
     readonly parentHashHex: string | null;
     readonly timestampMs: number;
+    readonly deadlineUnixSeconds: number | null;
+    readonly deliberationMode: DeliberationModeKind;
+    readonly quorumPct: number | null;
+    readonly requiredVotes: number;
+    readonly status: ProposalStatus;
+    readonly isVotingOpen: boolean;
+    readonly supersededByDocIdHex: string | null;
     readonly pickCount: number;
     readonly supporterPubs: readonly string[];
 }

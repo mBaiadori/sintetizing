@@ -1,5 +1,5 @@
 import { bytesToHex } from "@noble/hashes/utils";
-import { calculateDocId, ConfigKind, getDocTypeName, getDocumentUniverse, InvitePolicy, parseInviteProof, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readQuorumPctBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, } from "@sintetizing/wire";
+import { calculateDocId, ConfigKind, DeliberationMode, getDocTypeName, getDocumentUniverse, InvitePolicy, parseInviteProof, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readQuorumPctBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, } from "@sintetizing/wire";
 const TAG_NAMES = {
     [Tag.SCOPE]: "SCOPE",
     [Tag.PARENT_HASH]: "PARENT_HASH",
@@ -18,6 +18,12 @@ const TAG_NAMES = {
     [Tag.PARENT_COMMUNITY_HASH]: "PARENT_COMMUNITY_HASH",
     [Tag.INVITE_PROOF]: "INVITE_PROOF",
     [Tag.CATEGORY_HASH]: "CATEGORY_HASH",
+    [Tag.DELIBERATION_MODE]: "DELIBERATION_MODE",
+    [Tag.FIELD_SUBTITLE]: "FIELD_SUBTITLE",
+    [Tag.FIELD_TEXT]: "FIELD_TEXT",
+    [Tag.FIELD_VALUE]: "FIELD_VALUE",
+    [Tag.FIELD_LINK]: "FIELD_LINK",
+    [Tag.FIELD_TABLE]: "FIELD_TABLE",
     [Tag.CUTOFF_HASH]: "CUTOFF_HASH",
     [Tag.ACTIVE_CMNT_HASH]: "ACTIVE_CMNT_HASH",
     [Tag.ACTIVE_MEMBERS_TABLE]: "ACTIVE_MEMBERS_TABLE",
@@ -105,6 +111,36 @@ function decodeBlockForDisplay(block) {
         case Tag.COSIGNATURES: {
             const entries = readCosignaturesBlock(block);
             displayValue = `${entries.length} co-assinatura(s)`;
+            break;
+        }
+        case Tag.DELIBERATION_MODE: {
+            const mode = readDeliberationModeBlock(block);
+            displayValue = mode === DeliberationMode.OPEN ? "OPEN (2)" : "QUORUM (1)";
+            break;
+        }
+        case Tag.FIELD_SUBTITLE: {
+            const f = readFieldSubtitleBlock(block);
+            displayValue = `[${f.fieldId}] ${f.label}`;
+            break;
+        }
+        case Tag.FIELD_TEXT: {
+            const f = readFieldTextBlock(block);
+            displayValue = `[${f.fieldId}] ${f.label ? `${f.label}: ` : ""}${f.text}`;
+            break;
+        }
+        case Tag.FIELD_VALUE: {
+            const f = readFieldValueBlock(block);
+            displayValue = `[${f.fieldId}] ${f.label}: ${(f.amountCents / 100).toFixed(2)} ${f.unit}`;
+            break;
+        }
+        case Tag.FIELD_LINK: {
+            const f = readFieldLinkBlock(block);
+            displayValue = `[${f.fieldId}] ${f.label ? `${f.label} → ` : ""}${f.url}`;
+            break;
+        }
+        case Tag.FIELD_TABLE: {
+            const f = readFieldTableBlock(block);
+            displayValue = `[${f.fieldId}] ${f.label || "Tabela"} (${f.columns.length} col × ${f.rows.length} lin)`;
             break;
         }
         default:

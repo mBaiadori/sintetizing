@@ -8,16 +8,20 @@ import {
 } from "@sintetizing/wire";
 import {
   CommunityRecord,
+  HiddenDocRecord,
   LocalIdentity,
   LocalStoreOptions,
+  ProposalDraftRecord,
   SavePacketResult,
   StoredPacketRecord,
 } from "./types.js";
 
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_IDENTITY = "identity";
 const STORE_COMMUNITIES = "communities";
 const STORE_PACKETS = "packets";
+const STORE_DRAFTS = "drafts";
+const STORE_HIDDEN_DOCS = "hidden_docs";
 
 function awaitRequest<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -96,6 +100,18 @@ export class SintetizeLocalStore {
           });
           packetStore.createIndex("by_community", "communityId", { unique: false });
           packetStore.createIndex("by_universe", "universe", { unique: false });
+        }
+        if (!db.objectStoreNames.contains(STORE_DRAFTS)) {
+          const draftStore = db.createObjectStore(STORE_DRAFTS, {
+            keyPath: "draftId",
+          });
+          draftStore.createIndex("by_community", "communityId", { unique: false });
+        }
+        if (!db.objectStoreNames.contains(STORE_HIDDEN_DOCS)) {
+          const hiddenStore = db.createObjectStore(STORE_HIDDEN_DOCS, {
+            keyPath: "docIdHex",
+          });
+          hiddenStore.createIndex("by_community", "communityId", { unique: false });
         }
       };
 
@@ -306,15 +322,89 @@ export class SintetizeLocalStore {
   public async clearAll(): Promise<void> {
     const db = await this.open();
     const tx = db.transaction(
-      [STORE_IDENTITY, STORE_COMMUNITIES, STORE_PACKETS],
+      [STORE_IDENTITY, STORE_COMMUNITIES, STORE_PACKETS, STORE_DRAFTS, STORE_HIDDEN_DOCS],
       "readwrite"
     );
     await Promise.all([
       awaitRequest(tx.objectStore(STORE_IDENTITY).clear()),
       awaitRequest(tx.objectStore(STORE_COMMUNITIES).clear()),
       awaitRequest(tx.objectStore(STORE_PACKETS).clear()),
+      awaitRequest(tx.objectStore(STORE_DRAFTS).clear()),
+      awaitRequest(tx.objectStore(STORE_HIDDEN_DOCS).clear()),
     ]);
     await awaitTransaction(tx);
+  }
+
+  public async saveDraft(draft: ProposalDraftRecord): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_DRAFTS, "readwrite");
+    await awaitRequest(
+      tx.objectStore(STORE_DRAFTS).put({
+        ...draft,
+        fields: draft.fields.map((f) =>
+          f.kind === "TABLE"
+            ? {
+                ...f,
+                columns: [...f.columns],
+                rows: f.rows.map((r) => [...r]),
+              }
+            : { ...f }
+        ),
+      })
+    );
+    await awaitTransaction(tx);
+  }
+
+  public async listDraftsByCommunity(communityId: string): Promise<ProposalDraftRecord[]> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_DRAFTS, "readonly");
+    const idx = tx.objectStore(STORE_DRAFTS).index("by_community");
+    const rows = (await awaitRequest(idx.getAll(communityId))) as ProposalDraftRecord[];
+    await awaitTransaction(tx);
+    return rows.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+  }
+
+  public async deleteDraft(draftId: string): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_DRAFTS, "readwrite");
+    await awaitRequest(tx.objectStore(STORE_DRAFTS).delete(draftId));
+    await awaitTransaction(tx);
+  }
+
+  public async hideDocument(record: HiddenDocRecord): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_HIDDEN_DOCS, "readwrite");
+    await awaitRequest(tx.objectStore(STORE_HIDDEN_DOCS).put({ ...record }));
+    await awaitTransaction(tx);
+  }
+
+  public async unhideDocument(docIdHex: string): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_HIDDEN_DOCS, "readwrite");
+    await awaitRequest(tx.objectStore(STORE_HIDDEN_DOCS).delete(docIdHex));
+    await awaitTransaction(tx);
+  }
+
+  public async listHiddenByCommunity(communityId: string): Promise<HiddenDocRecord[]> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_HIDDEN_DOCS, "readonly");
+    const idx = tx.objectStore(STORE_HIDDEN_DOCS).index("by_community");
+    const rows = (await awaitRequest(idx.getAll(communityId))) as HiddenDocRecord[];
+    await awaitTransaction(tx);
+    return rows.sort((a, b) => b.hiddenAtMs - a.hiddenAtMs);
+  }
+
+  public async listAllPackets(): Promise<StoredPacketRecord[]> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_PACKETS, "readonly");
+    const rows = (await awaitRequest(
+      tx.objectStore(STORE_PACKETS).getAll()
+    )) as StoredPacketRecord[];
+    await awaitTransaction(tx);
+
+    return rows
+      .map(normalizePacketRecord)
+      .sort((a, b) => b.storedAtMs - a.storedAtMs || b.seq - a.seq);
   }
 
   public async listPacketsByCommunity(

@@ -2,9 +2,17 @@ import type { CategorySummaryView, SubjectSummaryView } from "@sintetizing/domai
 import type { CommunityRecord } from "@sintetizing/storage";
 import { useState } from "react";
 import { GENERAL_CATEGORY_ID, getInitials } from "../utils/format.js";
+import type { AppRoute } from "../utils/router.js";
+import { AppLink } from "./AppLink.js";
 import { MaterialIcon } from "./MaterialIcon.js";
 
-export type AppViewMode = "feed" | "graph" | "workspace" | "communities" | "profile";
+export type AppViewMode =
+  | "feed"
+  | "graph"
+  | "workspace"
+  | "communities"
+  | "profile"
+  | "storage";
 
 export interface NavigationRailProps {
   readonly activeView: AppViewMode;
@@ -24,16 +32,8 @@ export interface NavigationRailProps {
   readonly busy: boolean;
   readonly onToggleCollapse: () => void;
   readonly onResync: () => void;
-  readonly onSelectCommunity: (communityId: string) => void;
-  readonly onOpenFeed: () => void;
-  readonly onOpenGraph: () => void;
-  readonly onOpenAddCommunity: () => void;
-  readonly onOpenCommunitySettings: () => void;
-  readonly onSelectCategory: (categoryId: string) => void;
-  readonly onSelectSubject: (categoryId: string, scope: string) => void;
+  readonly onNavigate: (route: AppRoute) => void;
   readonly onRequestNewCategory: () => void;
-  readonly onRequestNewSubject: (categoryId: string) => void;
-  readonly onOpenProfile: () => void;
 }
 
 interface CategoryGroup {
@@ -60,16 +60,8 @@ export function NavigationRail({
   busy,
   onToggleCollapse,
   onResync,
-  onSelectCommunity,
-  onOpenFeed,
-  onOpenGraph,
-  onOpenAddCommunity,
-  onOpenCommunitySettings,
-  onSelectCategory,
-  onSelectSubject,
+  onNavigate,
   onRequestNewCategory,
-  onRequestNewSubject,
-  onOpenProfile,
 }: NavigationRailProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<
     Readonly<Record<string, boolean>>
@@ -133,18 +125,18 @@ export function NavigationRail({
                 }
               >
                 <span className="server-item__pill" aria-hidden="true" />
-                <button
-                  type="button"
+                <AppLink
+                  to={{ kind: "feed", communityId: comm.communityId }}
+                  onNavigate={onNavigate}
                   className={
                     isActive ? "server-icon server-icon--active" : "server-icon"
                   }
-                  onClick={() => onSelectCommunity(comm.communityId)}
                   title={comm.title}
                   aria-label={`Comunidade ${comm.title}`}
                   aria-current={isActive ? "true" : undefined}
                 >
                   {getInitials(comm.title)}
-                </button>
+                </AppLink>
               </div>
             );
           })}
@@ -159,19 +151,20 @@ export function NavigationRail({
             }
           >
             <span className="server-item__pill" aria-hidden="true" />
-            <button
-              type="button"
+            <AppLink
+              to={{ kind: "add-community" }}
+              onNavigate={onNavigate}
               className={
                 isAddingCommunity
                   ? "server-icon server-icon--action server-icon--active"
                   : "server-icon server-icon--action"
               }
-              onClick={onOpenAddCommunity}
               title="Criar ou entrar em comunidade"
               aria-label="Criar ou entrar em comunidade"
+              aria-current={isAddingCommunity ? "page" : undefined}
             >
               <MaterialIcon name="add" />
-            </button>
+            </AppLink>
           </div>
         </nav>
 
@@ -179,37 +172,50 @@ export function NavigationRail({
         <aside className="channel-sidebar" aria-label="Assuntos da comunidade">
           {/* Topo: Nome da comunidade + Configurações do servidor + Recolher */}
           <div className="sidebar-header">
-            <button
-              type="button"
-              className="sidebar-community-btn"
-              onClick={onOpenCommunitySettings}
-              disabled={!hasCommunity}
-              title={
-                hasCommunity
-                  ? "Regras, membros e sincronização da comunidade"
-                  : "Selecione ou adicione uma comunidade"
-              }
-            >
-              <span className="sidebar-community-title">
-                {selectedCommunityTitle ?? "Sintetize"}
-              </span>
-            </button>
+            {hasCommunity && selectedCommunityId ? (
+              <AppLink
+                to={{ kind: "community-settings", communityId: selectedCommunityId }}
+                onNavigate={onNavigate}
+                className="sidebar-community-btn"
+                title="Regras, membros e sincronização da comunidade"
+              >
+                <span className="sidebar-community-title">
+                  {selectedCommunityTitle ?? "Sintetize"}
+                </span>
+              </AppLink>
+            ) : (
+              <button
+                type="button"
+                className="sidebar-community-btn"
+                disabled
+                title="Selecione ou adicione uma comunidade"
+              >
+                <span className="sidebar-community-title">
+                  {selectedCommunityTitle ?? "Sintetize"}
+                </span>
+              </button>
+            )}
 
             <div className="sidebar-header__actions">
-              {hasCommunity && (
-                <button
-                  type="button"
+              {hasCommunity && selectedCommunityId && (
+                <AppLink
+                  to={{ kind: "community-settings", communityId: selectedCommunityId }}
+                  onNavigate={onNavigate}
                   className={
                     activeView === "communities" && !isAddingCommunity
                       ? "icon-btn icon-btn--active"
                       : "icon-btn"
                   }
-                  onClick={onOpenCommunitySettings}
                   title="Configurações, regras e membros"
                   aria-label="Configurações da comunidade"
+                  aria-current={
+                    activeView === "communities" && !isAddingCommunity
+                      ? "page"
+                      : undefined
+                  }
                 >
                   <MaterialIcon name="tune" />
-                </button>
+                </AppLink>
               )}
 
               <button
@@ -226,16 +232,16 @@ export function NavigationRail({
 
           {/* Árvore de Categorias e Assuntos */}
           <div className="sidebar-tree" aria-label="Categorias e assuntos">
-            {hasCommunity ? (
+            {hasCommunity && selectedCommunityId ? (
               <>
-                <button
-                  type="button"
+                <AppLink
+                  to={{ kind: "feed", communityId: selectedCommunityId }}
+                  onNavigate={onNavigate}
                   className={
                     activeView === "feed"
                       ? "sidebar-feed-btn sidebar-feed-btn--active"
                       : "sidebar-feed-btn"
                   }
-                  onClick={onOpenFeed}
                   aria-current={activeView === "feed" ? "page" : undefined}
                 >
                   <MaterialIcon
@@ -251,16 +257,21 @@ export function NavigationRail({
                       {pendingSupportCount}
                     </span>
                   )}
-                </button>
+                </AppLink>
 
-                <button
-                  type="button"
+                <AppLink
+                  to={{
+                    kind: "graph",
+                    communityId: selectedCommunityId,
+                    categoryId: null,
+                    subjectScope: null,
+                  }}
+                  onNavigate={onNavigate}
                   className={
                     activeView === "graph"
                       ? "sidebar-feed-btn sidebar-feed-btn--active"
                       : "sidebar-feed-btn"
                   }
-                  onClick={onOpenGraph}
                   aria-current={activeView === "graph" ? "page" : undefined}
                 >
                   <MaterialIcon
@@ -268,7 +279,7 @@ export function NavigationRail({
                     filled={activeView === "graph"}
                   />
                   <span className="tree-channel__title">Grafo</span>
-                </button>
+                </AppLink>
 
                 <div className="sidebar-section-header">
                   <span className="sidebar-section-title">Assuntos</span>
@@ -311,61 +322,88 @@ export function NavigationRail({
                             />
                           </button>
 
-                          <button
-                            type="button"
+                          <AppLink
+                            to={{
+                              kind: "workspace",
+                              communityId: selectedCommunityId,
+                              categoryId: group.id,
+                              subjectScope: null,
+                              proposalId: null,
+                              newSubject: false,
+                            }}
+                            onNavigate={onNavigate}
                             className={
                               isCatSelected
                                 ? "tree-category-label tree-category-label--active"
                                 : "tree-category-label"
                             }
-                            onClick={() => onSelectCategory(group.id)}
                             title={`Ver assuntos de ${group.title}`}
+                            aria-current={isCatSelected ? "page" : undefined}
                           >
                             <span className="tree-category-name">{group.title}</span>
                             {isCatCollapsed && group.items.length > 0 && (
                               <span className="tree-badge">{group.items.length}</span>
                             )}
-                          </button>
+                          </AppLink>
 
-                          <button
-                            type="button"
+                          <AppLink
+                            to={{
+                              kind: "workspace",
+                              communityId: selectedCommunityId,
+                              categoryId: group.id,
+                              subjectScope: null,
+                              proposalId: null,
+                              newSubject: true,
+                            }}
+                            onNavigate={onNavigate}
                             className="icon-btn icon-btn--xs tree-category-add"
-                            onClick={() => onRequestNewSubject(group.id)}
-                            disabled={busy}
                             title={`Novo assunto em ${group.title}`}
                             aria-label={`Novo assunto em ${group.title}`}
                           >
                             <MaterialIcon name="add" />
-                          </button>
+                          </AppLink>
                         </div>
 
                         {!isCatCollapsed && (
                           <div className="tree-channels">
                             {group.items.length === 0 ? (
-                              <button
-                                type="button"
+                              <AppLink
+                                to={{
+                                  kind: "workspace",
+                                  communityId: selectedCommunityId,
+                                  categoryId: group.id,
+                                  subjectScope: null,
+                                  proposalId: null,
+                                  newSubject: true,
+                                }}
+                                onNavigate={onNavigate}
                                 className="tree-empty-btn"
-                                onClick={() => onRequestNewSubject(group.id)}
-                                disabled={busy}
                               >
                                 <MaterialIcon name="add" />
                                 <span>Criar assunto</span>
-                              </button>
+                              </AppLink>
                             ) : (
                               group.items.map((subj) => {
                                 const isSelected =
                                   activeView === "workspace" &&
                                   selectedSubjectScope === subj.scope;
                                 return (
-                                  <button
+                                  <AppLink
                                     key={subj.docIdHex}
-                                    type="button"
+                                    to={{
+                                      kind: "workspace",
+                                      communityId: selectedCommunityId,
+                                      categoryId: group.id,
+                                      subjectScope: subj.scope,
+                                      proposalId: null,
+                                      newSubject: false,
+                                    }}
+                                    onNavigate={onNavigate}
                                     className={
                                       isSelected
                                         ? "tree-channel tree-channel--active"
                                         : "tree-channel"
                                     }
-                                    onClick={() => onSelectSubject(group.id, subj.scope)}
                                     aria-current={isSelected ? "page" : undefined}
                                   >
                                     <span className="tree-channel__title">
@@ -374,7 +412,7 @@ export function NavigationRail({
                                     <span className="tree-badge gov-tabular">
                                       {subj.proposalCount}
                                     </span>
-                                  </button>
+                                  </AppLink>
                                 );
                               })
                             )}
@@ -397,14 +435,14 @@ export function NavigationRail({
 
           {/* Rodapé estilo Discord User Panel */}
           <div className="sidebar-footer">
-            <button
-              type="button"
+            <AppLink
+              to={{ kind: "profile" }}
+              onNavigate={onNavigate}
               className={
                 activeView === "profile"
                   ? "sidebar-user sidebar-user--active"
                   : "sidebar-user"
               }
-              onClick={onOpenProfile}
               title="Meu perfil e histórico de apoios"
               aria-current={activeView === "profile" ? "page" : undefined}
             >
@@ -421,7 +459,20 @@ export function NavigationRail({
                   <span>{syncLabel}</span>
                 </span>
               </span>
-            </button>
+            </AppLink>
+
+            <AppLink
+              to={{ kind: "storage" }}
+              onNavigate={onNavigate}
+              className={
+                activeView === "storage" ? "icon-btn icon-btn--active" : "icon-btn"
+              }
+              title="Dados locais deste nó (IndexedDB)"
+              aria-label="Dados locais deste nó (IndexedDB)"
+              aria-current={activeView === "storage" ? "page" : undefined}
+            >
+              <MaterialIcon name="dataset" filled={activeView === "storage"} />
+            </AppLink>
 
             <button
               type="button"

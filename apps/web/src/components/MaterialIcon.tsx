@@ -1,7 +1,10 @@
 export type MaterialIconName =
   | "account_tree"
   | "add"
+  | "add_circle"
   | "arrow_back"
+  | "arrow_downward"
+  | "arrow_upward"
   | "ballot"
   | "category"
   | "center_focus_strong"
@@ -41,8 +44,11 @@ export type MaterialIconName =
   | "open_in_new"
   | "person"
   | "person_add"
+  | "preview"
   | "refresh"
   | "remove"
+  | "remove_circle"
+  | "save"
   | "schedule"
   | "science"
   | "search"
@@ -55,6 +61,8 @@ export type MaterialIconName =
   | "unfold_less"
   | "unfold_more"
   | "verified_user"
+  | "visibility"
+  | "visibility_off"
   | "warning";
 
 export interface MaterialIconProps {

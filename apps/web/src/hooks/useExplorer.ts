@@ -1,5 +1,5 @@
 import { hexToBytes } from "@noble/hashes/utils";
-import { CommunityProjection, projectCommunityState } from "@sintetizing/domain";
+import { CommunityProjection, ProposalFieldView, projectCommunityState } from "@sintetizing/domain";
 import {
   decodeInviteCode,
   DEFAULT_PUBLIC_NOSTR_RELAYS,
@@ -10,8 +10,12 @@ import {
 } from "@sintetizing/network";
 import {
   CommunityRecord,
+  DraftFieldInput,
+  HiddenDocRecord,
   LocalIdentity,
+  ProposalDraftRecord,
   SintetizeLocalStore,
+  StoredPacketRecord,
 } from "@sintetizing/storage";
 import {
   ConfigKind,
@@ -22,9 +26,17 @@ import {
   createCategoryHashBlock,
   createConfigKindBlock,
   createCutoffHashBlock,
+  createDeadlineBlock,
+  createDeliberationModeBlock,
+  createFieldLinkBlock,
+  createFieldSubtitleBlock,
+  createFieldTableBlock,
+  createFieldTextBlock,
+  createFieldValueBlock,
   createInactivityDaysBlock,
   createInvitePolicyBlock,
   createInviteProofBlock,
+  createLawArticleBlock,
   createParentHashBlock,
   createPickTargetBlock,
   createQuorumPctBlock,
@@ -32,12 +44,16 @@ import {
   createSignedInvite,
   createTimestampBlock,
   createTitleBlock,
+  DeliberationMode,
   DocType,
   InvitePolicy,
   InvitePolicyValue,
   packDocument,
+  TLVBlock,
 } from "@sintetizing/wire";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GENERAL_CATEGORY_ID } from "../utils/format.js";
+import { buildRouteHref } from "../utils/router.js";
 import { generateSeedDataset, SeedScale } from "../utils/seed-generator.js";
 
 export interface CreateCommunityInput {
@@ -65,22 +81,28 @@ export interface CreateCategoryInput {
 export interface CreateSubjectInput {
   readonly title: string;
   readonly body: string;
-  readonly quorumPct: number;
-  readonly categoryHashHex?: string;
+  readonly deliberationMode: "QUORUM" | "OPEN";
+  readonly deadlineUnixSeconds?: number | undefined;
+  readonly categoryHashHex?: string | undefined;
 }
 
 export interface CreateProposalInput {
   readonly subjectScope: string;
   readonly title: string;
   readonly body: string;
-  readonly parentHashHex?: string;
+  readonly parentHashHex?: string | undefined;
+  readonly deadlineUnixSeconds?: number | undefined;
+  readonly fields?: readonly ProposalFieldView[] | undefined;
 }
 
-export interface InitialRouteSelection {
-  readonly communityId: string | null;
-  readonly categoryId: string | null;
-  readonly subjectScope: string | null;
-  readonly proposalId: string | null;
+export interface SaveDraftInput {
+  readonly draftId: string;
+  readonly subjectScope: string;
+  readonly parentHashHex: string | null;
+  readonly title: string;
+  readonly body: string;
+  readonly deadlineUnixSeconds: number | null;
+  readonly fields: readonly DraftFieldInput[];
 }
 
 export function buildProposalShareUrl(params: {
@@ -92,28 +114,15 @@ export function buildProposalShareUrl(params: {
   if (typeof window === "undefined") {
     return "";
   }
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.searchParams.set("c", params.communityId);
-  if (params.categoryId) {
-    url.searchParams.set("cat", params.categoryId);
-  }
-  url.searchParams.set("s", params.subjectScope);
-  url.searchParams.set("p", params.proposalId);
-  return url.toString();
-}
-
-function readInitialRouteSelection(): InitialRouteSelection {
-  if (typeof window === "undefined") {
-    return { communityId: null, categoryId: null, subjectScope: null, proposalId: null };
-  }
-  const params = new URLSearchParams(window.location.search);
-  return {
-    communityId: params.get("c"),
-    categoryId: params.get("cat"),
-    subjectScope: params.get("s"),
-    proposalId: params.get("p"),
-  };
+  const path = buildRouteHref({
+    kind: "workspace",
+    communityId: params.communityId,
+    categoryId: params.categoryId ?? GENERAL_CATEGORY_ID,
+    subjectScope: params.subjectScope,
+    proposalId: params.proposalId,
+    newSubject: false,
+  });
+  return `${window.location.origin}${path}`;
 }
 
 export function getInitialDefaultRelays(): string[] {
@@ -187,10 +196,26 @@ export function useExplorer() {
   const [generatedInviteCode, setGeneratedInviteCode] = useState<string | null>(null);
   const [resyncNonce, setResyncNonce] = useState(0);
   const [seedProgress, setSeedProgress] = useState<string | null>(null);
-  const [initialSelection] = useState<InitialRouteSelection>(() => readInitialRouteSelection());
+  const [drafts, setDrafts] = useState<ProposalDraftRecord[]>([]);
+  const [hiddenDocs, setHiddenDocs] = useState<HiddenDocRecord[]>([]);
+
+  const hiddenDocIds = useMemo(
+    () => new Set(hiddenDocs.map((h) => h.docIdHex)),
+    [hiddenDocs]
+  );
 
   const selectedCommunity =
     communities.find((c) => c.communityId === selectedCommunityId) ?? null;
+
+  const refreshLocalPrefs = useCallback(async (communityId: string) => {
+    const store = storeRef.current!;
+    const [loadedDrafts, loadedHidden] = await Promise.all([
+      store.listDraftsByCommunity(communityId),
+      store.listHiddenByCommunity(communityId),
+    ]);
+    setDrafts(loadedDrafts);
+    setHiddenDocs(loadedHidden);
+  }, []);
 
   const refreshProjection = useCallback(async (communityId: string) => {
     const store = storeRef.current!;
@@ -220,10 +245,7 @@ export function useExplorer() {
         setIdentity(loadedId);
         setCommunities(loadedComms);
         if (loadedComms.length > 0) {
-          const matched = initialSelection.communityId
-            ? loadedComms.find((c) => c.communityId === initialSelection.communityId)
-            : undefined;
-          setSelectedCommunityId((prev) => prev ?? matched?.communityId ?? loadedComms[0]!.communityId);
+          setSelectedCommunityId((prev) => prev ?? loadedComms[0]!.communityId);
         }
       } catch (err: unknown) {
         if (active) {
@@ -247,6 +269,8 @@ export function useExplorer() {
   useEffect(() => {
     if (!selectedCommunity || !identity) {
       setProjection(null);
+      setDrafts([]);
+      setHiddenDocs([]);
       setSyncState("idle");
       return;
     }
@@ -259,6 +283,7 @@ export function useExplorer() {
 
     setGeneratedInviteCode(null);
     setSyncState("syncing");
+    void refreshLocalPrefs(selectedCommunity.communityId);
 
     void (async () => {
       try {
@@ -349,7 +374,7 @@ export function useExplorer() {
       }
       sub?.close("effect cleanup");
     };
-  }, [selectedCommunity, identity, resyncNonce, refreshProjection]);
+  }, [selectedCommunity, identity, resyncNonce, refreshProjection, refreshLocalPrefs]);
 
   const publishAndStore = useCallback(
     async (communityId: string, relays: readonly string[], rawBytes: Uint8Array) => {
@@ -688,7 +713,9 @@ export function useExplorer() {
           selectedCommunity.communityId,
           identity.publicKeyHex
         );
-        const blocks = [
+        const modeValue =
+          input.deliberationMode === "OPEN" ? DeliberationMode.OPEN : DeliberationMode.QUORUM;
+        const blocks: TLVBlock[] = [
           createScopeBlock(subjectScope),
           createConfigKindBlock(ConfigKind.SUBJECT),
           ...(input.categoryHashHex
@@ -696,7 +723,10 @@ export function useExplorer() {
             : []),
           createTitleBlock(input.title.trim()),
           createBodyBlock(input.body.trim() || "Abertura de assunto"),
-          createQuorumPctBlock(input.quorumPct),
+          createDeliberationModeBlock(modeValue),
+          ...(input.deadlineUnixSeconds !== undefined
+            ? [createDeadlineBlock(input.deadlineUnixSeconds)]
+            : []),
           createAuthorNameBlock(identity.displayName),
           createTimestampBlock(Date.now()),
         ];
@@ -728,13 +758,76 @@ export function useExplorer() {
         if (!identity || !selectedCommunity) {
           throw new Error("Selecione uma comunidade.");
         }
-        const blocks = [
+        const structuredBlocks: TLVBlock[] = [];
+        for (const field of input.fields ?? []) {
+          switch (field.kind) {
+            case "SUBTITLE":
+              structuredBlocks.push(
+                createFieldSubtitleBlock({ fieldId: field.fieldId, label: field.label })
+              );
+              break;
+            case "TEXT":
+              structuredBlocks.push(
+                createFieldTextBlock({
+                  fieldId: field.fieldId,
+                  label: field.label,
+                  text: field.text,
+                })
+              );
+              break;
+            case "VALUE":
+              structuredBlocks.push(
+                createFieldValueBlock({
+                  fieldId: field.fieldId,
+                  label: field.label,
+                  amountCents: field.amountCents,
+                  unit: field.unit,
+                })
+              );
+              break;
+            case "LINK":
+              structuredBlocks.push(
+                createFieldLinkBlock({
+                  fieldId: field.fieldId,
+                  label: field.label,
+                  url: field.url,
+                })
+              );
+              break;
+            case "TABLE":
+              structuredBlocks.push(
+                createFieldTableBlock({
+                  fieldId: field.fieldId,
+                  label: field.label,
+                  columns: field.columns,
+                  rows: field.rows,
+                })
+              );
+              break;
+            case "ARTICLE":
+              structuredBlocks.push(createLawArticleBlock(field.articleNum, field.text));
+              break;
+          }
+        }
+
+        const firstTextField = (input.fields ?? []).find((f) => f.kind === "TEXT");
+        const fallbackSummary =
+          input.body.trim() ||
+          (firstTextField && firstTextField.kind === "TEXT"
+            ? firstTextField.text.slice(0, 280).trim()
+            : "");
+
+        const blocks: TLVBlock[] = [
           createScopeBlock(input.subjectScope),
           ...(input.parentHashHex
             ? [createParentHashBlock(hexToBytes(input.parentHashHex))]
             : []),
           createTitleBlock(input.title.trim()),
-          createBodyBlock(input.body.trim()),
+          ...(fallbackSummary.length > 0 ? [createBodyBlock(fallbackSummary)] : []),
+          ...structuredBlocks,
+          ...(input.deadlineUnixSeconds !== undefined
+            ? [createDeadlineBlock(input.deadlineUnixSeconds)]
+            : []),
           createAuthorNameBlock(identity.displayName),
           createTimestampBlock(Date.now()),
         ];
@@ -758,6 +851,59 @@ export function useExplorer() {
         };
       }),
     [identity, publishAndStore, runActionWithResult, selectedCommunity]
+  );
+
+  const saveDraft = useCallback(
+    async (input: SaveDraftInput) => {
+      if (!selectedCommunity) {
+        return;
+      }
+      await storeRef.current!.saveDraft({
+        ...input,
+        communityId: selectedCommunity.communityId,
+        updatedAtMs: Date.now(),
+      });
+      await refreshLocalPrefs(selectedCommunity.communityId);
+    },
+    [refreshLocalPrefs, selectedCommunity]
+  );
+
+  const deleteDraft = useCallback(
+    async (draftId: string) => {
+      if (!selectedCommunity) {
+        return;
+      }
+      await storeRef.current!.deleteDraft(draftId);
+      await refreshLocalPrefs(selectedCommunity.communityId);
+    },
+    [refreshLocalPrefs, selectedCommunity]
+  );
+
+  const hideDocument = useCallback(
+    async (docIdHex: string, kind: "SUBJECT" | "PROPOSAL") => {
+      if (!selectedCommunity) {
+        return;
+      }
+      await storeRef.current!.hideDocument({
+        docIdHex,
+        communityId: selectedCommunity.communityId,
+        kind,
+        hiddenAtMs: Date.now(),
+      });
+      await refreshLocalPrefs(selectedCommunity.communityId);
+    },
+    [refreshLocalPrefs, selectedCommunity]
+  );
+
+  const unhideDocument = useCallback(
+    async (docIdHex: string) => {
+      if (!selectedCommunity) {
+        return;
+      }
+      await storeRef.current!.unhideDocument(docIdHex);
+      await refreshLocalPrefs(selectedCommunity.communityId);
+    },
+    [refreshLocalPrefs, selectedCommunity]
   );
 
   const pickProposal = useCallback(
@@ -856,6 +1002,11 @@ export function useExplorer() {
     setResyncNonce((n) => n + 1);
   }, []);
 
+  const listAllStoredPackets = useCallback(async (): Promise<StoredPacketRecord[]> => {
+    const store = storeRef.current!;
+    return store.listAllPackets();
+  }, []);
+
   const seedLargeDataset = useCallback(
     (scale: SeedScale = "large", preferredName?: string) =>
       runAction(async () => {
@@ -910,11 +1061,10 @@ export function useExplorer() {
         setCommunities([]);
         setSelectedCommunityId(null);
         setProjection(null);
+        setDrafts([]);
+        setHiddenDocs([]);
         setGeneratedInviteCode(null);
         setSyncState("idle");
-        if (typeof window !== "undefined") {
-          window.history.replaceState(null, "", window.location.pathname);
-        }
         return "Todos os dados locais (identidade, comunidades e pacotes) foram zerados.";
       }),
     [runAction]
@@ -941,8 +1091,10 @@ export function useExplorer() {
     selectedCommunity,
     selectedCommunityId,
     setSelectedCommunityId,
-    initialSelection,
     projection,
+    drafts,
+    hiddenDocs,
+    hiddenDocIds,
     syncState,
     statusMessage,
     errorMessage,
@@ -957,10 +1109,15 @@ export function useExplorer() {
     createCategory,
     createSubject,
     createProposal,
+    saveDraft,
+    deleteDraft,
+    hideDocument,
+    unhideDocument,
     pickProposal,
     createSnapshot,
     updateRelays,
     resync,
+    listAllStoredPackets,
     seedLargeDataset,
     resetAllData,
     notifyStatus,

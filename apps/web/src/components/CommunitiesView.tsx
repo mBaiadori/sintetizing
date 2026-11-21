@@ -66,6 +66,7 @@ export function CommunitiesView({
 
   const [inviteInput, setInviteInput] = useState("");
   const [relaysDraft, setRelaysDraft] = useState("");
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
   const [v2Title, setV2Title] = useState("");
   const [v2Body, setV2Body] = useState("");
@@ -78,6 +79,7 @@ export function CommunitiesView({
   useEffect(() => {
     setRelaysDraft(selectedCommunity ? selectedCommunity.relays.join("\n") : "");
     setShowProposeV2Form(false);
+    setMemberSearchQuery("");
   }, [selectedCommunity]);
 
   useEffect(() => {
@@ -393,8 +395,8 @@ export function CommunitiesView({
           className="btn btn--sm btn--tonal"
           onClick={onGoToWorkspace}
         >
-          <MaterialIcon name="tag" />
-          <span>Ir para canais</span>
+          <MaterialIcon name="category" />
+          <span>Ir para categorias</span>
         </button>
       </div>
 
@@ -670,59 +672,102 @@ export function CommunitiesView({
 
           {!projection || projection.members.length === 0 ? (
             <p className="md-body-medium">Nenhum membro registrado ainda.</p>
-          ) : (
-            <div className="member-list">
-              {projection.members.map((m) => {
-                const inviterName = m.invitedByPubHex
-                  ? projection.members.find((x) => x.pubHex === m.invitedByPubHex)
-                      ?.displayName
-                  : null;
-                const displayName = m.displayName ?? "Membro";
+          ) : (() => {
+            const normalizedMemberQuery = memberSearchQuery.trim().toLowerCase();
+            const filteredMembers = normalizedMemberQuery
+              ? projection.members.filter((m) => {
+                  const name = (m.displayName ?? "Membro").toLowerCase();
+                  return (
+                    name.includes(normalizedMemberQuery) ||
+                    m.pubHex.toLowerCase().includes(normalizedMemberQuery)
+                  );
+                })
+              : projection.members;
 
-                return (
-                  <article key={m.pubHex} className="member-row">
-                    <div className="member-row__left">
-                      <span className="author-avatar">
-                        {getInitials(displayName, "M")}
-                      </span>
-                      <div className="member-row__text">
-                        <div className="btn-row">
-                          <strong className="md-title-medium">{displayName}</strong>
-                          <span
-                            className={
-                              m.status === "ACTIVE"
-                                ? "chip chip--memb"
-                                : m.status === "LEFT"
-                                  ? "chip chip--left"
-                                  : "chip chip--stze"
-                            }
-                          >
-                            {m.status === "ACTIVE"
-                              ? "Ativo"
-                              : m.status === "LEFT"
-                                ? "Saiu"
-                                : "Inativo"}
-                          </span>
-                          <span className="chip">
-                            {m.isFounder
-                              ? "Fundador"
-                              : inviterName
-                                ? `Convidado por ${inviterName}`
-                                : "Convidado"}
-                          </span>
-                        </div>
-                        <span className="md-label-medium">
-                          Última atividade: {formatDateMs(m.lastActivityMs)}
-                        </span>
-                      </div>
-                    </div>
+            return (
+              <>
+                <div className="feed-search" style={{ marginBottom: 12 }}>
+                  <MaterialIcon name="search" />
+                  <input
+                    type="search"
+                    className="feed-search__input"
+                    value={memberSearchQuery}
+                    onChange={(e) => setMemberSearchQuery(e.target.value)}
+                    placeholder="Buscar membro por nome ou chave..."
+                    aria-label="Buscar membro"
+                  />
+                  {memberSearchQuery && (
+                    <button
+                      type="button"
+                      className="icon-btn icon-btn--xs"
+                      onClick={() => setMemberSearchQuery("")}
+                      aria-label="Limpar busca de membros"
+                    >
+                      <MaterialIcon name="close" />
+                    </button>
+                  )}
+                </div>
 
-                    <span className="chip gov-tabular">{m.pickCount} apoio(s)</span>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+                {filteredMembers.length === 0 ? (
+                  <p className="md-body-medium">
+                    Nenhum membro encontrado para &ldquo;{memberSearchQuery}&rdquo;.
+                  </p>
+                ) : (
+                  <div className="member-list">
+                    {filteredMembers.map((m) => {
+                      const inviterName = m.invitedByPubHex
+                        ? projection.members.find((x) => x.pubHex === m.invitedByPubHex)
+                            ?.displayName
+                        : null;
+                      const displayName = m.displayName ?? "Membro";
+
+                      return (
+                        <article key={m.pubHex} className="member-row">
+                          <div className="member-row__left">
+                            <span className="author-avatar">
+                              {getInitials(displayName, "M")}
+                            </span>
+                            <div className="member-row__text">
+                              <div className="btn-row">
+                                <strong className="md-title-medium">{displayName}</strong>
+                                <span
+                                  className={
+                                    m.status === "ACTIVE"
+                                      ? "chip chip--memb"
+                                      : m.status === "LEFT"
+                                        ? "chip chip--left"
+                                        : "chip chip--stze"
+                                  }
+                                >
+                                  {m.status === "ACTIVE"
+                                    ? "Ativo"
+                                    : m.status === "LEFT"
+                                      ? "Saiu"
+                                      : "Inativo"}
+                                </span>
+                                <span className="chip">
+                                  {m.isFounder
+                                    ? "Fundador"
+                                    : inviterName
+                                      ? `Convidado por ${inviterName}`
+                                      : "Convidado"}
+                                </span>
+                              </div>
+                              <span className="md-label-medium">
+                                Última atividade: {formatDateMs(m.lastActivityMs)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="chip gov-tabular">{m.pickCount} apoio(s)</span>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </section>
       )}
 

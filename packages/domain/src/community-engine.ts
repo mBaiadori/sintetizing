@@ -3,17 +3,25 @@ import {
   BinaryDocument,
   calculateDocId,
   ConfigKind,
+  DeliberationMode,
   DocType,
   InvitePolicy,
   InvitePolicyValue,
   readActiveMembersTableBlock,
   readConfigKindBlock,
   readCosignaturesBlock,
+  readCurrencyBlock,
   readDeadlineBlock,
+  readDeliberationModeBlock,
+  readFieldLinkBlock,
+  readFieldSubtitleBlock,
+  readFieldTableBlock,
+  readFieldTextBlock,
+  readFieldValueBlock,
   readInactivityDaysBlock,
   readInvitePolicyBlock,
+  readLawArticleBlock,
   readPickTargetBlock,
-  readQuorumPctBlock,
   readTimestampBlock,
   readUtf8Block,
   Tag,
@@ -26,10 +34,13 @@ import {
   CommunityConfigVersion,
   CommunityProjection,
   ConfigVersionStatus,
+  DeliberationModeKind,
   InspectedDocument,
   MemberStatus,
   MemberView,
   PickHistoryEntry,
+  ProposalFieldView,
+  ProposalStatus,
   ProposalSummaryView,
   SnapshotSummaryView,
   SubjectSummaryView,
@@ -61,6 +72,11 @@ interface ParsedCmntDraft {
   readonly seq: number;
 }
 
+interface ConfigTimelineEntry {
+  readonly draft: ParsedCmntDraft;
+  readonly activatedAtMs: number;
+}
+
 interface MutableMemberState {
   pubHex: string;
   displayName: string | null;
@@ -69,6 +85,7 @@ interface MutableMemberState {
   invitedByPubHex: string | null;
   joinedAtMs: number;
   lastActivityMs: number;
+  activityTimestamps: number[];
   joinSeq: number;
   joinDocIdHex: string;
   leftAtMs: number | null;
@@ -121,6 +138,10 @@ function isNewerSeqOrTime(
   return candidate.docIdHex > current.docIdHex;
 }
 
+function readQuorumPctUnsafe(blockValue: Uint8Array): number {
+  return blockValue.length === 1 ? blockValue[0]! : 51;
+}
+
 function parseCmntDraft(env: VerifiedEnvelope): ParsedCmntDraft | null {
   if (env.doc.docType !== DocType.CONFIG || env.scope.includes("/")) {
     return null;
@@ -139,6 +160,8 @@ function parseCmntDraft(env: VerifiedEnvelope): ParsedCmntDraft | null {
   const parentBlock = env.doc.blocks.find((b) => b.tag === Tag.PARENT_HASH);
   const parentCommBlock = env.doc.blocks.find((b) => b.tag === Tag.PARENT_COMMUNITY_HASH);
 
+  const parsedQuorum = quorumBlock ? readQuorumPctUnsafe(quorumBlock.value) : 51;
+
   return {
     docIdHex: env.docIdHex,
     parentHashHex: parentBlock ? bytesToHex(parentBlock.value) : null,
@@ -146,7 +169,7 @@ function parseCmntDraft(env: VerifiedEnvelope): ParsedCmntDraft | null {
     scope: env.scope,
     title: titleBlock ? readUtf8Block(titleBlock) : "Comunidade",
     body: bodyBlock ? readUtf8Block(bodyBlock) : "",
-    quorumPct: quorumBlock ? readQuorumPctBlock(quorumBlock) : 51,
+    quorumPct: parsedQuorum >= 1 && parsedQuorum <= 100 ? parsedQuorum : 51,
     inactivityDays: inactivityBlock ? readInactivityDaysBlock(inactivityBlock) : 30,
     invitePolicy: invitePolicyBlock ? readInvitePolicyBlock(invitePolicyBlock) : InvitePolicy.ANY_ACTIVE_MEMBER,
     parentCommunityHashHex: parentCommBlock ? bytesToHex(parentCommBlock.value) : null,
@@ -162,6 +185,64 @@ function isMemberInactive(member: MutableMemberState, inactivityDays: number, no
   return nowMs - member.lastActivityMs > inactivityDays * DAY_MS;
 }
 
+function getLastActivityAt(member: MutableMemberState, targetMs: number): number | null {
+  if (member.joinedAtMs > targetMs) {
+    return null;
+  }
+  if (member.leftAtMs !== null && member.leftAtMs <= targetMs) {
+    return null;
+  }
+  const list = member.activityTimestamps;
+  let lo = 0;
+  let hi = list.length - 1;
+  let best = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (list[mid]! <= targetMs) {
+      best = list[mid]!;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return best >= 0 ? best : member.joinedAtMs;
+}
+
+function getActiveMembersSetAt(
+  membersMap: ReadonlyMap<string, MutableMemberState>,
+  inactivityDays: number,
+  targetMs: number
+): Set<string> {
+  const active = new Set<string>();
+  for (const member of membersMap.values()) {
+    const lastTs = getLastActivityAt(member, targetMs);
+    if (lastTs === null) {
+      continue;
+    }
+    if (lastTs <= 0 || targetMs - lastTs <= inactivityDays * DAY_MS) {
+      active.add(member.pubHex);
+    }
+  }
+  return active;
+}
+
+function getConfigActiveAt(
+  timeline: readonly ConfigTimelineEntry[],
+  targetMs: number
+): { readonly quorumPct: number; readonly inactivityDays: number } {
+  for (let i = timeline.length - 1; i >= 0; i -= 1) {
+    const entry = timeline[i]!;
+    if (entry.activatedAtMs <= targetMs) {
+      return entry.draft;
+    }
+  }
+  const first = timeline[0];
+  if (first) {
+    return first.draft;
+  }
+  return { quorumPct: 51, inactivityDays: 30 };
+}
+
 function latestPickByAuthor(picks: readonly PickEventRecord[]): Map<string, PickEventRecord> {
   const latest = new Map<string, PickEventRecord>();
   for (const pick of picks) {
@@ -173,17 +254,79 @@ function latestPickByAuthor(picks: readonly PickEventRecord[]): Map<string, Pick
   return latest;
 }
 
+function extractProposalFields(doc: BinaryDocument, rawBody: string): ProposalFieldView[] {
+  const fields: ProposalFieldView[] = [];
+  let idx = 0;
+
+  for (const block of doc.blocks) {
+    switch (block.tag) {
+      case Tag.FIELD_SUBTITLE:
+        fields.push({ kind: "SUBTITLE", ...readFieldSubtitleBlock(block) });
+        break;
+      case Tag.FIELD_TEXT:
+        fields.push({ kind: "TEXT", ...readFieldTextBlock(block) });
+        break;
+      case Tag.FIELD_VALUE:
+        fields.push({ kind: "VALUE", ...readFieldValueBlock(block) });
+        break;
+      case Tag.CURRENCY: {
+        const c = readCurrencyBlock(block);
+        fields.push({
+          kind: "VALUE",
+          fieldId: `currency-${idx}`,
+          label: c.label,
+          amountCents: c.cents,
+          unit: "BRL",
+        });
+        break;
+      }
+      case Tag.FIELD_LINK:
+        fields.push({ kind: "LINK", ...readFieldLinkBlock(block) });
+        break;
+      case Tag.FIELD_TABLE:
+        fields.push({ kind: "TABLE", ...readFieldTableBlock(block) });
+        break;
+      case Tag.LAW_ARTICLE: {
+        const a = readLawArticleBlock(block);
+        fields.push({
+          kind: "ARTICLE",
+          fieldId: `article-${a.articleNum}-${idx}`,
+          label: `Art. ${a.articleNum}`,
+          articleNum: a.articleNum,
+          text: a.text,
+        });
+        break;
+      }
+      default:
+        break;
+    }
+    idx += 1;
+  }
+
+  if (fields.length === 0 && rawBody.length > 0) {
+    fields.push({
+      kind: "TEXT",
+      fieldId: "body",
+      label: "Descrição",
+      text: rawBody,
+    });
+  }
+
+  return fields;
+}
+
 function buildContentViews(
   sortedVerified: readonly VerifiedEnvelope[],
   subjectPicksRaw: readonly PickEventRecord[],
-  activeMembersSet: ReadonlySet<string>
+  membersMap: ReadonlyMap<string, MutableMemberState>,
+  timeline: readonly ConfigTimelineEntry[],
+  nowMs: number
 ): {
   readonly categories: CategorySummaryView[];
   readonly subjects: SubjectSummaryView[];
   readonly proposals: ProposalSummaryView[];
   readonly snapshots: SnapshotSummaryView[];
 } {
-  const proposalsByScope = new Map<string, ProposalSummaryView[]>();
   const picksByScope = new Map<string, PickEventRecord[]>();
   for (const pick of subjectPicksRaw) {
     const arr = picksByScope.get(pick.scope) ?? [];
@@ -191,43 +334,24 @@ function buildContentViews(
     picksByScope.set(pick.scope, arr);
   }
 
-  const proposals: ProposalSummaryView[] = [];
-  for (const env of sortedVerified) {
-    if (env.doc.docType !== DocType.PROPOSAL) {
-      continue;
+  const latestPicksCache = new Map<string, Map<string, PickEventRecord>>();
+  const getLatestPicksAt = (scope: string, evalMs: number): Map<string, PickEventRecord> => {
+    const cacheKey = `${scope}@${evalMs}`;
+    const cached = latestPicksCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
-    const scopePicks = latestPickByAuthor(picksByScope.get(env.scope) ?? []);
-    const supporterPubs: string[] = [];
-    for (const [authorHex, pick] of scopePicks.entries()) {
-      if (activeMembersSet.has(authorHex) && pick.targetHex === env.docIdHex) {
-        supporterPubs.push(authorHex);
-      }
-    }
-    const titleBlock = env.doc.blocks.find((b) => b.tag === Tag.TITLE);
-    const bodyBlock = env.doc.blocks.find((b) => b.tag === Tag.BODY);
-    const authorNameBlock = env.doc.blocks.find((b) => b.tag === Tag.AUTHOR_NAME);
-    const parentBlock = env.doc.blocks.find((b) => b.tag === Tag.PARENT_HASH);
+    const filtered = (picksByScope.get(scope) ?? []).filter((p) => p.timestampMs <= evalMs);
+    const map = latestPickByAuthor(filtered);
+    latestPicksCache.set(cacheKey, map);
+    return map;
+  };
 
-    const item: ProposalSummaryView = {
-      docIdHex: env.docIdHex,
-      scope: env.scope,
-      title: titleBlock ? readUtf8Block(titleBlock) : "Proposta",
-      body: bodyBlock ? readUtf8Block(bodyBlock) : "",
-      authorPubHex: env.authorPubHex,
-      authorName: authorNameBlock ? readUtf8Block(authorNameBlock) : null,
-      parentHashHex: parentBlock ? bytesToHex(parentBlock.value) : null,
-      timestampMs: env.timestampMs,
-      pickCount: supporterPubs.length,
-      supporterPubs,
-    };
-    proposals.push(item);
-    const list = proposalsByScope.get(env.scope) ?? [];
-    list.push(item);
-    proposalsByScope.set(env.scope, list);
-  }
-
-  const subjects: SubjectSummaryView[] = [];
+  // 1. Assuntos primeiro (para que propostas herdem o modo e prazo padrão do assunto)
+  const rawSubjects: SubjectSummaryView[] = [];
+  const subjectByScope = new Map<string, SubjectSummaryView>();
   const subjectCountByCategory = new Map<string, number>();
+
   for (const env of sortedVerified) {
     if (env.doc.docType !== DocType.CONFIG) {
       continue;
@@ -238,11 +362,11 @@ function buildContentViews(
     }
     const titleBlock = env.doc.blocks.find((b) => b.tag === Tag.TITLE);
     const bodyBlock = env.doc.blocks.find((b) => b.tag === Tag.BODY);
-    const quorumBlock = env.doc.blocks.find((b) => b.tag === Tag.QUORUM_PCT);
+    const modeBlock = env.doc.blocks.find((b) => b.tag === Tag.DELIBERATION_MODE);
     const deadlineBlock = env.doc.blocks.find((b) => b.tag === Tag.DEADLINE);
     const categoryBlock = env.doc.blocks.find((b) => b.tag === Tag.CATEGORY_HASH);
-    const categoryHashHex = categoryBlock ? bytesToHex(categoryBlock.value) : null;
 
+    const categoryHashHex = categoryBlock ? bytesToHex(categoryBlock.value) : null;
     if (categoryHashHex) {
       subjectCountByCategory.set(
         categoryHashHex,
@@ -250,19 +374,174 @@ function buildContentViews(
       );
     }
 
-    subjects.push({
+    const deliberationMode: DeliberationModeKind =
+      modeBlock && readDeliberationModeBlock(modeBlock) === DeliberationMode.OPEN
+        ? "OPEN"
+        : "QUORUM";
+    const deadlineUnixSeconds = deadlineBlock ? readDeadlineBlock(deadlineBlock) : null;
+    const deadlineMs = deadlineUnixSeconds !== null ? deadlineUnixSeconds * 1000 : null;
+    const isExpired = deadlineMs !== null && nowMs > deadlineMs;
+    const evalMs = isExpired ? deadlineMs! : nowMs;
+    const cmntAtEval = getConfigActiveAt(timeline, evalMs);
+    const activeSetAtEval =
+      timeline.length > 0
+        ? getActiveMembersSetAt(membersMap, cmntAtEval.inactivityDays, evalMs)
+        : new Set<string>();
+    const quorumPct = deliberationMode === "OPEN" ? null : cmntAtEval.quorumPct;
+    const requiredVotes =
+      quorumPct === null ? 0 : computeQuorumRequired(activeSetAtEval.size, quorumPct);
+
+    const subjectView: SubjectSummaryView = {
       scope: env.scope,
       docIdHex: env.docIdHex,
       categoryHashHex,
       title: titleBlock ? readUtf8Block(titleBlock) : "Assunto",
       body: bodyBlock ? readUtf8Block(bodyBlock) : "",
-      quorumPct: quorumBlock ? readQuorumPctBlock(quorumBlock) : 51,
-      deadlineUnixSeconds: deadlineBlock ? readDeadlineBlock(deadlineBlock) : null,
+      deliberationMode,
+      quorumPct,
+      requiredVotes,
+      deadlineUnixSeconds,
+      isExpired,
       authorPubHex: env.authorPubHex,
       timestampMs: env.timestampMs,
-      proposalCount: proposalsByScope.get(env.scope)?.length ?? 0,
-    });
+      proposalCount: 0,
+    };
+
+    rawSubjects.push(subjectView);
+    subjectByScope.set(env.scope, subjectView);
   }
+
+  // 2. Propostas com avaliação histórica de .cmnt, corte de prazo e blocos estruturados
+  interface DraftProposalView extends ProposalSummaryView {
+    status: ProposalStatus;
+    supersededByDocIdHex: string | null;
+  }
+
+  const proposalsRaw: DraftProposalView[] = [];
+  const proposalsByScope = new Map<string, DraftProposalView[]>();
+
+  for (const env of sortedVerified) {
+    if (env.doc.docType !== DocType.PROPOSAL) {
+      continue;
+    }
+
+    const titleBlock = env.doc.blocks.find((b) => b.tag === Tag.TITLE);
+    const bodyBlock = env.doc.blocks.find((b) => b.tag === Tag.BODY);
+    const authorNameBlock = env.doc.blocks.find((b) => b.tag === Tag.AUTHOR_NAME);
+    const parentBlock = env.doc.blocks.find((b) => b.tag === Tag.PARENT_HASH);
+    const deadlineBlock = env.doc.blocks.find((b) => b.tag === Tag.DEADLINE);
+
+    const rawBody = bodyBlock ? readUtf8Block(bodyBlock) : "";
+    const fields = extractProposalFields(env.doc, rawBody);
+    const firstText = fields.find((f) => f.kind === "TEXT");
+    const summaryBody =
+      rawBody || (firstText && firstText.kind === "TEXT" ? firstText.text : "");
+
+    const subject = subjectByScope.get(env.scope) ?? null;
+    const deliberationMode: DeliberationModeKind = subject?.deliberationMode ?? "QUORUM";
+    const propDeadlineSec = deadlineBlock ? readDeadlineBlock(deadlineBlock) : null;
+    const deadlineUnixSeconds = propDeadlineSec ?? subject?.deadlineUnixSeconds ?? null;
+    const deadlineMs = deadlineUnixSeconds !== null ? deadlineUnixSeconds * 1000 : null;
+    const isVotingOpen = deadlineMs === null || nowMs <= deadlineMs;
+    const evalMs = isVotingOpen ? nowMs : deadlineMs!;
+
+    const cmntAtEval = getConfigActiveAt(timeline, evalMs);
+    const activeSetAtEval =
+      timeline.length > 0
+        ? getActiveMembersSetAt(membersMap, cmntAtEval.inactivityDays, evalMs)
+        : new Set<string>();
+    const quorumPct = deliberationMode === "OPEN" ? null : cmntAtEval.quorumPct;
+    const requiredVotes =
+      quorumPct === null ? 0 : computeQuorumRequired(activeSetAtEval.size, quorumPct);
+
+    const scopePicks = getLatestPicksAt(env.scope, evalMs);
+    const supporterPubs: string[] = [];
+    for (const [authorHex, pick] of scopePicks.entries()) {
+      if (activeSetAtEval.has(authorHex) && pick.targetHex === env.docIdHex) {
+        supporterPubs.push(authorHex);
+      }
+    }
+
+    const item: DraftProposalView = {
+      docIdHex: env.docIdHex,
+      scope: env.scope,
+      title: titleBlock ? readUtf8Block(titleBlock) : "Proposta",
+      body: summaryBody,
+      fields,
+      authorPubHex: env.authorPubHex,
+      authorName: authorNameBlock ? readUtf8Block(authorNameBlock) : null,
+      parentHashHex: parentBlock ? bytesToHex(parentBlock.value) : null,
+      timestampMs: env.timestampMs,
+      deadlineUnixSeconds,
+      deliberationMode,
+      quorumPct,
+      requiredVotes,
+      status: "OPEN",
+      isVotingOpen,
+      supersededByDocIdHex: null,
+      pickCount: supporterPubs.length,
+      supporterPubs,
+    };
+
+    proposalsRaw.push(item);
+    const list = proposalsByScope.get(env.scope) ?? [];
+    list.push(item);
+    proposalsByScope.set(env.scope, list);
+  }
+
+  // 3. Fecha status (CONSENSUS / APPROVED / EXPIRED) e detecta substituições sem apoios
+  for (const scopeProps of proposalsByScope.values()) {
+    const expiredCandidates = scopeProps.filter((p) => !p.isVotingOpen);
+    let winningExpiredId: string | null = null;
+
+    if (expiredCandidates.length > 0) {
+      const qualified = expiredCandidates.filter((p) =>
+        p.deliberationMode === "OPEN"
+          ? p.pickCount > 0
+          : p.requiredVotes > 0 && p.pickCount >= p.requiredVotes
+      );
+      if (qualified.length > 0) {
+        qualified.sort(
+          (a, b) =>
+            b.pickCount - a.pickCount ||
+            a.timestampMs - b.timestampMs ||
+            a.docIdHex.localeCompare(b.docIdHex)
+        );
+        winningExpiredId = qualified[0]!.docIdHex;
+      }
+    }
+
+    for (const prop of scopeProps) {
+      if (prop.isVotingOpen) {
+        prop.status =
+          prop.deliberationMode === "QUORUM" &&
+          prop.requiredVotes > 0 &&
+          prop.pickCount >= prop.requiredVotes
+            ? "CONSENSUS"
+            : "OPEN";
+      } else {
+        prop.status = prop.docIdHex === winningExpiredId ? "APPROVED" : "EXPIRED";
+      }
+
+      if (prop.pickCount === 0) {
+        const newerAuthorForks = scopeProps
+          .filter(
+            (other) =>
+              other.parentHashHex === prop.docIdHex &&
+              other.authorPubHex === prop.authorPubHex
+          )
+          .sort((a, b) => b.timestampMs - a.timestampMs || b.docIdHex.localeCompare(a.docIdHex));
+        if (newerAuthorForks.length > 0) {
+          prop.supersededByDocIdHex = newerAuthorForks[0]!.docIdHex;
+        }
+      }
+    }
+  }
+
+  const subjects: SubjectSummaryView[] = rawSubjects.map((s) => ({
+    ...s,
+    proposalCount: proposalsByScope.get(s.scope)?.length ?? 0,
+  }));
 
   const categories: CategorySummaryView[] = [];
   for (const env of sortedVerified) {
@@ -309,7 +588,7 @@ function buildContentViews(
   return {
     categories,
     subjects: subjects.reverse(),
-    proposals: proposals.reverse(),
+    proposals: proposalsRaw.reverse(),
     snapshots: snapshots.reverse(),
   };
 }
@@ -421,7 +700,13 @@ export async function projectCommunityState(
   const sortedVerified = [...verified].sort(compareChronological);
   const genesis = cmntDrafts.find((d) => d.parentHashHex === null);
   if (!genesis) {
-    const contentWithoutGenesis = buildContentViews(sortedVerified, [], new Set());
+    const contentWithoutGenesis = buildContentViews(
+      sortedVerified,
+      [],
+      new Map(),
+      [],
+      nowMs
+    );
     return {
       communityId,
       activeConfig: null,
@@ -448,6 +733,7 @@ export async function projectCommunityState(
     invitedByPubHex: null,
     joinedAtMs: genesis.timestampMs,
     lastActivityMs: genesis.timestampMs,
+    activityTimestamps: [genesis.timestampMs],
     joinSeq: genesis.seq,
     joinDocIdHex: genesis.docIdHex,
     leftAtMs: null,
@@ -460,7 +746,6 @@ export async function projectCommunityState(
     .filter((v) => v.doc.docType === DocType.MEMB_JOIN && v.scope === communityId)
     .sort(compareChronological);
 
-  const acceptedJoinPaks: VerifiedEnvelope[] = [];
   for (const joinEnv of joinPackets) {
     const inviteBlock = joinEnv.doc.blocks.find((b) => b.tag === Tag.INVITE_PROOF);
     if (!inviteBlock) {
@@ -483,7 +768,6 @@ export async function projectCommunityState(
       continue;
     }
 
-    acceptedJoinPaks.push(joinEnv);
     const existing = membersMap.get(joinEnv.authorPubHex);
     if (!existing) {
       membersMap.set(joinEnv.authorPubHex, {
@@ -494,6 +778,7 @@ export async function projectCommunityState(
         invitedByPubHex: inviterHex,
         joinedAtMs: joinTs,
         lastActivityMs: joinTs,
+        activityTimestamps: [joinTs],
         joinSeq: joinEnv.doc.seq,
         joinDocIdHex: joinEnv.docIdHex,
         leftAtMs: null,
@@ -506,6 +791,7 @@ export async function projectCommunityState(
       existing.invitedByPubHex = inviterHex;
       existing.joinedAtMs = joinTs;
       existing.lastActivityMs = Math.max(existing.lastActivityMs, joinTs);
+      existing.activityTimestamps.push(joinTs);
       existing.joinSeq = joinEnv.doc.seq;
       existing.joinDocIdHex = joinEnv.docIdHex;
     }
@@ -533,13 +819,20 @@ export async function projectCommunityState(
       if (env.timestampMs > member.lastActivityMs) {
         member.lastActivityMs = env.timestampMs;
       }
+      if (env.timestampMs > 0) {
+        member.activityTimestamps.push(env.timestampMs);
+      }
       if (env.doc.docType === DocType.PICK || env.doc.docType === DocType.COMMUNITY_PICK) {
         member.pickCount += 1;
       }
     }
   }
 
-  // Coleta últimos COMMUNITY_PICK de membros não saídos
+  for (const member of membersMap.values()) {
+    member.activityTimestamps.sort((a, b) => a - b);
+  }
+
+  // Coleta últimos COMMUNITY_PICK e PICK
   const communityPicksRaw: PickEventRecord[] = [];
   const subjectPicksRaw: PickEventRecord[] = [];
   for (const env of verified) {
@@ -569,13 +862,18 @@ export async function projectCommunityState(
     }
   }
 
-  const latestCommunityPickMap = latestPickByAuthor(communityPicksRaw);
+  const sortedCommunityPicks = [...communityPicksRaw].sort(compareChronological);
+  const latestCommunityPickMap = latestPickByAuthor(sortedCommunityPicks);
 
-  // Resolução iterativa da cadeia .cmnt (v1 -> v2 -> v3...)
+  // Resolução iterativa da cadeia .cmnt (v1 -> v2 -> v3...) com linha do tempo histórica (activatedAtMs)
   let currentActive: ParsedCmntDraft = genesis;
+  let currentActivatedAtMs = genesis.timestampMs;
+  const timeline: ConfigTimelineEntry[] = [{ draft: genesis, activatedAtMs: genesis.timestampMs }];
+  const activatedAtMap = new Map<string, number>([[genesis.docIdHex, genesis.timestampMs]]);
   const versionIndexMap = new Map<string, number>([[genesis.docIdHex, 1]]);
   const statusMap = new Map<string, ConfigVersionStatus>([[genesis.docIdHex, "ACTIVE"]]);
   const childrenMap = new Map<string, ParsedCmntDraft[]>();
+
   for (const draft of cmntDrafts) {
     if (draft.parentHashHex) {
       const list = childrenMap.get(draft.parentHashHex) ?? [];
@@ -588,37 +886,100 @@ export async function projectCommunityState(
   const visitedConfigs = new Set<string>([genesis.docIdHex]);
 
   while (true) {
-    const activeMembersAtStep = Array.from(membersMap.values()).filter(
-      (m) => m.leftAtMs === null && !isMemberInactive(m, currentActive.inactivityDays, nowMs)
-    );
-    const activeSet = new Set(activeMembersAtStep.map((m) => m.pubHex));
-    const required = computeQuorumRequired(activeMembersAtStep.length, currentActive.quorumPct);
-
     const children = (childrenMap.get(currentActive.docIdHex) ?? []).filter(
       (c) => !visitedConfigs.has(c.docIdHex)
     );
-    if (children.length === 0 || activeMembersAtStep.length === 0 || required <= 0) {
+    if (children.length === 0) {
       break;
     }
 
     let winner: ParsedCmntDraft | null = null;
-    let winnerCount = -1;
+    let winnerActivatedAtMs = 0;
 
-    for (const child of children) {
-      let count = 0;
-      for (const authorHex of activeSet) {
-        if (latestCommunityPickMap.get(authorHex)?.targetHex === child.docIdHex) {
-          count += 1;
+    // Replay cronológico para determinar em qual timestamp exato a nova .cmnt atingiu quórum
+    const runningPicks = new Map<string, PickEventRecord>();
+    for (const pick of sortedCommunityPicks) {
+      const prev = runningPicks.get(pick.authorPubHex);
+      if (!prev || isNewerSeqOrTime(pick, prev)) {
+        runningPicks.set(pick.authorPubHex, pick);
+      }
+
+      if (pick.timestampMs < currentActivatedAtMs) {
+        continue;
+      }
+
+      const activeAtPick = getActiveMembersSetAt(
+        membersMap,
+        currentActive.inactivityDays,
+        pick.timestampMs
+      );
+      const requiredAtPick = computeQuorumRequired(
+        activeAtPick.size,
+        currentActive.quorumPct
+      );
+      if (activeAtPick.size === 0 || requiredAtPick <= 0) {
+        continue;
+      }
+
+      let bestChild: ParsedCmntDraft | null = null;
+      let bestCount = -1;
+      for (const child of children) {
+        if (child.timestampMs > pick.timestampMs) {
+          continue;
+        }
+        let count = 0;
+        for (const authorHex of activeAtPick) {
+          if (runningPicks.get(authorHex)?.targetHex === child.docIdHex) {
+            count += 1;
+          }
+        }
+        if (count >= requiredAtPick) {
+          if (
+            bestChild === null ||
+            count > bestCount ||
+            (count === bestCount && compareChronological(child, bestChild) < 0)
+          ) {
+            bestChild = child;
+            bestCount = count;
+          }
         }
       }
-      if (count >= required) {
-        if (
-          winner === null ||
-          count > winnerCount ||
-          (count === winnerCount && compareChronological(child, winner) < 0)
-        ) {
-          winner = child;
-          winnerCount = count;
+
+      if (bestChild) {
+        winner = bestChild;
+        winnerActivatedAtMs = pick.timestampMs;
+        break;
+      }
+    }
+
+    // Fallback no instante nowMs caso inatividade recente de membros tenha reduzido o denominador
+    if (!winner) {
+      const activeAtNow = getActiveMembersSetAt(
+        membersMap,
+        currentActive.inactivityDays,
+        nowMs
+      );
+      const requiredAtNow = computeQuorumRequired(activeAtNow.size, currentActive.quorumPct);
+      if (activeAtNow.size > 0 && requiredAtNow > 0) {
+        let bestCount = -1;
+        for (const child of children) {
+          let count = 0;
+          for (const authorHex of activeAtNow) {
+            if (latestCommunityPickMap.get(authorHex)?.targetHex === child.docIdHex) {
+              count += 1;
+            }
+          }
+          if (count >= requiredAtNow) {
+            if (
+              winner === null ||
+              count > bestCount ||
+              (count === bestCount && compareChronological(child, winner) < 0)
+            ) {
+              winner = child;
+              bestCount = count;
+              winnerActivatedAtMs = Math.max(currentActivatedAtMs, child.timestampMs, nowMs);
+            }
+          }
         }
       }
     }
@@ -630,8 +991,11 @@ export async function projectCommunityState(
     statusMap.set(currentActive.docIdHex, "SUPERSEDED");
     statusMap.set(winner.docIdHex, "ACTIVE");
     versionIndexMap.set(winner.docIdHex, nextVersionNum++);
+    activatedAtMap.set(winner.docIdHex, winnerActivatedAtMs);
     visitedConfigs.add(winner.docIdHex);
+    timeline.push({ draft: winner, activatedAtMs: winnerActivatedAtMs });
     currentActive = winner;
+    currentActivatedAtMs = winnerActivatedAtMs;
   }
 
   // Constrói lista final de membros usando o inactivityDays da versão ativa final
@@ -688,6 +1052,7 @@ export async function projectCommunityState(
       invitePolicy: draft.invitePolicy,
       parentCommunityHashHex: draft.parentCommunityHashHex,
       timestampMs: draft.timestampMs,
+      activatedAtMs: activatedAtMap.get(draft.docIdHex) ?? null,
       supportCount: supporterPubs.length,
       supporterPubs,
       requiredSupports: requiredForNext,
@@ -701,7 +1066,9 @@ export async function projectCommunityState(
   const content = buildContentViews(
     sortedVerified,
     subjectPicksRaw,
-    activeMembersFinalSet
+    membersMap,
+    timeline,
+    nowMs
   );
   const pickHistory = buildPickHistory(
     subjectPicksRaw,
