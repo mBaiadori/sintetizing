@@ -1,0 +1,33 @@
+{
+  "name": "@sintetizing/network",
+  "version": "1.0.0",
+  "description": "Nostr NIP-01 transport (nostr-tools) and minimal local NIP-01 dev relay for Sintetize TLV documents",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./local-relay": {
+      "import": "./dist/local-relay.js",
+      "types": "./dist/local-relay.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.7.1",
+    "@sintetizing/wire": "workspace:*",
+    "nostr-tools": "^2.26.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "@types/ws": "^8.18.0",
+    "typescript": "^5.7.3"
+  }
+}

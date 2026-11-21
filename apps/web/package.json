@@ -1,0 +1,29 @@
+{
+  "name": "@sintetizing/web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sintetize Document Explorer PWA (.cmnt, .memb, .stze, .snap over Nostr)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.7.1",
+    "@sintetizing/domain": "workspace:*",
+    "@sintetizing/network": "workspace:*",
+    "@sintetizing/storage": "workspace:*",
+    "@sintetizing/wire": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.4",
+    "@vitejs/plugin-react": "^4.5.2",
+    "typescript": "^5.7.3",
+    "vite": "^7.3.7"
+  }
+}

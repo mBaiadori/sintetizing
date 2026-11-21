@@ -1,0 +1,24 @@
+{
+  "name": "@sintetizing/domain",
+  "version": "1.0.0",
+  "description": "Pure community governance engine (.cmnt, .memb, .stze, .snap) and TLV packet inspector for Sintetize",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.7.1",
+    "@sintetizing/wire": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

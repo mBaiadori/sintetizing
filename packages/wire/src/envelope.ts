@@ -60,6 +60,12 @@ export async function packDocument(
 
   // Serializa a fita de blocos TLV
   const tlvBytes = encodeTLVBlocks(doc.blocks);
+  const totalSize = WIRE_CONSTANTS.HEADER_SIZE + tlvBytes.length;
+  if (totalSize > WIRE_CONSTANTS.MAX_PACKET_SIZE) {
+    throw new Error(
+      `Pacote binário excede o limite máximo de ${WIRE_CONSTANTS.MAX_PACKET_SIZE} bytes (recebido ${totalSize} bytes).`
+    );
+  }
 
   // Constrói payload assinado (pré-cabeçalho 38 bytes + tlvBytes)
   const signedPayload = buildSignedPayload(version, doc.docType, doc.authorPub, doc.seq, tlvBytes);
@@ -86,6 +92,12 @@ export async function packDocument(
  * Verifica cabeçalho de 102 bytes, autenticidade da assinatura Ed25519 e limites da fita TLV.
  */
 export async function unpackAndVerifyDocument(bytes: Uint8Array): Promise<BinaryDocument> {
+  if (bytes.length > WIRE_CONSTANTS.MAX_PACKET_SIZE) {
+    throw new Error(
+      `Pacote binário excede o limite máximo de ${WIRE_CONSTANTS.MAX_PACKET_SIZE} bytes (recebido ${bytes.length} bytes).`
+    );
+  }
+
   if (bytes.length < WIRE_CONSTANTS.HEADER_SIZE) {
     throw new Error(
       `Pacote binário truncado: esperado no mínimo ${WIRE_CONSTANTS.HEADER_SIZE} bytes de cabeçalho, recebido ${bytes.length}.`
@@ -137,4 +149,16 @@ export async function unpackAndVerifyDocument(bytes: Uint8Array): Promise<Binary
  */
 export function calculateDocId(bytes: Uint8Array): Uint8Array {
   return sha256(bytes);
+}
+
+/**
+ * Gera um novo par de chaves Ed25519 (32B pública / 32B privada).
+ */
+export async function generateEd25519Keypair(): Promise<{
+  readonly publicKey: Uint8Array;
+  readonly privateKey: Uint8Array;
+}> {
+  const privateKey = ed25519.utils.randomPrivateKey();
+  const publicKey = await ed25519.getPublicKeyAsync(privateKey);
+  return { publicKey, privateKey };
 }

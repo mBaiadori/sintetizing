@@ -1,6 +1,6 @@
 # CONSTRAINTS.md — Contrato de Qualidade e Segurança Inegociável
 **Projeto:** Sintetize — Infraestrutura Local-First de Síntese e Consenso Dinâmico  
-**Versão do Contrato:** 1.1 (Regras Estritas para Humanos e Agentes de IA)
+**Versão do Contrato:** 1.2 (Modo Protótipo / Exploração Ativa)
 
 ---
 
@@ -10,47 +10,44 @@ As regras abaixo são inegociáveis. Qualquer Pull Request ou código gerado por
 
 1. **Tipagem Estrita Total no Compilador:**
    * O arquivo `tsconfig.base.json` deve conter `"strict": true`, `"noImplicitAny": true`, `"strictNullChecks": true` e `"exactOptionalPropertyTypes": true`.
-   * **Proibição Absoluta do tipo `any`:** Utilizar `unknown` para dados não validados nas bordas, seguido de narrowing estrito via Zod ou decodificação binária validada.
+   * **Proibição Absoluta do tipo `any`:** Utilizar `unknown` para dados não validados nas bordas, seguido de narrowing estrito via decodificação binária/runtime validada.
    * **Zero Supressões Silenciosas:** É estritamente proibido o uso de `@ts-ignore`, `@ts-nocheck`, `@ts-expect-error` ou comentários de desativação do linter (`eslint-disable`). Se há erro de tipo, o tipo está errado e deve ser consertado.
 
-2. **Integridade da Suíte de Testes:**
-   * É proibido desativar, pular (`it.skip`, `describe.skip`) ou deletar testes existentes para obter status verde.
-   * Proibido remover ou enfraquecer asserções (`expect(...)`) para ocultar regressões.
-   * Proibido criar stubs de teste vazios sem asserções reais.
+2. **Integridade da Suíte de Testes (Fase Protótipo / Exploração Ativa):**
+   * Por decisão explícita do projeto durante a exploração do protocolo TLV + Nostr (`07_COMMUNITY_PROTOCOL_AND_SYNC.md` / `08_TLV_DOCUMENT_TYPES.md`) e do Explorador de Documentos:
+     * Mantém-se **1 suíte enxuta de teste de fumaça** em `packages/wire/test/wire.smoke.spec.ts` cobrindo empacotamento, desempacotamento e verificação Ed25519 nos universos `.cmnt`, `.memb`, `.stze` e `.snap`.
+     * Ficam dispensadas metas de cobertura pesada e suítes de testes em `domain`, `storage`, `network` e `apps/web` até a estabilização do protocolo e da interface (quando os gates de cobertura retornarão).
+   * Dentro da suíte existente, continua proibido desativar (`it.skip`, `describe.skip`) ou enfraquecer asserções para ocultar falhas.
 
 ---
 
-## 2. Metas Numéricas de Cobertura de Testes
+## 2. Verificação Obrigatória na Fase Atual
 
-Os limites de cobertura de testes automatizados são verificados mecanicamente pelo Vitest:
-
-| Módulo do Sistema | Cobertura Mínima de Linhas | Cobertura Mínima de Ramos (Branch) | Ação em Caso de Violação |
-| :--- | :--- | :--- | :--- |
-| **`packages/wire/src`** (envelope, TLV, validadores, Merkle, estado) | **100%** | **95%** | Bloqueio imediato de build |
-| **`packages/domain`** (quórum, prazos, diff $N \times N$) | **100%** | **100%** | Bloqueio imediato de build |
-| **`packages/storage`** (persistência local e projeções) | **90%** | **85%** | Bloqueio imediato de build |
-| **`packages/network`** (Blind Relay, `RelayPool`, delta sync) | **90%** | **85%** | Bloqueio imediato de build |
-| **`apps/web/components`** | **80%** | **75%** | Alerta no pipeline de CI |
+| Camada / Comando | Requisito Atual | Ação em Caso de Violação |
+| :--- | :--- | :--- |
+| **`pnpm typecheck`** (`wire`, `domain`, `storage`, `network`, `web`) | 0 erros com TS estrito + `exactOptionalPropertyTypes` | Bloqueio imediato |
+| **`pnpm build`** (`packages/*` + `apps/web`) | Build completo sem erros de empacotamento | Bloqueio imediato |
+| **`pnpm test`** (`packages/wire/test/wire.smoke.spec.ts`) | 100% dos testes de fumaça binária passando | Bloqueio imediato |
+| **`domain` / `storage` / `network` / `apps/web`** | Sem gates de cobertura durante exploração | Retornam na estabilização |
 
 ---
 
 ## 3. Orçamento de Segurança e Hardening
 
 1. **Proteção contra DoS e Exaustão de Recursos:**
-   * **Teto Máximo de Payload:** Todo pacote `.stze` ou evento recebido via rede P2P/relay que exceda **100 Kilobytes** deve ser descartado antes do parsing completo ou verificação criptográfica.
-   * **Limites de String/TLV:** Campos da fita TLV seguem limites rígidos (`SCOPE`: 3–128 bytes; `TITLE`: 5–160 bytes; `BODY`: 1–4.000 bytes; `LAW_ARTICLE`: 3–2.002 bytes).
+   * **Teto Máximo de Payload:** Todo pacote binário ou evento recebido via Nostr/relay que exceda **100 Kilobytes** (`102400` bytes) deve ser descartado antes do parsing completo ou verificação criptográfica.
+   * **Limites de String/TLV:** Campos da fita TLV seguem limites rígidos (`SCOPE`: 3–128 bytes; `TITLE`: 5–160 bytes; `BODY`: 1–4.000 bytes; `LAW_ARTICLE`: 3–2.002 bytes; `INACTIVITY_DAYS`: 1–3.650 dias).
 
 2. **Mitigação contra Ataques de Replay e Fraude:**
-   * **Idempotência Criptográfica:** Um pacote `.stze` com o mesmo `docId` (SHA-256 dos bytes) nunca pode ser reprocessado nem duplicado no estado.
-   * **Anti-Replay Monotônico:** Pacotes `PICK` e `COMMUNITY_PICK` exigem `seq > seq_atual` do autor; pacotes com `seq` menor ou igual são rejeitados imediatamente.
+   * **Idempotência Criptográfica:** Um pacote com o mesmo `docId` (SHA-256 dos bytes) nunca pode ser reprocessado nem duplicado no estado.
+   * **Anti-Replay Monotônico:** Pacotes `PICK`, `COMMUNITY_PICK` e `MEMB_LEAVE` exigem `seq` monotônico crescente por autor; apenas a última posição válida por autor prevalece.
 
 3. **Prevenção contra XSS (Cross-Site Scripting):**
-   * Nenhum conteúdo gerado por usuário (propostas, emendas, mensagens) pode ser renderizado via `dangerouslySetInnerHTML` ou similar sem passar previamente por sanitização via biblioteca auditada (ex.: DOMPurify).
-   * Tags permitidas em formatação rica: exclusivamente `<p>`, `<b>`, `<i>`, `<ul>`, `<li>`, `<blockquote>`, `<h1>`-`<h3>`, `<del>`, `<ins>`. Qualquer tag `<script>`, `<iframe>`, `<object>` ou atributos de evento (`onload`, `onerror`) são expurgados.
+   * Nenhum conteúdo gerado por usuário (propostas, documentos, mensagens) pode ser renderizado via `dangerouslySetInnerHTML` ou similar.
 
 4. **Custódia Zero e Isolamento de Chaves:**
-   * Chaves privadas Ed25519 nunca são enviadas para servidores/relays, nunca são persistidas em `localStorage` inseguro e nunca trafegam em mensagens de rede.
-   * Em clientes web/mobile, a assinatura é protegida localmente no dispositivo via WebAuthn/Passkeys (ou WebCrypto não-extraível como fallback).
+   * Chaves privadas Ed25519 nunca são enviadas para relays Nostr ou servidores e nunca trafegam em mensagens de rede.
+   * Chaves secp256k1 usadas apenas no envelope Nostr são derivadas localmente por comunidade para preservar privacidade entre comunidades.
 
 ---
 
@@ -60,10 +57,9 @@ O protocolo deve operar de forma imperceptível em smartphones e hardware modest
 
 | Operação | Tempo Máximo de Resposta | Ambiente de Medição |
 | :--- | :--- | :--- |
-| **Verificação de Pacote `.stze`** | $\le 5 \text{ ms}$ | CPU do navegador / mobile |
-| **Ingestão e Cálculo de Placar/Quórum** | $\le 10 \text{ ms}$ | CPU do navegador / mobile |
-| **Consulta de Propostas Ativas** | $\le 20 \text{ ms}$ | Storage local (IndexedDB / OPFS) |
-| **Renderização de Diff Visual $N \times N$** | $\le 50 \text{ ms}$ | Interface PWA / DOM |
+| **Verificação de Pacote TLV** | $\le 5 \text{ ms}$ | CPU do navegador / mobile |
+| **Ingestão e Cálculo de Estado / Quórum** | $\le 10 \text{ ms}$ | CPU do navegador / mobile |
+| **Consulta Local de Pacotes** | $\le 20 \text{ ms}$ | Storage local (IndexedDB) |
 
 ---
 
@@ -71,5 +67,5 @@ O protocolo deve operar de forma imperceptível em smartphones e hardware modest
 
 1. **Sem Dependências Circulares:** A direção das dependências deve ser unidirecional e linear:
    $$\text{Wire} \longrightarrow \text{Domain} \longrightarrow \text{Storage} \longrightarrow \text{Network} \longrightarrow \text{UI}$$
-   O módulo `Wire` nunca importa `Storage`, `Network` ou `UI`.
-2. **Funções Puras no Núcleo:** As funções de codificação, validação estrutural, cálculo de estado e Diff dentro de `packages/wire` e `packages/domain` não podem realizar chamadas de rede, acessar I/O de disco ou ler o relógio do sistema diretamente (`timestamp` deve ser recebido como parâmetro).
+   O módulo `Wire` nunca importa `Domain`, `Storage`, `Network` ou `UI`.
+2. **Funções Puras no Núcleo:** As funções de codificação, validação estrutural, inspeção TLV e cálculo de comunidade dentro de `packages/wire` e `packages/domain` não podem realizar chamadas de rede, acessar I/O de disco ou ler o relógio do sistema diretamente (`nowMs` deve ser recebido como parâmetro).

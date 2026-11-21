@@ -4,7 +4,7 @@
 **Status:** Canonical / Living Document  
 **Tipo:** System Design Document (UI/UX & Delivery Spec)  
 **Autor:** Projeto Sintetize Core Team  
-**Última Atualização:** 2026-11-04  
+**Última Atualização:** 2026-11-20  
 
 ---
 
@@ -46,16 +46,24 @@ flowchart TD
 
 ## 2. Especificação Técnica dos Componentes de Interface
 
-### 2.1. Ergonomia Cognitiva (Ux)
-* **Área de Toque Inegociável:** Todo botão, card de proposta ou elemento clicável respeita a dimensão mínima de **$44 \times 44\text{ px}$** (`.gov-touch-target`), prevenindo toques acidentais e facilitando o uso em telas pequenas por idosos;
-* **Carga Mental Reduzida:** Um assunto apresenta apenas as informações vitais de decisão: *O que será feito, quanto custa, quem executa, prazos e garantias*.
+### 2.1. Ergonomia Cognitiva (Ux) & Componentes M3
+* **Área de Toque Inegociável (Padrão Material Design 3):** Todo botão, card de proposta ou elemento clicável respeita a dimensão mínima de **$48 \times 48\text{ dp}$** (classe semântica `.gov-touch-target`, superando o piso mínimo WCAG de $44 \times 44\text{ px}$), prevenindo toques acidentais e facilitando o uso em telas pequenas por idosos;
+* **Carga Mental Reduzida:** Um assunto apresenta apenas as informações vitais de decisão: *O que será feito, quanto custa, quem executa, prazos e garantias*;
+* **Componentes Oficiais M3:** A interface utiliza exclusivamente componentes estruturados do Material Design 3: `Top App Bar`, `Navigation Bar` (mobile) / `Navigation Rail` (desktop), tonal `Cards`, botões em formato pill (`Filled` para ação principal, `Filled Tonal` para secundárias, `Outlined` para alternativas), `Filter Chips` para seleção no comparador Diff $N \times N$, `Linear Progress Indicator` no termômetro de quórum, `Dialogs`/`Bottom Sheets` e `State Layers` nativas de interação.
 
-### 2.2. Sistema de Design Semântico (Ui Tokens)
-O sistema adota uma paleta estrita de significado funcional:
-* **Verde Consenso (`--gov-consensus`):** Propostas com forte adesão, metas atingidas e inclusões no comparador de Diffs;
-* **Vermelho Exclusão (`--gov-removal`):** Gastos cortados, propostas caducadas ou texto substituído no comparador;
-* **Azul Institucional (`--gov-primary`):** Botões de ação direta, identidade biométrica e atestações de pares;
-* **Âmbar Atenção (`--gov-warning`):** Prazos finais de ciclo em contagem regressiva viva e avisos anti-sniping.
+### 2.2. Sistema de Design Semântico (Google Material Design 3)
+A interface segue estritamente as diretrizes do **Google Material Design 3 (M3)**, com cores tonais suaves escolhidas para transmitir calma e confiança institucional e acessibilidade **WCAG 2.1 AA**:
+* **Tipografia Oficial M3:** Família `Roboto` seguindo a *Type Scale* do M3 (`Headline`, `Title`, `Body`, `Label`), com `font-variant-numeric: tabular-nums` em placares, percentuais, datas e valores em reais;
+* **Ícones Oficiais M3 (Zero ícones de texto ou emojis):** Biblioteca `Material Symbols Rounded` empacotada localmente para funcionamento 100% offline no PWA (ex.: `how_to_vote`, `fork_right`, `compare_arrows`, `verified_user`, `lock`, `schedule`, `sync`, `groups`). É proibido o uso de emojis ou símbolos de texto improvisados na interface;
+* **Superfícies Calmas (Tonal Surfaces):**
+  * `--md-sys-color-surface: #F7F9FC` (fundo claro levemente frio para evitar fadiga visual);
+  * `--md-sys-color-surface-container: #EEF2F6` (agrupamento sutil);
+  * `--md-sys-color-surface-container-lowest: #FFFFFF` com borda `--md-sys-color-outline-variant: #CFD8E3` (cards elevados);
+* **Paleta Semântica Tonal Suave (`.gov-*` + M3 Color Roles):**
+  * **Azul Ardósia Institucional (`--gov-primary`):** `--md-sys-color-primary: #365B77`, `--md-sys-color-primary-container: #D1E4F5`, `--md-sys-color-on-primary-container: #0E334D` — ações diretas, identidade e foco;
+  * **Verde Sálvia Consenso (`--gov-consensus`):** `#265D40` sobre container `#E3F2E9` — propostas com forte adesão, metas atingidas e adições no comparador Diff;
+  * **Terracota Suave Exclusão (`--gov-removal`):** `#8F362C` sobre container `#FBEAE7` — gastos cortados, propostas expiradas ou texto removido no comparador Diff;
+  * **Âmbar Areia Atenção (`--gov-warning`):** `#785300` sobre container `#FEF3DC` — contagem regressiva de prazos finais e avisos de ciclo.
 
 ### 2.3. Delivery Soberano (PWA sem App Stores)
 * **Independência de Apple e Google:**

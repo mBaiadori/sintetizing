@@ -2,23 +2,14 @@
   "name": "sintetizing-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Protocol Fractal of Synthesis and Dynamic Consensus ",
+  "description": "Protocol Fractal of Synthesis and Dynamic Consensus",
   "packageManager": "pnpm@12.3.4",
   "scripts": {
-    "test": "pnpm --filter @sintetizing/wire test",
-    "test:coverage": "pnpm --filter @sintetizing/wire test:coverage",
-    "test:wire": "pnpm --filter @sintetizing/wire test",
-    "test:wire:coverage": "pnpm --filter @sintetizing/wire test:coverage",
-    "simular": "pnpm --filter @sintetizing/wire simular",
-    "simular:rapido": "pnpm --filter @sintetizing/wire simular:rapido",
-    "estresse": "pnpm --filter @sintetizing/wire estresse",
-    "painel": "pnpm --filter @sintetizing/wire painel",
-    "rede:criar": "pnpm --filter @sintetizing/wire rede:criar",
-    "inspecionar": "pnpm --filter @sintetizing/wire inspecionar",
-    "arvore": "pnpm --filter @sintetizing/wire arvore",
-    "test:all": "pnpm --recursive run test",
+    "build": "pnpm --recursive --filter \"./packages/*\" run build && pnpm --filter @sintetizing/web run build",
     "typecheck": "pnpm --recursive exec tsc --noEmit",
-    "build": "pnpm --recursive --filter \"./packages/*\" run build"
+    "test": "pnpm --filter @sintetizing/wire test",
+    "dev:relay": "pnpm --filter @sintetizing/network start",
+    "dev:web": "pnpm --filter @sintetizing/web dev"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

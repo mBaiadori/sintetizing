@@ -1,0 +1,25 @@
+{
+  "name": "@sintetizing/storage",
+  "version": "1.0.0",
+  "description": "Lean Local-First IndexedDB persistence for Ed25519 identity, community relays, and TLV documents",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^2.2.3",
+    "@noble/hashes": "^1.7.1",
+    "@sintetizing/wire": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

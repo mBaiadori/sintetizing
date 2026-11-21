@@ -1,0 +1,144 @@
+:root {
+  /* M3 Surfaces - Calmas e confiáveis (06_INTERFACE.md) */
+  --md-sys-color-surface: #f7f9fc;
+  --md-sys-color-surface-container: #eef2f6;
+  --md-sys-color-surface-container-high: #e5ebf2;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-on-surface: #1a1c1e;
+  --md-sys-color-on-surface-variant: #44474e;
+  --md-sys-color-outline: #74777f;
+  --md-sys-color-outline-variant: #cfd8e3;
+
+  /* Azul Ardósia Institucional (--gov-primary) */
+  --md-sys-color-primary: #365b77;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d1e4f5;
+  --md-sys-color-on-primary-container: #0e334d;
+  --gov-primary: var(--md-sys-color-primary);
+
+  /* Verde Sálvia Consenso (--gov-consensus) */
+  --gov-consensus: #265d40;
+  --gov-consensus-container: #e3f2e9;
+  --gov-on-consensus-container: #103a24;
+
+  /* Terracota Suave Exclusão (--gov-removal) */
+  --gov-removal: #8f362c;
+  --gov-removal-container: #fbeae7;
+  --gov-on-removal-container: #5c1d16;
+
+  /* Âmbar Areia Atenção (--gov-warning) */
+  --gov-warning: #785300;
+  --gov-warning-container: #fef3dc;
+  --gov-on-warning-container: #493100;
+
+  /* M3 Typography & Shape */
+  --md-sys-typescale-font: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* M3 Elevation */
+  --md-sys-elevation-1: 0 1px 2px rgba(26, 28, 30, 0.06), 0 1px 3px 1px rgba(26, 28, 30, 0.04);
+  --md-sys-elevation-2: 0 2px 6px 2px rgba(26, 28, 30, 0.07), 0 1px 2px rgba(26, 28, 30, 0.05);
+
+  /* Layout metrics */
+  --gov-channel-topbar-height: 56px;
+  --gov-sidebar-width: 268px;
+  --gov-drawer-width: 440px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--gov-primary);
+  outline-offset: 2px;
+}
+
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.material-symbols-rounded--filled {
+  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
+.gov-touch-target {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.gov-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.md-headline-small {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.md-title-large {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.md-title-medium {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+.md-body-medium {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.md-label-medium {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.03em;
+}
