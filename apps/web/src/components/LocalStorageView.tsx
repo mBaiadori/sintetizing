@@ -5,9 +5,10 @@ import {
 import type {
   CommunityRecord,
   LocalIdentity,
+  StoredChatFileRecord,
   StoredPacketRecord,
 } from "@sintetizing/storage";
-import { getDocTypeName } from "@sintetizing/wire";
+import { decodeChatFile, getDocTypeName } from "@sintetizing/wire";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDateMs, shortHex } from "../utils/format.js";
 import { MaterialIcon } from "./MaterialIcon.js";
@@ -16,6 +17,7 @@ export interface LocalStorageViewProps {
   readonly identity: LocalIdentity;
   readonly communities: readonly CommunityRecord[];
   readonly loadAllPackets: () => Promise<StoredPacketRecord[]>;
+  readonly loadAllChatFiles: () => Promise<StoredChatFileRecord[]>;
 }
 
 function formatByteSize(bytes: number): string {
@@ -45,8 +47,14 @@ export function LocalStorageView({
   identity,
   communities,
   loadAllPackets,
+  loadAllChatFiles,
 }: LocalStorageViewProps) {
   const [packets, setPackets] = useState<StoredPacketRecord[]>([]);
+  const [chatFiles, setChatFiles] = useState<StoredChatFileRecord[]>([]);
+  const [expandedChatScope, setExpandedChatScope] = useState<string | null>(null);
+  const [decodedChatByScope, setDecodedChatByScope] = useState<
+    Readonly<Record<string, readonly InspectedDocument[]>>
+  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [communityFilter, setCommunityFilter] = useState<string>("all");
@@ -64,14 +72,15 @@ export function LocalStorageView({
     setLoading(true);
     setError(null);
     try {
-      const rows = await loadAllPackets();
+      const [rows, chats] = await Promise.all([loadAllPackets(), loadAllChatFiles()]);
       setPackets(rows);
+      setChatFiles(chats);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
-  }, [loadAllPackets]);
+  }, [loadAllChatFiles, loadAllPackets]);
 
   useEffect(() => {
     void refresh();
@@ -130,6 +139,35 @@ export function LocalStorageView({
     }
   };
 
+  const handleToggleInspectChatFile = async (chatFile: StoredChatFileRecord) => {
+    if (expandedChatScope === chatFile.subjectScope) {
+      setExpandedChatScope(null);
+      return;
+    }
+    setExpandedChatScope(chatFile.subjectScope);
+    if (decodedChatByScope[chatFile.subjectScope]) {
+      return;
+    }
+    const rawList = decodeChatFile(chatFile.rawChatBytes);
+    const inspectedList: InspectedDocument[] = [];
+    for (const raw of rawList) {
+      try {
+        inspectedList.push(await inspectBinaryPacket(raw));
+      } catch {
+        // ignora pacote inválido
+      }
+    }
+    setDecodedChatByScope((prev) => ({
+      ...prev,
+      [chatFile.subjectScope]: inspectedList,
+    }));
+  };
+
+  const totalChatBytes = useMemo(
+    () => chatFiles.reduce((sum, f) => sum + f.rawChatBytes.length, 0),
+    [chatFiles]
+  );
+
   return (
     <div className="stack">
       <section className="card">
@@ -137,7 +175,7 @@ export function LocalStorageView({
           <div className="btn-row">
             <MaterialIcon name="dataset" />
             <h2 className="md-title-medium">
-              Resumo do Banco Local (IndexedDB: sintetize-nostr-v2)
+              Resumo do Banco Local (IndexedDB: sintetize-nostr-v3)
             </h2>
           </div>
           <button
@@ -172,7 +210,13 @@ export function LocalStorageView({
             </strong>
           </div>
           <div className="kv-box">
-            <span className="md-label-medium">Tamanho bruto total</span>
+            <span className="md-label-medium">Arquivos .chat compactados</span>
+            <strong className="md-title-medium gov-tabular">
+              {chatFiles.length} ({formatByteSize(totalChatBytes)})
+            </strong>
+          </div>
+          <div className="kv-box">
+            <span className="md-label-medium">Tamanho bruto total (governança)</span>
             <strong className="md-title-medium gov-tabular">
               {formatByteSize(totalBytes)}
             </strong>
@@ -326,7 +370,36 @@ export function LocalStorageView({
               const decodeError = decodeErrorByDocId[pkt.docIdHex];
               const commTitle = communityTitleById.get(pkt.communityId) ?? pkt.communityId;
 
-              return (
+              const handleToggleInspectChatFile = async (chatFile: StoredChatFileRecord) => {
+    if (expandedChatScope === chatFile.subjectScope) {
+      setExpandedChatScope(null);
+      return;
+    }
+    setExpandedChatScope(chatFile.subjectScope);
+    if (decodedChatByScope[chatFile.subjectScope]) {
+      return;
+    }
+    const rawList = decodeChatFile(chatFile.rawChatBytes);
+    const inspectedList: InspectedDocument[] = [];
+    for (const raw of rawList) {
+      try {
+        inspectedList.push(await inspectBinaryPacket(raw));
+      } catch {
+        // ignora pacote inválido
+      }
+    }
+    setDecodedChatByScope((prev) => ({
+      ...prev,
+      [chatFile.subjectScope]: inspectedList,
+    }));
+  };
+
+  const totalChatBytes = useMemo(
+    () => chatFiles.reduce((sum, f) => sum + f.rawChatBytes.length, 0),
+    [chatFiles]
+  );
+
+  return (
                 <article
                   key={pkt.docIdHex}
                   className="member-row"
@@ -420,6 +493,108 @@ export function LocalStorageView({
                             </div>
                           ))}
                         </>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="card">
+        <div className="card__header">
+          <div className="btn-row">
+            <MaterialIcon name="chat" />
+            <h2 className="md-title-medium">
+              Store: chat_files (Arquivos .chat compactados por assunto: {chatFiles.length})
+            </h2>
+          </div>
+        </div>
+
+        {chatFiles.length === 0 ? (
+          <div className="empty-box">
+            <p className="md-body-medium">Nenhum arquivo .chat salvo neste nó.</p>
+          </div>
+        ) : (
+          <div className="member-list">
+            {chatFiles.map((cf) => {
+              const isExpanded = expandedChatScope === cf.subjectScope;
+              const inspected = decodedChatByScope[cf.subjectScope];
+              const commTitle = communityTitleById.get(cf.communityId) ?? cf.communityId;
+
+              return (
+                <article
+                  key={cf.subjectScope}
+                  className="member-row"
+                  style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div className="member-row__left">
+                      <span className="chip chip--cmnt">.chat</span>
+                      <div className="member-row__text">
+                        <strong className="md-title-medium mono">
+                          {cf.subjectScope}
+                        </strong>
+                        <span className="md-label-medium gov-tabular">
+                          {cf.messageCount} msg(s) · {cf.activeDraftCount} rascunho(s) ativo(s) ·{" "}
+                          {formatByteSize(cf.rawChatBytes.length)}
+                        </span>
+                        <span className="md-label-medium">
+                          {commTitle} · compactado em {formatDateMs(cf.updatedAtMs)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn--sm btn--outlined"
+                      onClick={() => void handleToggleInspectChatFile(cf)}
+                    >
+                      <MaterialIcon
+                        name={isExpanded ? "expand_less" : "expand_more"}
+                      />
+                      <span>{isExpanded ? "Ocultar .chat" : "Inspecionar .chat"}</span>
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="kv-box" style={{ marginTop: 4, gap: 8 }}>
+                      {!inspected ? (
+                        <span className="md-body-medium">Decodificando pacotes .chat...</span>
+                      ) : inspected.length === 0 ? (
+                        <span className="md-body-medium">Arquivo .chat vazio.</span>
+                      ) : (
+                        inspected.map((item) => (
+                          <div
+                            key={item.docIdHex}
+                            className="md-body-medium"
+                            style={{
+                              paddingLeft: 10,
+                              borderLeft: "2px solid var(--md-outline-variant, #444)",
+                            }}
+                          >
+                            <strong className="mono md-label-medium">
+                              [{item.docTypeLabel} · seq #{item.seq} · {item.byteLength} B]
+                            </strong>{" "}
+                            <span className="mono md-label-medium">
+                              {shortHex(item.authorPubHex)}
+                            </span>
+                            {" · "}
+                            {item.blocks
+                              .map((b) => `${b.tagName}=${b.displayValue}`)
+                              .join(" | ")}
+                          </div>
+                        ))
                       )}
                     </div>
                   )}

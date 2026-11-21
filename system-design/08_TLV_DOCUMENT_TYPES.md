@@ -1,4 +1,4 @@
-# 08 — Guia Simples dos Tipos de Documentos TLV (`.cmnt`, `.memb`, `.stze`, `.snap`)
+# 08 — Guia Simples dos Tipos de Documentos TLV (`.cmnt`, `.memb`, `.stze`, `.snap`, `.chat`)
 
 > Referência direta e enxuta do que vai dentro de cada documento binário no **Sintetize**, como eles se encaixam no formato já existente em `packages/wire` e como trafegam via **Nostr (`nostr-tools`)**.
 
@@ -21,7 +21,7 @@ Todos os documentos compartilham **exatamente o mesmo envelope binário**:
 
 ---
 
-## 2. Os 4 Universos e Seus Tipos (`docType`)
+## 2. Os 5 Universos e Seus Tipos (`docType`)
 
 ### Universo `.cmnt` — Comunidade e Regras
 Define o que a comunidade é e quais parâmetros estão valendo (versão `v1 -> v2 -> v3`).
@@ -64,14 +64,28 @@ Resumo consolidado para novos membros sincronizarem rápido sem baixar anos de e
 
 ---
 
+### Universo `.chat` — Oficina do Assunto (Chat e Rascunhos Vivos)
+Espaço de debate contínuo e rascunhos individuais editáveis dentro de um assunto, **sem interferir** em `inactivityDays`, `seq` de `.memb` nem `.snap`. Os pacotes podem ser compactados localmente por assunto no formato binário `.chat` (`STZECHAT`).
+
+| Subtipo | `docType` | Para que serve | Principais campos (Tags TLV) |
+| :--- | :--- | :--- | :--- |
+| **Mensagem de Chat (`CHAT_MESSAGE`)** | `8` | Registrar mensagem de debate na oficina do assunto | `SCOPE` (`communityId/subjectId`), `BODY`, `PARENT_HASH` (resposta/fio, opcional), `AUTHOR_NAME` (opcional), `TIMESTAMP` |
+| **Rascunho Vivo (`CHAT_DRAFT`)** | `9` | Criar, atualizar ou deletar rascunho substituível de proposta do autor | `SCOPE` (`communityId/subjectId`), `DRAFT_ID (34)`, `DRAFT_STATUS (35)` (`1=ACTIVE / 2=DELETED`), `TITLE`, `BODY`, campos estruturados (`SUBTITLE`, `VALUE`, `LINK`, `TABLE`, `ARTICLE`), `TIMESTAMP` |
+
+---
+
 ## 3. Como Tudo Viaja Pelo Nostr (`nostr-tools`)
 
 O Nostr funciona apenas como **correio descentralizado** para esses pacotes:
 
-1. **Tipo de evento Nostr:** Evento **regular/imutável** (por exemplo `kind` na faixa `1000–9999`), porque cada versão/evento TLV é imutável e nunca deve ser sobrescrita silenciosamente pelo relay.
-2. **Conteúdo (`content`):** Os bytes do pacote TLV (`.cmnt`, `.memb`, `.stze` ou `.snap`) codificados em Base64.
+1. **Tipos de evento Nostr por universo:**
+   * **`kind 4545` (regular/imutável):** Documentos formais dos universos `.cmnt`, `.memb`, `.stze` e `.snap` — nunca devem ser sobrescritos silenciosamente pelo relay.
+   * **`kind 4546` (regular/imutável):** Mensagens de chat na oficina (`CHAT_MESSAGE`, `docType = 8`).
+   * **`kind 30545` (endereçável/substituível via tag `d`):** Rascunhos vivos (`CHAT_DRAFT`, `docType = 9`), identificados no relay pela tupla `(pubkey, kind, d)` onde `d` corresponde ao `DRAFT_ID`.
+2. **Conteúdo (`content`):** Os bytes do pacote TLV (`.cmnt`, `.memb`, `.stze`, `.snap` ou `.chat`) codificados em Base64.
 3. **Tags Nostr para filtragem rápida no relay:**
    * `["t", "<communityId>"]` — separa o tráfego por comunidade.
-   * `["u", "cmnt" | "memb" | "stze" | "snap"]` — permite *sync* seletivo por universo.
+   * `["u", "cmnt" | "memb" | "stze" | "snap" | "chat"]` — permite *sync* seletivo por universo.
    * `["h", "<sha256Hex>"]` — identifica o hash exato do pacote TLV.
+   * `["d", "<draftId>"]` — obrigatório no `kind 30545` para substituição/exclusão lógica do rascunho vivo no relay.
 4. **Validação:** O cliente **nunca** confia cegamente no evento Nostr — ao receber o `content`, ele decodifica o Base64 e valida a assinatura Ed25519, os limites TLV e as regras da versão vigente do `.cmnt`.

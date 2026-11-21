@@ -1,5 +1,5 @@
 import { bytesToHex } from "@noble/hashes/utils";
-import { calculateDocId, ConfigKind, DeliberationMode, DocType, InvitePolicy, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readUtf8Block, Tag, unpackAndVerifyDocument, verifyInviteProof, } from "@sintetizing/wire";
+import { calculateDocId, ConfigKind, DeliberationMode, DocType, DraftStatus, getDocumentUniverse, InvitePolicy, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readDraftIdBlock, readDraftStatusBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, verifyInviteProof, } from "@sintetizing/wire";
 import { buildInspectedDocument } from "./inspector.js";
 const DAY_MS = 86_400_000;
 /**
@@ -457,6 +457,9 @@ export async function projectCommunityState(packets, communityId, nowMs) {
         seenIds.add(docIdHex);
         try {
             const doc = await unpackAndVerifyDocument(rawBytes);
+            if (getDocumentUniverse(doc) === "chat") {
+                continue;
+            }
             const inspected = buildInspectedDocument(docIdHex, rawBytes.length, doc);
             if (!inspected.scope ||
                 (inspected.scope !== communityId && !inspected.scope.startsWith(`${communityId}/`))) {
@@ -820,6 +823,167 @@ export async function projectCommunityState(packets, communityId, nowMs) {
         pickHistory,
         documents,
         rejectedPacketCount,
+    };
+}
+/**
+ * Projeta de forma pura e determinística a Oficina de um Assunto (.chat):
+ * histórico cronológico de mensagens + rascunhos ativos (1 revisão mais recente por autor/draftId)
+ * com sinalização automática caso algum rascunho já tenha sido convertido em Proposta Oficial (.stze).
+ */
+export async function projectSubjectWorkshop(params) {
+    const { subjectScope, rawChatPackets, projection } = params;
+    const memberStatusMap = new Map();
+    const memberNameMap = new Map();
+    if (projection) {
+        for (const member of projection.members) {
+            memberStatusMap.set(member.pubHex, member.status);
+            if (member.displayName) {
+                memberNameMap.set(member.pubHex, member.displayName);
+            }
+        }
+    }
+    const proposalTitleMap = new Map();
+    if (projection) {
+        for (const prop of projection.proposals) {
+            proposalTitleMap.set(prop.docIdHex, prop.title);
+        }
+    }
+    const messagesByDocId = new Map();
+    const latestDraftByKey = new Map();
+    for (const rawBytes of rawChatPackets) {
+        let doc;
+        try {
+            doc = await unpackAndVerifyDocument(rawBytes);
+        }
+        catch {
+            continue;
+        }
+        if (getDocumentUniverse(doc) !== "chat") {
+            continue;
+        }
+        const scopeBlock = doc.blocks.find((b) => b.tag === Tag.SCOPE);
+        const scope = scopeBlock ? readUtf8Block(scopeBlock) : null;
+        if (scope !== subjectScope) {
+            continue;
+        }
+        const authorPubHex = bytesToHex(doc.authorPub);
+        if (memberStatusMap.size > 0) {
+            const status = memberStatusMap.get(authorPubHex);
+            if (!status || status === "LEFT") {
+                continue;
+            }
+        }
+        const docIdHex = bytesToHex(calculateDocId(rawBytes));
+        const tsBlock = doc.blocks.find((b) => b.tag === Tag.TIMESTAMP);
+        const timestampMs = tsBlock ? readTimestampBlock(tsBlock) : 0;
+        const authorNameBlock = doc.blocks.find((b) => b.tag === Tag.AUTHOR_NAME);
+        const resolvedAuthorName = (authorNameBlock ? readUtf8Block(authorNameBlock) : null) ??
+            memberNameMap.get(authorPubHex) ??
+            null;
+        if (doc.docType === DocType.CHAT_MESSAGE) {
+            if (messagesByDocId.has(docIdHex)) {
+                continue;
+            }
+            const bodyBlock = doc.blocks.find((b) => b.tag === Tag.BODY);
+            if (!bodyBlock) {
+                continue;
+            }
+            const draftIdBlock = doc.blocks.find((b) => b.tag === Tag.DRAFT_ID);
+            const targetBlock = doc.blocks.find((b) => b.tag === Tag.PICK_TARGET);
+            const targetHash = targetBlock ? readPickTargetBlock(targetBlock).targetHash : undefined;
+            messagesByDocId.set(docIdHex, {
+                docIdHex,
+                scope,
+                authorPubHex,
+                authorName: resolvedAuthorName,
+                body: readUtf8Block(bodyBlock),
+                timestampMs,
+                seq: doc.seq,
+                referencedDraftId: draftIdBlock ? readDraftIdBlock(draftIdBlock) : null,
+                referencedProposalDocIdHex: targetHash ? bytesToHex(targetHash) : null,
+            });
+            continue;
+        }
+        if (doc.docType === DocType.CHAT_DRAFT) {
+            const draftIdBlock = doc.blocks.find((b) => b.tag === Tag.DRAFT_ID);
+            const statusBlock = doc.blocks.find((b) => b.tag === Tag.DRAFT_STATUS);
+            if (!draftIdBlock || !statusBlock) {
+                continue;
+            }
+            const draftId = readDraftIdBlock(draftIdBlock);
+            const status = readDraftStatusBlock(statusBlock);
+            const titleBlock = doc.blocks.find((b) => b.tag === Tag.TITLE);
+            const bodyBlock = doc.blocks.find((b) => b.tag === Tag.BODY);
+            const parentBlock = doc.blocks.find((b) => b.tag === Tag.PARENT_HASH);
+            const deadlineBlock = doc.blocks.find((b) => b.tag === Tag.DEADLINE);
+            const rawBody = bodyBlock ? readUtf8Block(bodyBlock) : "";
+            const fields = extractProposalFields(doc, rawBody);
+            const firstText = fields.find((f) => f.kind === "TEXT");
+            const summaryBody = rawBody || (firstText && firstText.kind === "TEXT" ? firstText.text : "");
+            const candidate = {
+                docIdHex,
+                draftId,
+                scope,
+                authorPubHex,
+                authorName: resolvedAuthorName,
+                status,
+                title: titleBlock ? readUtf8Block(titleBlock) : "",
+                body: summaryBody,
+                fields,
+                parentHashHex: parentBlock ? bytesToHex(parentBlock.value) : null,
+                deadlineUnixSeconds: deadlineBlock ? readDeadlineBlock(deadlineBlock) : null,
+                timestampMs,
+                seq: doc.seq,
+            };
+            const key = `${authorPubHex}:${draftId}`;
+            const existing = latestDraftByKey.get(key);
+            if (!existing || isNewerSeqOrTime(candidate, existing)) {
+                latestDraftByKey.set(key, candidate);
+            }
+        }
+    }
+    const messages = Array.from(messagesByDocId.values()).sort(compareChronological);
+    const conversionByDraftId = new Map();
+    for (const msg of messages) {
+        if (msg.referencedDraftId && msg.referencedProposalDocIdHex) {
+            conversionByDraftId.set(msg.referencedDraftId, msg);
+        }
+    }
+    const activeDrafts = [];
+    for (const draft of latestDraftByKey.values()) {
+        if (draft.status !== DraftStatus.ACTIVE) {
+            continue;
+        }
+        const conversion = conversionByDraftId.get(draft.draftId) ?? null;
+        const convertedProposalId = conversion?.referencedProposalDocIdHex ?? null;
+        activeDrafts.push({
+            docIdHex: draft.docIdHex,
+            draftId: draft.draftId,
+            scope: draft.scope,
+            authorPubHex: draft.authorPubHex,
+            authorName: draft.authorName,
+            title: draft.title,
+            body: draft.body,
+            fields: draft.fields,
+            parentHashHex: draft.parentHashHex,
+            deadlineUnixSeconds: draft.deadlineUnixSeconds,
+            timestampMs: draft.timestampMs,
+            seq: draft.seq,
+            convertedToProposalDocIdHex: convertedProposalId,
+            convertedToProposalTitle: convertedProposalId
+                ? (proposalTitleMap.get(convertedProposalId) ?? null)
+                : null,
+            convertedByPubHex: conversion?.authorPubHex ?? null,
+            convertedByName: conversion?.authorName ?? null,
+        });
+    }
+    activeDrafts.sort((a, b) => b.timestampMs - a.timestampMs ||
+        b.seq - a.seq ||
+        a.docIdHex.localeCompare(b.docIdHex));
+    return {
+        subjectScope,
+        messages,
+        activeDrafts,
     };
 }
 //# sourceMappingURL=community-engine.js.map

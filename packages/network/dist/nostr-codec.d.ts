@@ -1,9 +1,17 @@
 import { DocUniverse } from "@sintetizing/wire";
 import { type Event } from "nostr-tools";
 /**
- * Evento regular (imutável) reservado para pacotes TLV assinados do Sintetize.
+ * Evento regular (imutável) reservado para pacotes TLV assinados de governança (.cmnt, .memb, .stze, .snap).
  */
 export declare const SINTETIZE_NOSTR_KIND = 4545;
+/**
+ * Evento regular reservado para mensagens leves de debate (.chat) em assuntos.
+ */
+export declare const SINTETIZE_CHAT_NOSTR_KIND = 4546;
+/**
+ * Evento endereçável/substituível (NIP-33) reservado para rascunhos vivos (.chat) por autor/assunto.
+ */
+export declare const SINTETIZE_DRAFT_NOSTR_KIND = 30545;
 export interface DecodedNostrPacket {
     readonly eventId: string;
     readonly createdAt: number;

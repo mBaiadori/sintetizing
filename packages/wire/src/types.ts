@@ -1,6 +1,6 @@
 /**
  * Tipos e constantes do envelope binário único (102B + fita TLV)
- * nos quatro universos lógicos do Sintetize: .cmnt, .memb, .stze e .snap.
+ * nos universos lógicos do Sintetize: .cmnt, .memb, .stze, .snap e .chat.
  */
 
 export const WIRE_CONSTANTS = {
@@ -16,7 +16,7 @@ export const WIRE_CONSTANTS = {
   MAX_PACKET_SIZE: 102400,
 } as const;
 
-export type DocUniverse = "cmnt" | "memb" | "stze" | "snap";
+export type DocUniverse = "cmnt" | "memb" | "stze" | "snap" | "chat";
 
 export const DocType = {
   CONFIG: 0,
@@ -27,9 +27,18 @@ export const DocType = {
   MEMB_JOIN: 5,
   MEMB_LEAVE: 6,
   SNAPSHOT: 7,
+  CHAT_MESSAGE: 8,
+  CHAT_DRAFT: 9,
 } as const;
 
 export type DocTypeValue = (typeof DocType)[keyof typeof DocType];
+
+export const DraftStatus = {
+  ACTIVE: 1,
+  DELETED: 2,
+} as const;
+
+export type DraftStatusValue = (typeof DraftStatus)[keyof typeof DraftStatus];
 
 export const ConfigKind = {
   COMMUNITY: 1,
@@ -81,6 +90,8 @@ export const Tag = {
   ACTIVE_CMNT_HASH: 31,
   ACTIVE_MEMBERS_TABLE: 32,
   COSIGNATURES: 33,
+  DRAFT_ID: 34,
+  DRAFT_STATUS: 35,
 } as const;
 
 export type TagValue = (typeof Tag)[keyof typeof Tag] | number;

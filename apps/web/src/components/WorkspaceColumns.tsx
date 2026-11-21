@@ -2,14 +2,18 @@ import type {
   MemberView,
   ProposalFieldView,
   ProposalSummaryView,
+  SharedDraftView,
   SubjectSummaryView,
+  SubjectWorkshopView,
 } from "@sintetizing/domain";
-import type { ProposalDraftRecord } from "@sintetizing/storage";
+import type { ProposalDraftRecord, StoredChatFileRecord } from "@sintetizing/storage";
 import { useCallback, useEffect, useState } from "react";
 import type {
   CreateProposalInput,
   CreateSubjectInput,
+  PublishSharedDraftInput,
   SaveDraftInput,
+  SendChatMessageInput,
 } from "../hooks/useExplorer.js";
 import {
   computeHeatInfo,
@@ -29,6 +33,7 @@ import {
   ProposalFieldsRenderer,
   unixSecondsToLocalInput,
 } from "./ProposalDocumentFields.js";
+import { SubjectWorkshopPanel } from "./SubjectWorkshopPanel.js";
 import { SupportersCollapsible } from "./SupportersCollapsible.js";
 
 export interface WorkspaceColumnsProps {
@@ -44,6 +49,8 @@ export interface WorkspaceColumnsProps {
   readonly selectedProposalId: string | null;
   readonly drafts: readonly ProposalDraftRecord[];
   readonly hiddenDocIds: ReadonlySet<string>;
+  readonly workshop: SubjectWorkshopView | null;
+  readonly chatFileRecord: StoredChatFileRecord | null;
   readonly sidebarCollapsed: boolean;
   readonly showNewSubjectForm: boolean;
   readonly busy: boolean;
@@ -58,6 +65,12 @@ export interface WorkspaceColumnsProps {
   readonly onCreateProposal: (
     input: CreateProposalInput,
   ) => Promise<string | null>;
+  readonly onSendChatMessage: (input: SendChatMessageInput) => Promise<string | null>;
+  readonly onPublishSharedDraft: (input: PublishSharedDraftInput) => Promise<string | null>;
+  readonly onDeleteSharedDraft: (subjectScope: string, draftId: string) => Promise<void>;
+  readonly onPromoteSharedDraft: (params: {
+    readonly draft: SharedDraftView;
+  }) => Promise<string | null>;
   readonly onSaveDraft: (input: SaveDraftInput) => Promise<void>;
   readonly onDeleteDraft: (draftId: string) => Promise<void>;
   readonly onHideDocument: (
@@ -71,6 +84,7 @@ export interface WorkspaceColumnsProps {
 }
 
 type DrawerMode = "closed" | "new-proposal" | "fork" | "diff";
+type SubjectStageTab = "proposals" | "workshop";
 
 function renderStatusChip(prop: ProposalSummaryView) {
   switch (prop.status) {
@@ -98,6 +112,8 @@ export function WorkspaceColumns({
   selectedProposalId,
   drafts,
   hiddenDocIds,
+  workshop,
+  chatFileRecord,
   sidebarCollapsed,
   showNewSubjectForm,
   busy,
@@ -108,6 +124,10 @@ export function WorkspaceColumns({
   onSelectProposal,
   onCreateSubject,
   onCreateProposal,
+  onSendChatMessage,
+  onPublishSharedDraft,
+  onDeleteSharedDraft,
+  onPromoteSharedDraft,
   onSaveDraft,
   onDeleteDraft,
   onHideDocument,
@@ -141,12 +161,14 @@ export function WorkspaceColumns({
   const [showHiddenSubjects, setShowHiddenSubjects] = useState(false);
   const [showHiddenProposals, setShowHiddenProposals] = useState(false);
   const [showSuperseded, setShowSuperseded] = useState(false);
+  const [subjectTab, setSubjectTab] = useState<SubjectStageTab>("proposals");
 
   useEffect(() => {
     setDrawerMode("closed");
     setForkTargetId(null);
     setShowHiddenProposals(false);
     setShowSuperseded(false);
+    setSubjectTab("proposals");
   }, [selectedSubject?.scope]);
 
   const visibleSubjects = subjects.filter((s) => !hiddenDocIds.has(s.docIdHex));
@@ -934,122 +956,190 @@ export function WorkspaceColumns({
                   )}
                 </div>
               )
-            ) : subjectProposals.length === 0 ? (
-              <div className="empty-state">
-                <MaterialIcon name="description" />
-                <h2 className="md-title-medium">
-                  Nenhuma proposta em {selectedSubject.title}
-                </h2>
-                <p className="md-body-medium">
-                  {selectedSubject.body ||
-                    "Publique a primeira proposta para iniciar o debate e a contagem de apoios."}
-                </p>
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  onClick={openNewProposalDrawer}
-                >
-                  <MaterialIcon name="add" />
-                  <span>Criar primeira proposta</span>
-                </button>
-              </div>
             ) : (
               <div className="stack">
-                <div className="entity-list" role="list">
-                  {(() => {
-                    const treeProposals = showSuperseded
-                      ? [...visibleProposals, ...supersededProposals]
-                      : visibleProposals;
-                    const visibleIds = new Set(
-                      treeProposals.map((p) => p.docIdHex),
-                    );
-                    const childrenByParent = new Map<
-                      string,
-                      ProposalSummaryView[]
-                    >();
-                    const roots: ProposalSummaryView[] = [];
-                    for (const prop of treeProposals) {
-                      if (prop.parentHashHex && visibleIds.has(prop.parentHashHex)) {
-                        const list = childrenByParent.get(prop.parentHashHex) ?? [];
-                        list.push(prop);
-                        childrenByParent.set(prop.parentHashHex, list);
-                      } else {
-                        roots.push(prop);
-                      }
+                <div className="segmented-tabs" role="tablist" aria-label="Modo do assunto">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={subjectTab === "proposals"}
+                    className={
+                      subjectTab === "proposals"
+                        ? "segmented-tab segmented-tab--active"
+                        : "segmented-tab"
                     }
-                    const renderBranch = (
-                      prop: ProposalSummaryView,
-                    ): React.ReactNode => {
-                      const children = childrenByParent.get(prop.docIdHex) ?? [];
-                      return (
-                        <div key={prop.docIdHex} className="fork-tree__branch">
-                          {renderProposalRow(prop, false)}
-                          {children.length > 0 && (
-                            <div className="fork-tree__children">
-                              {children.map((child) => (
-                                <div
-                                  key={child.docIdHex}
-                                  className="fork-tree__item"
-                                >
-                                  {renderBranch(child)}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    };
-                    return roots.map((root) => renderBranch(root));
-                  })()}
+                    onClick={() => setSubjectTab("proposals")}
+                  >
+                    <MaterialIcon name="description" />
+                    <span className="gov-tabular">
+                      Propostas Oficiais ({subjectProposals.length})
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={subjectTab === "workshop"}
+                    className={
+                      subjectTab === "workshop"
+                        ? "segmented-tab segmented-tab--active"
+                        : "segmented-tab"
+                    }
+                    onClick={() => setSubjectTab("workshop")}
+                  >
+                    <MaterialIcon name="chat" />
+                    <span className="gov-tabular">
+                      Oficina: Chat &amp; Rascunhos ({workshop?.messages.length ?? 0} msgs ·{" "}
+                      {workshop?.activeDrafts.length ?? 0} rascunhos)
+                    </span>
+                  </button>
                 </div>
 
-                {(supersededProposals.length > 0 ||
-                  hiddenProposals.length > 0) && (
-                  <div className="btn-row" style={{ flexWrap: "wrap" }}>
-                    {supersededProposals.length > 0 && (
+                {subjectTab === "workshop" ? (
+                  <SubjectWorkshopPanel
+                    myPubHex={myPubHex}
+                    subject={selectedSubject}
+                    members={members}
+                    workshop={workshop}
+                    chatFileRecord={chatFileRecord}
+                    busy={busy}
+                    onSendChatMessage={onSendChatMessage}
+                    onPublishSharedDraft={onPublishSharedDraft}
+                    onDeleteSharedDraft={onDeleteSharedDraft}
+                    onPromoteSharedDraft={onPromoteSharedDraft}
+                    onOpenProposal={(proposalDocIdHex) => {
+                      setSubjectTab("proposals");
+                      closeComposerOnly();
+                      onSelectProposal(proposalDocIdHex);
+                    }}
+                  />
+                ) : subjectProposals.length === 0 ? (
+                  <div className="empty-state">
+                    <MaterialIcon name="description" />
+                    <h2 className="md-title-medium">
+                      Nenhuma proposta oficial em {selectedSubject.title}
+                    </h2>
+                    <p className="md-body-medium">
+                      {selectedSubject.body ||
+                        "Debatam e lapidem um rascunho na Oficina (.chat) ou publiquem a primeira proposta oficial (.stze)."}
+                    </p>
+                    <div className="btn-row" style={{ justifyContent: "center" }}>
                       <button
                         type="button"
-                        className="btn btn--outlined btn--sm"
-                        onClick={() => setShowSuperseded((prev) => !prev)}
+                        className="btn btn--tonal"
+                        onClick={() => setSubjectTab("workshop")}
                       >
-                        <MaterialIcon name="history" />
-                        <span>
-                          {showSuperseded
-                            ? "Recolher versões sem apoio"
-                            : `Versões sem apoio (${supersededProposals.length})`}
-                        </span>
+                        <MaterialIcon name="chat" />
+                        <span>Abrir Oficina (Chat &amp; Rascunhos)</span>
                       </button>
-                    )}
-
-                    {hiddenProposals.length > 0 && (
                       <button
                         type="button"
-                        className="btn btn--outlined btn--sm"
-                        onClick={() => setShowHiddenProposals((prev) => !prev)}
+                        className="btn btn--primary"
+                        onClick={openNewProposalDrawer}
                       >
-                        <MaterialIcon
-                          name={
-                            showHiddenProposals
-                              ? "visibility_off"
-                              : "visibility"
+                        <MaterialIcon name="add" />
+                        <span>Criar primeira proposta</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="entity-list" role="list">
+                      {(() => {
+                        const treeProposals = showSuperseded
+                          ? [...visibleProposals, ...supersededProposals]
+                          : visibleProposals;
+                        const visibleIds = new Set(
+                          treeProposals.map((p) => p.docIdHex),
+                        );
+                        const childrenByParent = new Map<
+                          string,
+                          ProposalSummaryView[]
+                        >();
+                        const roots: ProposalSummaryView[] = [];
+                        for (const prop of treeProposals) {
+                          if (prop.parentHashHex && visibleIds.has(prop.parentHashHex)) {
+                            const list = childrenByParent.get(prop.parentHashHex) ?? [];
+                            list.push(prop);
+                            childrenByParent.set(prop.parentHashHex, list);
+                          } else {
+                            roots.push(prop);
                           }
-                        />
-                        <span>
-                          {showHiddenProposals
-                            ? "Esconder ocultas"
-                            : `Ocultas localmente (${hiddenProposals.length})`}
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                )}
+                        }
+                        const renderBranch = (
+                          prop: ProposalSummaryView,
+                        ): React.ReactNode => {
+                          const children = childrenByParent.get(prop.docIdHex) ?? [];
+                          return (
+                            <div key={prop.docIdHex} className="fork-tree__branch">
+                              {renderProposalRow(prop, false)}
+                              {children.length > 0 && (
+                                <div className="fork-tree__children">
+                                  {children.map((child) => (
+                                    <div
+                                      key={child.docIdHex}
+                                      className="fork-tree__item"
+                                    >
+                                      {renderBranch(child)}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        };
+                        return roots.map((root) => renderBranch(root));
+                      })()}
+                    </div>
 
-                {showHiddenProposals && hiddenProposals.length > 0 && (
-                  <div className="entity-list" role="list">
-                    {hiddenProposals.map((prop) =>
-                      renderProposalRow(prop, true),
+                    {(supersededProposals.length > 0 ||
+                      hiddenProposals.length > 0) && (
+                      <div className="btn-row" style={{ flexWrap: "wrap" }}>
+                        {supersededProposals.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn btn--outlined btn--sm"
+                            onClick={() => setShowSuperseded((prev) => !prev)}
+                          >
+                            <MaterialIcon name="history" />
+                            <span>
+                              {showSuperseded
+                                ? "Recolher versões sem apoio"
+                                : `Versões sem apoio (${supersededProposals.length})`}
+                            </span>
+                          </button>
+                        )}
+
+                        {hiddenProposals.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn btn--outlined btn--sm"
+                            onClick={() => setShowHiddenProposals((prev) => !prev)}
+                          >
+                            <MaterialIcon
+                              name={
+                                showHiddenProposals
+                                  ? "visibility_off"
+                                  : "visibility"
+                              }
+                            />
+                            <span>
+                              {showHiddenProposals
+                                ? "Esconder ocultas"
+                                : `Ocultas localmente (${hiddenProposals.length})`}
+                            </span>
+                          </button>
+                        )}
+                      </div>
                     )}
-                  </div>
+
+                    {showHiddenProposals && hiddenProposals.length > 0 && (
+                      <div className="entity-list" role="list">
+                        {hiddenProposals.map((prop) =>
+                          renderProposalRow(prop, true),
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

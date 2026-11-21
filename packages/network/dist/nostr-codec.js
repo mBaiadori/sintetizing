@@ -1,11 +1,19 @@
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { calculateDocId, getDocumentUniverse, INVITE_PROOF_SIZE, parseInviteProof, unpackAndVerifyDocument, WIRE_CONSTANTS, } from "@sintetizing/wire";
+import { calculateDocId, DocType, getDocumentUniverse, INVITE_PROOF_SIZE, parseInviteProof, readDraftIdBlock, readUtf8Block, Tag, unpackAndVerifyDocument, WIRE_CONSTANTS, } from "@sintetizing/wire";
 import { finalizeEvent, getPublicKey, verifyEvent, } from "nostr-tools";
 /**
- * Evento regular (imutável) reservado para pacotes TLV assinados do Sintetize.
+ * Evento regular (imutável) reservado para pacotes TLV assinados de governança (.cmnt, .memb, .stze, .snap).
  */
 export const SINTETIZE_NOSTR_KIND = 4545;
+/**
+ * Evento regular reservado para mensagens leves de debate (.chat) em assuntos.
+ */
+export const SINTETIZE_CHAT_NOSTR_KIND = 4546;
+/**
+ * Evento endereçável/substituível (NIP-33) reservado para rascunhos vivos (.chat) por autor/assunto.
+ */
+export const SINTETIZE_DRAFT_NOSTR_KIND = 30545;
 const INVITE_PREFIX = "stze-inv:";
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
@@ -62,14 +70,49 @@ export async function encodePacketToNostrEvent(rawPacket, communityId, ed25519Pr
     const docIdHex = bytesToHex(calculateDocId(rawPacket));
     const universe = getDocumentUniverse(doc);
     const nostrSecret = deriveNostrSecretKey(ed25519PrivateKey, communityId);
-    const event = finalizeEvent({
-        kind: SINTETIZE_NOSTR_KIND,
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [
+    const scopeBlock = doc.blocks.find((b) => b.tag === Tag.SCOPE);
+    const scope = scopeBlock ? readUtf8Block(scopeBlock) : null;
+    let kind = SINTETIZE_NOSTR_KIND;
+    let tags;
+    if (doc.docType === DocType.CHAT_DRAFT) {
+        const draftIdBlock = doc.blocks.find((b) => b.tag === Tag.DRAFT_ID);
+        if (!scope || !draftIdBlock) {
+            throw new Error("Pacote CHAT_DRAFT requer SCOPE e DRAFT_ID.");
+        }
+        const draftId = readDraftIdBlock(draftIdBlock);
+        const authorPubHex = bytesToHex(doc.authorPub);
+        kind = SINTETIZE_DRAFT_NOSTR_KIND;
+        tags = [
+            ["d", `${scope}:${authorPubHex}:${draftId}`],
+            ["t", communityId],
+            ["u", "chat"],
+            ["s", scope],
+            ["h", docIdHex],
+        ];
+    }
+    else if (doc.docType === DocType.CHAT_MESSAGE) {
+        if (!scope) {
+            throw new Error("Pacote CHAT_MESSAGE requer SCOPE.");
+        }
+        kind = SINTETIZE_CHAT_NOSTR_KIND;
+        tags = [
+            ["t", communityId],
+            ["u", "chat"],
+            ["s", scope],
+            ["h", docIdHex],
+        ];
+    }
+    else {
+        tags = [
             ["t", communityId],
             ["u", universe],
             ["h", docIdHex],
-        ],
+        ];
+    }
+    const event = finalizeEvent({
+        kind,
+        created_at: Math.floor(Date.now() / 1000),
+        tags,
         content: bytesToBase64(rawPacket),
     }, nostrSecret);
     return { event, docIdHex, universe };
@@ -86,7 +129,9 @@ function getTagValue(event, key) {
  * Decodifica e valida um evento Nostr (NIP-01 + teto 100 KB + SHA-256 + Ed25519 + TLV).
  */
 export async function decodeAndVerifyNostrEvent(event) {
-    if (event.kind !== SINTETIZE_NOSTR_KIND) {
+    if (event.kind !== SINTETIZE_NOSTR_KIND &&
+        event.kind !== SINTETIZE_CHAT_NOSTR_KIND &&
+        event.kind !== SINTETIZE_DRAFT_NOSTR_KIND) {
         return null;
     }
     if (!verifyEvent(event)) {

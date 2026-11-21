@@ -64,3 +64,12 @@ export interface HiddenDocRecord {
   readonly kind: "SUBJECT" | "PROPOSAL";
   readonly hiddenAtMs: number;
 }
+
+export interface StoredChatFileRecord {
+  readonly subjectScope: string;
+  readonly communityId: string;
+  readonly rawChatBytes: Uint8Array;
+  readonly messageCount: number;
+  readonly activeDraftCount: number;
+  readonly updatedAtMs: number;
+}

@@ -217,7 +217,7 @@ export function ProposalFieldsRenderer({
 export interface ProposalDocumentComposerProps {
   readonly modeLabel: string;
   readonly submitLabel: string;
-  readonly submitIcon: "send" | "fork_right";
+  readonly submitIcon: "send" | "fork_right" | "save";
   readonly deliberationMode: DeliberationModeKind;
   readonly quorumPct: number | null;
   readonly subjectScope: string;
@@ -228,6 +228,8 @@ export interface ProposalDocumentComposerProps {
   readonly deadlineInput: string;
   readonly fields: readonly ProposalFieldView[];
   readonly busy: boolean;
+  readonly skipConfirm?: boolean | undefined;
+  readonly hideLocalDraftActions?: boolean | undefined;
   readonly onChangeTitle: (value: string) => void;
   readonly onChangeDeadlineInput: (value: string) => void;
   readonly onChangeFields: (fields: readonly ProposalFieldView[]) => void;
@@ -257,6 +259,8 @@ export function ProposalDocumentComposer({
   deadlineInput,
   fields,
   busy,
+  skipConfirm = false,
+  hideLocalDraftActions = false,
   onChangeTitle,
   onChangeDeadlineInput,
   onChangeFields,
@@ -335,6 +339,10 @@ export function ProposalDocumentComposer({
       return;
     }
     setValidationError(null);
+    if (skipConfirm) {
+      void handleConfirmPublish();
+      return;
+    }
     setConfirming(true);
   };
 
@@ -442,7 +450,7 @@ export function ProposalDocumentComposer({
 
   return (
     <form className="stack" onSubmit={handleEnterConfirm}>
-      {existingDrafts.length > 0 && (
+      {!hideLocalDraftActions && existingDrafts.length > 0 && (
         <div className="stack" style={{ gap: "8px" }}>
           {existingDrafts.map((draft) => (
             <div key={draft.draftId} className="draft-restore-banner">
@@ -831,28 +839,32 @@ export function ProposalDocumentComposer({
 
       <div className="btn-row" style={{ flexWrap: "wrap" }}>
         <button type="submit" className="btn btn--primary" disabled={busy}>
-          <MaterialIcon name="preview" />
-          <span>Revisar e {submitLabel}</span>
+          <MaterialIcon name={skipConfirm ? submitIcon : "preview"} />
+          <span>{skipConfirm ? submitLabel : `Revisar e ${submitLabel}`}</span>
         </button>
-        <button
-          type="button"
-          className="btn btn--tonal"
-          disabled={busy}
-          onClick={() => void handleSaveDraftClick(false)}
-        >
-          <MaterialIcon name="save" />
-          <span>{activeDraftId ? "Atualizar rascunho" : "Salvar rascunho local"}</span>
-        </button>
-        {activeDraftId && (
-          <button
-            type="button"
-            className="btn btn--outlined"
-            disabled={busy}
-            onClick={() => void handleSaveDraftClick(true)}
-          >
-            <MaterialIcon name="add" />
-            <span>Salvar como novo</span>
-          </button>
+        {!hideLocalDraftActions && (
+          <>
+            <button
+              type="button"
+              className="btn btn--tonal"
+              disabled={busy}
+              onClick={() => void handleSaveDraftClick(false)}
+            >
+              <MaterialIcon name="save" />
+              <span>{activeDraftId ? "Atualizar rascunho" : "Salvar rascunho local"}</span>
+            </button>
+            {activeDraftId && (
+              <button
+                type="button"
+                className="btn btn--outlined"
+                disabled={busy}
+                onClick={() => void handleSaveDraftClick(true)}
+              >
+                <MaterialIcon name="add" />
+                <span>Salvar como novo</span>
+              </button>
+            )}
+          </>
         )}
         <button
           type="button"

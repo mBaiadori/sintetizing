@@ -43,6 +43,8 @@ export function universeChipClass(universe: DocUniverse): string {
       return "chip chip--stze";
     case "snap":
       return "chip chip--snap";
+    case "chat":
+      return "chip chip--cmnt";
   }
 }
 

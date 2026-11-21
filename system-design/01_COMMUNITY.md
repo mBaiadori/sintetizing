@@ -15,7 +15,7 @@ O módulo **Community** estabelece o espaço soberano de deliberação. Uma comu
 ### Responsabilidades do Módulo:
 1. **Topologia de Escopo:** Gerenciar comunidades privadas (fechadas a convidados) e públicas (abertas à leitura).
 2. **Escala Multinível (Society & Federations):** Permitir a federação de comunidades autônomas para projetos compartilhados.
-3. **Ciclo de Vida do Assunto (Subject):** Orquestrar categorias, prazos (`Deadlines`), o tempo de conversação aberta (`Chat time`) e a máquina de estados.
+3. **Ciclo de Vida do Assunto (Subject):** Orquestrar categorias, prazos (`Deadlines`), a Oficina aberta (`.chat`) e a máquina de estados.
 4. **Resolução de Quórum Fantasma (Inactivity):** Calcular a massa votante real expurgando membros inativos de forma matemática.
 5. **Integração de Recursos (Treasury & Vaquinhas):** Gerenciar fundos e equipamentos comuns através de subcontas/vaquinhas atreladas a propostas sem intermediários individuais de custódia.
 
@@ -35,7 +35,7 @@ flowchart TD
         subgraph SubjectEngine ["Motor de Assuntos & Tempo"]
             CAT["Categories (Organização Temática)"]
             SUBJ["Subjects (Pautas com Prazo Final)"]
-            CHAT["Chat Efêmero (Janela: Chat time)"]
+            CHAT["Oficina Aberta (.chat + Rascunhos)"]
             CFG["Configs (Deadlines, Quorum, Inactivity Quorum)"]
         end
 
@@ -70,10 +70,10 @@ $$\text{Quórum Absoluto Exigido } (Q_{\text{req}}) = \left\lceil M_{\text{eff}}
 * **Critério de Inatividade:** Um membro é classificado como `INACTIVE_STANDBY` se não manifestar nenhum `Pick`, login ou interação por $N$ ciclos consecutivos (parâmetro `inactivityThresholdCycles`, padrão = 3).
 * **Reativação Automática:** No milissegundo em que um membro inativo abre o aplicativo e manifesta um `Pick`, seu status reverte instantaneamente para `ACTIVE` e o $M_{\text{eff}}$ do assunto é recalculado de forma atômica.
 
-### 2.3. O Ciclo do Subject e a Janela do Chat (`Chat time`)
-Cada assunto tramita com uma janela estrita de conversação:
-* **Fase 1: Conversa Aberta (`Chat time`):** Os primeiros $X$ dias/horas do ciclo (ex: 48 horas) são dedicados ao debate livre no chat, onde a IA escuta o diálogo;
-* **Fase 2: Foco em Propostas:** Terminado o `Chat time`, o chat é congelado ou arquivado, canalizando toda a atenção dos membros para a leitura dos Diffs e distribuição de `Picks` na árvore de propostas.
+### 2.3. O Ciclo do Subject e a Oficina Aberta (`.chat` + Rascunhos Vivos)
+O chat não possui janela fechada nem prazo configurável no `.cmnt` — ele nasce aberto junto com o `Subject` e **não bloqueia** a publicação nem a deliberação de propostas `.stze`:
+* **Oficina Contínua (`.chat`):** Funciona como espaço colaborativo permanente enquanto o assunto existir, reunindo mensagens leves de debate e **Rascunhos Vivos** individuais/substituíveis por autor (`CHAT_DRAFT`), onde membros lapidam ideias antes de publicá-las;
+* **Publicação em Paralelo (`.stze`):** A qualquer momento — antes, durante ou depois das conversas na Oficina — membros ativos podem publicar propostas imutáveis `.stze` diretamente ou converter um rascunho lapidado em proposta oficial e distribuir `Picks`.
 
 ### 2.4. A Arquitetura de Tesouraria: O Modelo de Vaquinha por Proposta
 Para garantir **custódia zero** (nenhum morador ou síndico fica com o dinheiro na própria conta corrente correndo risco de apropriação indevida ou penhora):
@@ -92,9 +92,9 @@ stateDiagram-v2
     DRAFT --> OPEN : Publicação com Data e Ciclo Iniciado
     
     state OPEN {
-        [*] --> ChatAberto : Janela de Chat Time ativa
-        ChatAberto --> SinteseDisponivel : IA ou membros geram propostas estruturadas
-        SinteseDisponivel --> DeliberacaoPropostas : Membros distribuem e migram Picks
+        [*] --> OficinaAberta : Chat aberto (.chat) + rascunhos substituíveis
+        --
+        [*] --> DeliberacaoPropostas : Propostas (.stze) + distribuição e migração de Picks
     }
 
     OPEN --> APPROVED : Alguma proposta atinge Q_req dentro do Deadline
@@ -123,7 +123,6 @@ export interface CommunityConfigs {
   defaultCycleDays: number;         // Duração padrão do ciclo (ex: 7)
   defaultQuorumPct: number;         // Meta percentual (ex: 75)
   inactivityThresholdCycles: number;// Ciclos sem ação para considerar inativo (ex: 3)
-  chatTimeHours: number;            // Janela do chat livre em horas (ex: 48)
   antiSnipingHoursTrigger: number;  // Janela final de vigilância (ex: 12)
   antiSnipingExtensionHours: number;// Tempo adicionado em caso de virada (ex: 24)
 }
@@ -167,7 +166,6 @@ export interface Subject {
   description: string;
   startedAt: number;
   deadlineTimestamp: number;
-  chatExpiresAt: number;
   activeProposalsCount: number;
   leadingProposalId: string | null;
   status: "OPEN" | "APPROVED" | "EXPIRED";

@@ -18,13 +18,16 @@ function isSignedNostrEvent(candidate) {
         "sig" in candidate &&
         typeof candidate.sig === "string");
 }
-function getTag(event, name) {
+function findTagValue(event, name) {
     for (const t of event.tags) {
         if (t[0] === name && typeof t[1] === "string") {
             return t[1];
         }
     }
-    return "-";
+    return null;
+}
+function getTag(event, name) {
+    return findTagValue(event, name) ?? "-";
 }
 /**
  * Mini-Relay Nostr NIP-01 local para desenvolvimento offline sem rate-limit.
@@ -118,6 +121,39 @@ export class LocalNostrRelay {
     log(msg) {
         this.onLog?.(`[nostr-relay] ${msg}`);
     }
+    insertVerifiedEvent(candidate) {
+        const packetHash = getTag(candidate, "h");
+        if (packetHash !== "-" && this.seenPacketHashes.has(packetHash)) {
+            return false;
+        }
+        if (candidate.kind >= 30000 && candidate.kind < 40000) {
+            const dTag = findTagValue(candidate, "d");
+            if (dTag !== null) {
+                for (const [existingId, existing] of this.events.entries()) {
+                    if (existing.pubkey === candidate.pubkey &&
+                        existing.kind === candidate.kind &&
+                        findTagValue(existing, "d") === dTag) {
+                        if (existing.created_at > candidate.created_at) {
+                            return false;
+                        }
+                        this.events.delete(existingId);
+                        const oldHash = findTagValue(existing, "h");
+                        if (oldHash !== null) {
+                            this.seenPacketHashes.delete(oldHash);
+                        }
+                    }
+                }
+            }
+        }
+        if (this.events.has(candidate.id)) {
+            return false;
+        }
+        this.events.set(candidate.id, candidate);
+        if (packetHash !== "-") {
+            this.seenPacketHashes.add(packetHash);
+        }
+        return true;
+    }
     loadFromDisk() {
         if (!this.eventsFile || !existsSync(this.eventsFile)) {
             return;
@@ -131,14 +167,7 @@ export class LocalNostrRelay {
             try {
                 const parsed = JSON.parse(trimmed);
                 if (isSignedNostrEvent(parsed) && verifyEvent(parsed)) {
-                    const packetHash = getTag(parsed, "h");
-                    if (packetHash !== "-" && this.seenPacketHashes.has(packetHash)) {
-                        continue;
-                    }
-                    this.events.set(parsed.id, parsed);
-                    if (packetHash !== "-") {
-                        this.seenPacketHashes.add(packetHash);
-                    }
+                    this.insertVerifiedEvent(parsed);
                 }
             }
             catch {
@@ -190,16 +219,8 @@ export class LocalNostrRelay {
                 return;
             }
             const packetHash = getTag(candidate, "h");
-            if (packetHash !== "-" && this.seenPacketHashes.has(packetHash)) {
-                sendJson(ws, ["OK", candidate.id, true, "duplicate docId"]);
-                return;
-            }
-            const isNew = !this.events.has(candidate.id);
+            const isNew = this.insertVerifiedEvent(candidate);
             if (isNew) {
-                this.events.set(candidate.id, candidate);
-                if (packetHash !== "-") {
-                    this.seenPacketHashes.add(packetHash);
-                }
                 this.persistEvent(candidate);
                 this.log(`EVENT kind=${candidate.kind} t=${getTag(candidate, "t")} u=${getTag(candidate, "u")} h=${packetHash.slice(0, 12)}`);
                 for (const subMap of this.subscriptions.values()) {
@@ -210,7 +231,7 @@ export class LocalNostrRelay {
                     }
                 }
             }
-            sendJson(ws, ["OK", candidate.id, true, ""]);
+            sendJson(ws, ["OK", candidate.id, true, isNew ? "" : "duplicate or superseded"]);
             return;
         }
         if (verb === "REQ" && typeof parsed[1] === "string") {

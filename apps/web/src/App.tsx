@@ -244,6 +244,12 @@ export function App() {
             Crie sua identidade para participar de comunidades, publicar propostas e
             registrar seus apoios.
           </p>
+          {explorer.errorMessage && (
+            <div className="banner banner--error" role="alert" style={{ marginBottom: 14 }}>
+              <MaterialIcon name="close" />
+              <span>{explorer.errorMessage}</span>
+            </div>
+          )}
           <div className="field">
             <label htmlFor="identity-name">Seu nome de exibição</label>
             <input
@@ -701,6 +707,7 @@ export function App() {
                     identity={explorer.identity}
                     communities={explorer.communities}
                     loadAllPackets={explorer.listAllStoredPackets}
+                    loadAllChatFiles={explorer.listAllChatFiles}
                   />
                 </div>
               </div>
@@ -827,6 +834,18 @@ export function App() {
                 selectedProposalId={selectedProposalId}
                 drafts={explorer.drafts}
                 hiddenDocIds={explorer.hiddenDocIds}
+                workshop={
+                  selectedSubject
+                    ? (explorer.workshopsByScope[selectedSubject.scope] ?? null)
+                    : null
+                }
+                chatFileRecord={
+                  selectedSubject
+                    ? (explorer.chatFiles.find(
+                        (f) => f.subjectScope === selectedSubject.scope
+                      ) ?? null)
+                    : null
+                }
                 sidebarCollapsed={sidebarCollapsed}
                 showNewSubjectForm={showNewSubjectForm}
                 busy={explorer.busy}
@@ -870,6 +889,10 @@ export function App() {
                 }}
                 onCreateSubject={explorer.createSubject}
                 onCreateProposal={explorer.createProposal}
+                onSendChatMessage={explorer.sendChatMessage}
+                onPublishSharedDraft={explorer.publishSharedDraft}
+                onDeleteSharedDraft={explorer.deleteSharedDraft}
+                onPromoteSharedDraft={explorer.promoteSharedDraftToProposal}
                 onSaveDraft={explorer.saveDraft}
                 onDeleteDraft={explorer.deleteDraft}
                 onHideDocument={explorer.hideDocument}

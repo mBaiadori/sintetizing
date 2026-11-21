@@ -4,6 +4,7 @@ import {
   calculateDocId,
   ConfigKind,
   DeliberationMode,
+  DraftStatus,
   getDocTypeName,
   getDocumentUniverse,
   InvitePolicy,
@@ -14,6 +15,8 @@ import {
   readCurrencyBlock,
   readDeadlineBlock,
   readDeliberationModeBlock,
+  readDraftIdBlock,
+  readDraftStatusBlock,
   readFieldLinkBlock,
   readFieldSubtitleBlock,
   readFieldTableBlock,
@@ -60,6 +63,8 @@ const TAG_NAMES: Readonly<Record<number, string>> = {
   [Tag.ACTIVE_CMNT_HASH]: "ACTIVE_CMNT_HASH",
   [Tag.ACTIVE_MEMBERS_TABLE]: "ACTIVE_MEMBERS_TABLE",
   [Tag.COSIGNATURES]: "COSIGNATURES",
+  [Tag.DRAFT_ID]: "DRAFT_ID",
+  [Tag.DRAFT_STATUS]: "DRAFT_STATUS",
 };
 
 function shortHex(hex: string): string {
@@ -195,6 +200,16 @@ function decodeBlockForDisplay(block: TLVBlock): DecodedBlockView {
     case Tag.FIELD_TABLE: {
       const f = readFieldTableBlock(block);
       displayValue = `[${f.fieldId}] ${f.label || "Tabela"} (${f.columns.length} col × ${f.rows.length} lin)`;
+      break;
+    }
+
+    case Tag.DRAFT_ID:
+      displayValue = readDraftIdBlock(block);
+      break;
+
+    case Tag.DRAFT_STATUS: {
+      const status = readDraftStatusBlock(block);
+      displayValue = status === DraftStatus.DELETED ? "DELETED (2)" : "ACTIVE (1)";
       break;
     }
 

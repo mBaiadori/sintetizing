@@ -162,4 +162,38 @@ export interface CommunityProjection {
     readonly documents: readonly InspectedDocument[];
     readonly rejectedPacketCount: number;
 }
+export interface ChatMessageView {
+    readonly docIdHex: string;
+    readonly scope: string;
+    readonly authorPubHex: string;
+    readonly authorName: string | null;
+    readonly body: string;
+    readonly timestampMs: number;
+    readonly seq: number;
+    readonly referencedDraftId: string | null;
+    readonly referencedProposalDocIdHex: string | null;
+}
+export interface SharedDraftView {
+    readonly docIdHex: string;
+    readonly draftId: string;
+    readonly scope: string;
+    readonly authorPubHex: string;
+    readonly authorName: string | null;
+    readonly title: string;
+    readonly body: string;
+    readonly fields: readonly ProposalFieldView[];
+    readonly parentHashHex: string | null;
+    readonly deadlineUnixSeconds: number | null;
+    readonly timestampMs: number;
+    readonly seq: number;
+    readonly convertedToProposalDocIdHex: string | null;
+    readonly convertedToProposalTitle: string | null;
+    readonly convertedByPubHex: string | null;
+    readonly convertedByName: string | null;
+}
+export interface SubjectWorkshopView {
+    readonly subjectScope: string;
+    readonly messages: readonly ChatMessageView[];
+    readonly activeDrafts: readonly SharedDraftView[];
+}
 //# sourceMappingURL=types.d.ts.map

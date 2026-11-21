@@ -1,5 +1,5 @@
 import { DocUniverse } from "@sintetizing/wire";
-import { CommunityRecord, HiddenDocRecord, LocalIdentity, LocalStoreOptions, ProposalDraftRecord, SavePacketResult, StoredPacketRecord } from "./types.js";
+import { CommunityRecord, HiddenDocRecord, LocalIdentity, LocalStoreOptions, ProposalDraftRecord, SavePacketResult, StoredChatFileRecord, StoredPacketRecord } from "./types.js";
 /**
  * Repositório Local-First enxuto em IndexedDB para identidade local,
  * lista de relays por comunidade e armazenamento verificado de pacotes TLV.
@@ -33,5 +33,17 @@ export declare class SintetizeLocalStore {
     listAllPackets(): Promise<StoredPacketRecord[]>;
     listPacketsByCommunity(communityId: string, universe?: DocUniverse): Promise<StoredPacketRecord[]>;
     getNextSeq(communityId: string, authorPubHex: string): Promise<number>;
+    private upsertCompactedChatFile;
+    ingestChatPacket(communityId: string, rawPacket: Uint8Array, nowMs?: number): Promise<{
+        readonly subjectScope: string;
+        readonly docIdHex: string;
+        readonly messageCount: number;
+        readonly activeDraftCount: number;
+    }>;
+    ingestChatPacketsBatch(communityId: string, rawPackets: readonly Uint8Array[], nowMs?: number): Promise<void>;
+    getChatFile(subjectScope: string): Promise<StoredChatFileRecord | null>;
+    getChatPacketsBySubject(subjectScope: string): Promise<Uint8Array[]>;
+    listChatFilesByCommunity(communityId: string): Promise<StoredChatFileRecord[]>;
+    listAllChatFiles(): Promise<StoredChatFileRecord[]>;
 }
 //# sourceMappingURL=idb-store.d.ts.map

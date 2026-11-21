@@ -3,6 +3,7 @@ import { webcrypto } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   calculateDocId,
+  compactChatPackets,
   ConfigKind,
   createActiveCmntHashBlock,
   createActiveMembersTableBlock,
@@ -14,6 +15,8 @@ import {
   createCutoffHashBlock,
   createDeadlineBlock,
   createDeliberationModeBlock,
+  createDraftIdBlock,
+  createDraftStatusBlock,
   createFieldLinkBlock,
   createFieldSubtitleBlock,
   createFieldTableBlock,
@@ -30,14 +33,19 @@ import {
   createSignedInvite,
   createTimestampBlock,
   createTitleBlock,
+  decodeChatFile,
   DeliberationMode,
   DocType,
+  DraftStatus,
+  encodeChatFile,
   getDocumentUniverse,
   InvitePolicy,
   packDocument,
   readActiveMembersTableBlock,
   readDeadlineBlock,
   readDeliberationModeBlock,
+  readDraftIdBlock,
+  readDraftStatusBlock,
   readFieldLinkBlock,
   readFieldSubtitleBlock,
   readFieldTableBlock,
@@ -372,5 +380,115 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
         url: "javascript:alert(1)",
       })
     ).toThrow();
+  });
+
+  it("empacota .chat (CHAT_MESSAGE e CHAT_DRAFT), compacta edições e preserva tombstone DELETED", async () => {
+    const alice = await makeKeyPair();
+    const bob = await makeKeyPair();
+    const subjectScope = "bairro-centro/portao-a1b2";
+    const draftId = "draft-portao-1";
+    const nowMs = 1_760_000_100_000;
+
+    const msgBytes = await packDocument(
+      {
+        docType: DocType.CHAT_MESSAGE,
+        authorPub: bob.pub,
+        seq: 1,
+        blocks: [
+          createScopeBlock(subjectScope),
+          createBodyBlock("Precisamos incluir bateria no motor do portão."),
+          createAuthorNameBlock("Bob"),
+          createTimestampBlock(nowMs),
+        ],
+      },
+      bob.priv
+    );
+    const msgDoc = await unpackAndVerifyDocument(msgBytes);
+    expect(getDocumentUniverse(msgDoc)).toBe("chat");
+
+    const draftV1 = await packDocument(
+      {
+        docType: DocType.CHAT_DRAFT,
+        authorPub: alice.pub,
+        seq: 1,
+        blocks: [
+          createScopeBlock(subjectScope),
+          createDraftIdBlock(draftId),
+          createDraftStatusBlock(DraftStatus.ACTIVE),
+          createTitleBlock("Motor do portão v1"),
+          createFieldTextBlock({
+            fieldId: "txt-1",
+            label: "Resumo",
+            text: "Versão inicial sem bateria.",
+          }),
+          createAuthorNameBlock("Alice"),
+          createTimestampBlock(nowMs + 1000),
+        ],
+      },
+      alice.priv
+    );
+
+    const draftV2 = await packDocument(
+      {
+        docType: DocType.CHAT_DRAFT,
+        authorPub: alice.pub,
+        seq: 2,
+        blocks: [
+          createScopeBlock(subjectScope),
+          createDraftIdBlock(draftId),
+          createDraftStatusBlock(DraftStatus.ACTIVE),
+          createTitleBlock("Motor do portão com bateria"),
+          createFieldValueBlock({
+            fieldId: "val-1",
+            label: "Orçamento",
+            amountCents: 145000,
+            unit: "BRL",
+          }),
+          createAuthorNameBlock("Alice"),
+          createTimestampBlock(nowMs + 2000),
+        ],
+      },
+      alice.priv
+    );
+    const draftV2Doc = await unpackAndVerifyDocument(draftV2);
+    expect(getDocumentUniverse(draftV2Doc)).toBe("chat");
+    expect(readDraftIdBlock(draftV2Doc.blocks.find((b) => b.tag === Tag.DRAFT_ID)!)).toBe(draftId);
+    expect(readDraftStatusBlock(draftV2Doc.blocks.find((b) => b.tag === Tag.DRAFT_STATUS)!)).toBe(
+      DraftStatus.ACTIVE
+    );
+
+    const compactedActive = await compactChatPackets([msgBytes, draftV1, draftV2]);
+    expect(compactedActive.messageCount).toBe(1);
+    expect(compactedActive.activeDraftCount).toBe(1);
+    expect(compactedActive.packets).toHaveLength(2);
+
+    const archiveBytes = encodeChatFile(compactedActive.packets);
+    const decodedPackets = decodeChatFile(archiveBytes);
+    expect(decodedPackets).toHaveLength(2);
+
+    const draftDeletedV3 = await packDocument(
+      {
+        docType: DocType.CHAT_DRAFT,
+        authorPub: alice.pub,
+        seq: 3,
+        blocks: [
+          createScopeBlock(subjectScope),
+          createDraftIdBlock(draftId),
+          createDraftStatusBlock(DraftStatus.DELETED),
+          createTimestampBlock(nowMs + 3000),
+        ],
+      },
+      alice.priv
+    );
+    const compactedDeleted = await compactChatPackets([
+      ...decodedPackets,
+      draftV1,
+      draftDeletedV3,
+    ]);
+    expect(compactedDeleted.messageCount).toBe(1);
+    expect(compactedDeleted.activeDraftCount).toBe(0);
+    expect(compactedDeleted.packets).toHaveLength(2);
+    const deletedArchive = decodeChatFile(encodeChatFile(compactedDeleted.packets));
+    expect(deletedArchive).toHaveLength(2);
   });
 });

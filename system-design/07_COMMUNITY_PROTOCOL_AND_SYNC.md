@@ -1,6 +1,6 @@
 # 07 — Protocolo de Comunidade, Documentos TLV e Sincronização em Escala
 
-> Especificação consolidada das decisões de arquitetura para governança descentralizada no **Sintetize**: um único envelope binário TLV assinável operando sobre quatro universos lógicos (`.cmnt`, `.memb`, `.stze`, `.snap`), permitindo comunidades versionadas por apoio, cálculo determinístico de inatividade, privacidade por escopo e escala para comunidades gigantes.
+> Especificação consolidada das decisões de arquitetura para governança descentralizada no **Sintetize**: um único envelope binário TLV assinável operando sobre cinco universos lógicos (`.cmnt`, `.memb`, `.stze`, `.snap`, `.chat`), permitindo comunidades versionadas por apoio, oficina aberta de rascunhos, cálculo determinístico de inatividade, privacidade por escopo e escala para comunidades gigantes.
 
 ---
 
@@ -15,11 +15,11 @@ A verdade é o **histórico imutável de documentos binários assinados (Ed25519
 
 ---
 
-## 2. Um Único Envelope TLV × Quatro Universos Lógicos
+## 2. Um Único Envelope TLV × Cinco Universos Lógicos
 
-Separar os universos em **`.cmnt`**, **`.memb`**, **`.stze`** e **`.snap`** **não torna o sistema mais pesado — torna a rede mais leve**, pois permite sincronização seletiva (ex.: baixar apenas regras ou apenas um assunto específico) sem baixar tudo o tempo todo.
+Separar os universos em **`.cmnt`**, **`.memb`**, **`.stze`**, **`.snap`** e **`.chat`** (`DocUniverse = "chat"`) **não torna o sistema mais pesado — torna a rede mais leve**, pois permite sincronização seletiva (ex.: baixar apenas regras, apenas um assunto específico ou sob demanda o histórico da oficina) sem baixar tudo o tempo todo.
 
-A regra de engenharia para manter o sistema simples é: **todos os quatro universos usam exatamente o mesmo envelope binário TLV e o mesmo validador Ed25519**, mudando apenas a leitura (`docType` / tipo lógico) e o conjunto de tags aceitas no corpo TLV.
+A regra de engenharia para manter o sistema simples é: **todos os cinco universos usam exatamente o mesmo envelope binário TLV e o mesmo validador Ed25519**, mudando apenas a leitura (`docType` / tipo lógico) e o conjunto de tags aceitas no corpo TLV.
 
 ### Estrutura Base Compartilhada (alinhada a `packages/wire`)
 
@@ -33,7 +33,7 @@ A regra de engenharia para manter o sistema simples é: **todos os quatro univer
 
 * **Preços de escala em binário:** Chave pública (`32B`), hash SHA-256 (`32B`) e assinatura (`64B`) tornam um evento completo de apoio (`pick`) com **~150–180 bytes** — ordem de grandeza menor que JSON.
 
-### Os 4 Universos Lógicos
+### Os 5 Universos Lógicos
 
 | Extensão / Universo | Papel no ecossistema | Quem pode assinar | Frequência |
 | :--- | :--- | :--- | :--- |
@@ -41,6 +41,7 @@ A regra de engenharia para manter o sistema simples é: **todos os quatro univer
 | **`.memb`** *(Membro)* | Log individual de um integrante **dentro de uma comunidade específica**: entrada via convite, alterações de apoio (`picks`) e saída voluntária. | **Apenas o próprio membro** (`authorPub`). Zero conflito de escrita entre membros. | Média |
 | **`.stze`** *(Assunto / Síntese)* | Abertura de assuntos, propostas, revisões e execuções/sínteses ligadas à comunidade. | Membros **ativos** segundo o `.cmnt` vigente. | Alta |
 | **`.snap`** *(Snapshot / Checkpoint)* | Ponto de consolidação do estado calculado (membros ativos + regra vigente + resultados consolidados) para entrada rápida de novos participantes. | Qualquer membro gera localmente; passa a valer com **quórum de co-assinaturas**. | Periódica |
+| **`.chat`** *(Oficina / `DocUniverse = "chat"`)* | Mensagens de debate (`CHAT_MESSAGE`) e rascunhos vivos substituíveis por autor (`CHAT_DRAFT`), compactados localmente por assunto no formato binário `.chat` (`STZECHAT`), **sem interferir** em `inactivityDays`, no `seq` de `.memb` nem em `.snap`. | Membros da comunidade (cada autor gerencia seus próprios rascunhos vivos). | Alta |
 
 ---
 
@@ -143,14 +144,19 @@ Mantendo compatibilidade com as tags já implementadas em `packages/wire/src/typ
   - Saída: subtipo `LEAVE`.
 * **`.stze` *(Assuntos e Sínteses)*:** `TITLE (10)`, `BODY (11)`, `CURRENCY (12)`, `DEADLINE (13)`, `LAW_ARTICLE (14)`, `PARENT_HASH (2)`.
 * **`.snap` *(Checkpoint Assinado)*:** `PARENT_HASH (2)` (hash do snapshot anterior), `CUTOFF_HASH` (`32B`), `ACTIVE_CMNT_HASH` (`32B`), tabela compacta de membros ativos (`authorPub + lastActivityTs`) e lista de co-assinaturas (`pubKey + sig`) atingindo o quórum.
+* **`.chat` *(Oficina do Assunto — Chat e Rascunhos Vivos)*:** `SCOPE (1)` (`communityId/subjectId`), `DRAFT_ID (34)`, `DRAFT_STATUS (35)`, `TITLE (10)`, `BODY (11)` e blocos estruturados da proposta em construção (`SUBTITLE`, `VALUE`, `LINK`, `TABLE`, `ARTICLE`), além de `PARENT_HASH (2)` e `TIMESTAMP` para mensagens (`CHAT_MESSAGE`) e rascunhos (`CHAT_DRAFT`). Compactado localmente por assunto em arquivo binário `.chat` (`STZECHAT`).
 
 ---
 
 ## 7. Camada de Rede Decidida: Nostr (`nostr-tools`)
 
 * **Decisão fechada:** Migrar a camada de rede do relay WebSocket caseiro para **Nostr (`nostr-tools`)**, reduzindo código de infraestrutura própria e ganhando redundância em múltiplos relays prontos.
-* **O que o Relay Nostr faz:** Continua sendo apenas uma **caixa postal burra** que armazena eventos imutáveis e permite filtrar por tags da comunidade e por universo (`.cmnt`, `.memb`, `.stze`, `.snap`). Ele nunca decide quórum nem valida governança.
+* **O que o Relay Nostr faz:** Continua sendo apenas uma **caixa postal burra** que armazena eventos e permite filtrar por tags da comunidade e por universo (`.cmnt`, `.memb`, `.stze`, `.snap`, `.chat`). Ele nunca decide quórum nem valida governança.
+* **Separação por Kinds Nostr:**
+  - `kind 4545` (regular/imutável): documentos formais dos universos `.cmnt`, `.memb`, `.stze` e `.snap`.
+  - `kind 4546` (regular/imutável): mensagens de debate na oficina (`CHAT_MESSAGE`).
+  - `kind 30545` (endereçável/substituível pelo relay via chave `(pubkey, kind, d)`): rascunhos vivos (`CHAT_DRAFT`), permitindo ao autor reescrever ou marcar o rascunho como deletado sem inflar o histórico de governança.
 * **Por que TLV próprio + transporte Nostr (sem Automerge):**
   - CRDTs genéricos não validam regras rígidas de governança (impedir voto de inativo, exigir convite válido, exigir quórum para trocar `v1 -> v2`).
-  - O pacote TLV binário assinado (Ed25519) viaja em Base64 no `content` de um evento Nostr regular/imutável, com tags de filtro (`communityId`, universo e hash). Todo cliente valida a assinatura e o `PARENT_HASH` internos antes de aceitar o pacote.
+  - O pacote TLV binário assinado (Ed25519) viaja em Base64 no `content` do evento Nostr correspondente, com tags de filtro (`communityId`, universo, hash e `d` no caso do `kind 30545`). Todo cliente valida a assinatura e o `PARENT_HASH` internos antes de aceitar o pacote.
 * **Referência dos tipos de documento:** Ver o catálogo simplificado em [08_TLV_DOCUMENT_TYPES.md](file:///Users/MarcosBaiadori/Desktop/sintetizing/system-design/08_TLV_DOCUMENT_TYPES.md).

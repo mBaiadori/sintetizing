@@ -9,6 +9,8 @@ import {
   createConfigKindBlock,
   createDeadlineBlock,
   createDeliberationModeBlock,
+  createDraftIdBlock,
+  createDraftStatusBlock,
   createFieldLinkBlock,
   createFieldSubtitleBlock,
   createFieldTableBlock,
@@ -27,6 +29,7 @@ import {
   createTitleBlock,
   DeliberationMode,
   DocType,
+  DraftStatus,
   generateEd25519Keypair,
   InvitePolicy,
   packDocument,
@@ -85,6 +88,7 @@ export const SEED_SCALE_CONFIGS: Readonly<Record<SeedScale, SeedScaleConfig>> = 
 export interface SeedCommunityBundle {
   readonly record: CommunityRecord;
   readonly packets: readonly Uint8Array[];
+  readonly chatPackets: readonly Uint8Array[];
 }
 
 export interface SeedDatasetStats {
@@ -94,6 +98,7 @@ export interface SeedDatasetStats {
   readonly subjects: number;
   readonly proposals: number;
   readonly picks: number;
+  readonly chatPackets: number;
   readonly totalPackets: number;
 }
 
@@ -233,6 +238,7 @@ export async function generateSeedDataset(params: {
   let totalSubjects = 0;
   let totalProposals = 0;
   let totalPicks = 0;
+  let totalChatPackets = 0;
   let totalPackets = 0;
 
   for (let cIdx = 0; cIdx < config.communities; cIdx += 1) {
@@ -249,6 +255,7 @@ export async function generateSeedDataset(params: {
     );
 
     const packets: Uint8Array[] = [];
+    const chatPackets: Uint8Array[] = [];
     const localMember: SimulatedMember = {
       displayName: params.identity.displayName,
       publicKey: params.identity.publicKey,
@@ -619,6 +626,103 @@ export async function generateSeedDataset(params: {
       }
     }
 
+    // 7. Oficina (.chat): mensagens de debate e rascunhos vivos para os primeiros assuntos
+    const chatSubjectLimit = Math.min(4, subjects.length);
+    for (let sIdx = 0; sIdx < chatSubjectLimit; sIdx += 1) {
+      const subj = subjects[sIdx]!;
+      const m1 = deterministicPick(simMembers, sIdx + 1);
+      const m2 = deterministicPick(simMembers, sIdx + 2);
+      const chatStart = subj.ts + 15_000;
+
+      chatPackets.push(
+        await packDocument(
+          {
+            docType: DocType.CHAT_MESSAGE,
+            authorPub: m1.publicKey,
+            seq: 1,
+            blocks: [
+              createScopeBlock(subj.scope),
+              createBodyBlock(
+                "Alguém já levantou quanto custaria fazer em etapas antes de fecharmos a proposta oficial?"
+              ),
+              createAuthorNameBlock(m1.displayName),
+              createTimestampBlock(chatStart),
+            ],
+          },
+          m1.privateKey
+        ),
+        await packDocument(
+          {
+            docType: DocType.CHAT_MESSAGE,
+            authorPub: m2.publicKey,
+            seq: 1,
+            blocks: [
+              createScopeBlock(subj.scope),
+              createBodyBlock(
+                "Abri um rascunho na Oficina com estimativa de custo e prazo de 10 dias para revisarmos juntos."
+              ),
+              createAuthorNameBlock(m2.displayName),
+              createTimestampBlock(chatStart + 25_000),
+            ],
+          },
+          m2.privateKey
+        )
+      );
+
+      const draftId = `draft-seed-${sIdx + 1}`;
+      chatPackets.push(
+        await packDocument(
+          {
+            docType: DocType.CHAT_DRAFT,
+            authorPub: m2.publicKey,
+            seq: 1,
+            blocks: [
+              createScopeBlock(subj.scope),
+              createDraftIdBlock(draftId),
+              createDraftStatusBlock(DraftStatus.ACTIVE),
+              createTitleBlock("Esboço inicial levantado no chat (v1)"),
+              createFieldTextBlock({
+                fieldId: "txt-esboco",
+                label: "Escopo preliminar",
+                text: "Versão inicial antes do ajuste sugerido pelos participantes.",
+              }),
+              createAuthorNameBlock(m2.displayName),
+              createTimestampBlock(chatStart + 30_000),
+            ],
+          },
+          m2.privateKey
+        ),
+        await packDocument(
+          {
+            docType: DocType.CHAT_DRAFT,
+            authorPub: m2.publicKey,
+            seq: 2,
+            blocks: [
+              createScopeBlock(subj.scope),
+              createDraftIdBlock(draftId),
+              createDraftStatusBlock(DraftStatus.ACTIVE),
+              createTitleBlock("Esboço refinado com entrega em 2 fases"),
+              createFieldTextBlock({
+                fieldId: "txt-esboco",
+                label: "Escopo refinado",
+                text: "Consolidado após debate no chat com garantia e prestação de contas por etapa.",
+              }),
+              createFieldValueBlock({
+                fieldId: "val-esboco",
+                label: "Teto de Custo Combinado",
+                amountCents: 920000,
+                unit: "BRL",
+              }),
+              createAuthorNameBlock(m2.displayName),
+              createTimestampBlock(chatStart + 45_000),
+            ],
+          },
+          m2.privateKey
+        )
+      );
+      totalChatPackets += 4;
+    }
+
     totalPackets += packets.length;
     bundles.push({
       record: {
@@ -628,6 +732,7 @@ export async function generateSeedDataset(params: {
         createdAtMs: commCreatedAt,
       },
       packets,
+      chatPackets,
     });
   }
 
@@ -640,6 +745,7 @@ export async function generateSeedDataset(params: {
       subjects: totalSubjects,
       proposals: totalProposals,
       picks: totalPicks,
+      chatPackets: totalChatPackets,
       totalPackets,
     },
   };

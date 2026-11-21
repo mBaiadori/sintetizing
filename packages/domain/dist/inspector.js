@@ -1,5 +1,5 @@
 import { bytesToHex } from "@noble/hashes/utils";
-import { calculateDocId, ConfigKind, DeliberationMode, getDocTypeName, getDocumentUniverse, InvitePolicy, parseInviteProof, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readQuorumPctBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, } from "@sintetizing/wire";
+import { calculateDocId, ConfigKind, DeliberationMode, DraftStatus, getDocTypeName, getDocumentUniverse, InvitePolicy, parseInviteProof, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readDraftIdBlock, readDraftStatusBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readQuorumPctBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, } from "@sintetizing/wire";
 const TAG_NAMES = {
     [Tag.SCOPE]: "SCOPE",
     [Tag.PARENT_HASH]: "PARENT_HASH",
@@ -28,6 +28,8 @@ const TAG_NAMES = {
     [Tag.ACTIVE_CMNT_HASH]: "ACTIVE_CMNT_HASH",
     [Tag.ACTIVE_MEMBERS_TABLE]: "ACTIVE_MEMBERS_TABLE",
     [Tag.COSIGNATURES]: "COSIGNATURES",
+    [Tag.DRAFT_ID]: "DRAFT_ID",
+    [Tag.DRAFT_STATUS]: "DRAFT_STATUS",
 };
 function shortHex(hex) {
     return hex.length > 16 ? `${hex.slice(0, 12)}...${hex.slice(-4)}` : hex;
@@ -141,6 +143,14 @@ function decodeBlockForDisplay(block) {
         case Tag.FIELD_TABLE: {
             const f = readFieldTableBlock(block);
             displayValue = `[${f.fieldId}] ${f.label || "Tabela"} (${f.columns.length} col × ${f.rows.length} lin)`;
+            break;
+        }
+        case Tag.DRAFT_ID:
+            displayValue = readDraftIdBlock(block);
+            break;
+        case Tag.DRAFT_STATUS: {
+            const status = readDraftStatusBlock(block);
+            displayValue = status === DraftStatus.DELETED ? "DELETED (2)" : "ACTIVE (1)";
             break;
         }
         default:

@@ -1,5 +1,12 @@
-import { hexToBytes } from "@noble/hashes/utils";
-import { CommunityProjection, ProposalFieldView, projectCommunityState } from "@sintetizing/domain";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import {
+  CommunityProjection,
+  projectCommunityState,
+  projectSubjectWorkshop,
+  ProposalFieldView,
+  SharedDraftView,
+  SubjectWorkshopView,
+} from "@sintetizing/domain";
 import {
   decodeInviteCode,
   DEFAULT_PUBLIC_NOSTR_RELAYS,
@@ -15,9 +22,11 @@ import {
   LocalIdentity,
   ProposalDraftRecord,
   SintetizeLocalStore,
+  StoredChatFileRecord,
   StoredPacketRecord,
 } from "@sintetizing/storage";
 import {
+  calculateDocId,
   ConfigKind,
   createActiveCmntHashBlock,
   createActiveMembersTableBlock,
@@ -28,6 +37,8 @@ import {
   createCutoffHashBlock,
   createDeadlineBlock,
   createDeliberationModeBlock,
+  createDraftIdBlock,
+  createDraftStatusBlock,
   createFieldLinkBlock,
   createFieldSubtitleBlock,
   createFieldTableBlock,
@@ -44,12 +55,15 @@ import {
   createSignedInvite,
   createTimestampBlock,
   createTitleBlock,
+  decodeChatFile,
   DeliberationMode,
   DocType,
+  DraftStatus,
   InvitePolicy,
   InvitePolicyValue,
   packDocument,
   TLVBlock,
+  unpackAndVerifyDocument,
 } from "@sintetizing/wire";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GENERAL_CATEGORY_ID } from "../utils/format.js";
@@ -103,6 +117,94 @@ export interface SaveDraftInput {
   readonly body: string;
   readonly deadlineUnixSeconds: number | null;
   readonly fields: readonly DraftFieldInput[];
+}
+
+export interface SendChatMessageInput {
+  readonly subjectScope: string;
+  readonly body: string;
+  readonly referencedDraftId?: string | undefined;
+  readonly referencedProposalDocIdHex?: string | undefined;
+}
+
+export interface PublishSharedDraftInput {
+  readonly subjectScope: string;
+  readonly draftId: string;
+  readonly title: string;
+  readonly body: string;
+  readonly parentHashHex?: string | null | undefined;
+  readonly deadlineUnixSeconds?: number | null | undefined;
+  readonly fields: readonly ProposalFieldView[];
+}
+
+function buildStructuredFieldBlocks(
+  fields: readonly ProposalFieldView[] | undefined
+): TLVBlock[] {
+  const structuredBlocks: TLVBlock[] = [];
+  for (const field of fields ?? []) {
+    switch (field.kind) {
+      case "SUBTITLE":
+        structuredBlocks.push(
+          createFieldSubtitleBlock({ fieldId: field.fieldId, label: field.label })
+        );
+        break;
+      case "TEXT":
+        structuredBlocks.push(
+          createFieldTextBlock({
+            fieldId: field.fieldId,
+            label: field.label,
+            text: field.text,
+          })
+        );
+        break;
+      case "VALUE":
+        structuredBlocks.push(
+          createFieldValueBlock({
+            fieldId: field.fieldId,
+            label: field.label,
+            amountCents: field.amountCents,
+            unit: field.unit,
+          })
+        );
+        break;
+      case "LINK":
+        structuredBlocks.push(
+          createFieldLinkBlock({
+            fieldId: field.fieldId,
+            label: field.label,
+            url: field.url,
+          })
+        );
+        break;
+      case "TABLE":
+        structuredBlocks.push(
+          createFieldTableBlock({
+            fieldId: field.fieldId,
+            label: field.label,
+            columns: field.columns,
+            rows: field.rows,
+          })
+        );
+        break;
+      case "ARTICLE":
+        structuredBlocks.push(createLawArticleBlock(field.articleNum, field.text));
+        break;
+    }
+  }
+  return structuredBlocks;
+}
+
+function buildSummaryBody(
+  body: string,
+  fields: readonly ProposalFieldView[] | undefined
+): string {
+  const trimmed = body.trim();
+  if (trimmed.length > 0) {
+    return trimmed;
+  }
+  const firstTextField = (fields ?? []).find((f) => f.kind === "TEXT");
+  return firstTextField && firstTextField.kind === "TEXT"
+    ? firstTextField.text.slice(0, 280).trim()
+    : "";
 }
 
 export function buildProposalShareUrl(params: {
@@ -198,6 +300,13 @@ export function useExplorer() {
   const [seedProgress, setSeedProgress] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<ProposalDraftRecord[]>([]);
   const [hiddenDocs, setHiddenDocs] = useState<HiddenDocRecord[]>([]);
+  const [chatFiles, setChatFiles] = useState<StoredChatFileRecord[]>([]);
+  const [workshopsByScope, setWorkshopsByScope] = useState<
+    Readonly<Record<string, SubjectWorkshopView>>
+  >({});
+
+  const projectionRef = useRef<CommunityProjection | null>(null);
+  projectionRef.current = projection;
 
   const hiddenDocIds = useMemo(
     () => new Set(hiddenDocs.map((h) => h.docIdHex)),
@@ -217,7 +326,26 @@ export function useExplorer() {
     setHiddenDocs(loadedHidden);
   }, []);
 
-  const refreshProjection = useCallback(async (communityId: string) => {
+  const refreshWorkshops = useCallback(
+    async (communityId: string, activeProjection: CommunityProjection | null) => {
+      const store = storeRef.current!;
+      const files = await store.listChatFilesByCommunity(communityId);
+      setChatFiles(files);
+      const nextMap: Record<string, SubjectWorkshopView> = {};
+      for (const file of files) {
+        const packets = decodeChatFile(file.rawChatBytes);
+        nextMap[file.subjectScope] = await projectSubjectWorkshop({
+          subjectScope: file.subjectScope,
+          rawChatPackets: packets,
+          projection: activeProjection,
+        });
+      }
+      setWorkshopsByScope(nextMap);
+    },
+    []
+  );
+
+  const refreshProjection = useCallback(async (communityId: string): Promise<CommunityProjection> => {
     const store = storeRef.current!;
     const records = await store.listPacketsByCommunity(communityId);
     const next = await projectCommunityState(
@@ -226,6 +354,7 @@ export function useExplorer() {
       Date.now()
     );
     setProjection(next);
+    return next;
   }, []);
 
   useEffect(() => {
@@ -261,6 +390,9 @@ export function useExplorer() {
     return () => {
       active = false;
       transport.destroy();
+      if (transportRef.current === transport) {
+        transportRef.current = null;
+      }
       store.close();
     };
   }, []);
@@ -271,6 +403,8 @@ export function useExplorer() {
       setProjection(null);
       setDrafts([]);
       setHiddenDocs([]);
+      setChatFiles([]);
+      setWorkshopsByScope({});
       setSyncState("idle");
       return;
     }
@@ -298,6 +432,7 @@ export function useExplorer() {
         );
         if (!cancelled) {
           setProjection(initialProj);
+          await refreshWorkshops(selectedCommunity.communityId, initialProj);
         }
 
         const relays = normalizeRelayList(selectedCommunity.relays);
@@ -309,6 +444,14 @@ export function useExplorer() {
         }
 
         const knownIds = new Set(stored.map((r) => r.docIdHex));
+        const storedChatFiles = await store.listChatFilesByCommunity(selectedCommunity.communityId);
+        const storedChatPackets: Uint8Array[] = [];
+        for (const cf of storedChatFiles) {
+          for (const pkt of decodeChatFile(cf.rawChatBytes)) {
+            storedChatPackets.push(pkt);
+            knownIds.add(bytesToHex(calculateDocId(pkt)));
+          }
+        }
         const remoteDocIds = new Set<string>();
         sub = transport.subscribeCommunity({
           relays,
@@ -318,6 +461,23 @@ export function useExplorer() {
               return;
             }
             remoteDocIds.add(decoded.docIdHex);
+            if (decoded.universe === "chat") {
+              if (knownIds.has(decoded.docIdHex)) {
+                return;
+              }
+              knownIds.add(decoded.docIdHex);
+              await store.ingestChatPacket(
+                selectedCommunity.communityId,
+                decoded.rawBytes
+              );
+              if (!cancelled) {
+                await refreshWorkshops(
+                  selectedCommunity.communityId,
+                  projectionRef.current
+                );
+              }
+              return;
+            }
             if (knownIds.has(decoded.docIdHex)) {
               return;
             }
@@ -327,7 +487,10 @@ export function useExplorer() {
               decoded.rawBytes
             );
             if (res.isNew && !cancelled) {
-              await refreshProjection(selectedCommunity.communityId);
+              const nextProj = await refreshProjection(selectedCommunity.communityId);
+              if (!cancelled) {
+                await refreshWorkshops(selectedCommunity.communityId, nextProj);
+              }
             }
           },
           onEose: () => {
@@ -346,6 +509,19 @@ export function useExplorer() {
                       relays,
                       selectedCommunity.communityId,
                       rec.rawBytes,
+                      identity.privateKey
+                    )
+                    .catch(() => {});
+                }
+              }
+              for (const chatPkt of storedChatPackets) {
+                const pktId = bytesToHex(calculateDocId(chatPkt));
+                if (!remoteDocIds.has(pktId)) {
+                  void transport
+                    .publishPacket(
+                      relays,
+                      selectedCommunity.communityId,
+                      chatPkt,
                       identity.privateKey
                     )
                     .catch(() => {});
@@ -374,7 +550,7 @@ export function useExplorer() {
       }
       sub?.close("effect cleanup");
     };
-  }, [selectedCommunity, identity, resyncNonce, refreshProjection, refreshLocalPrefs]);
+  }, [selectedCommunity, identity, resyncNonce, refreshProjection, refreshLocalPrefs, refreshWorkshops]);
 
   const publishAndStore = useCallback(
     async (communityId: string, relays: readonly string[], rawBytes: Uint8Array) => {
@@ -385,7 +561,8 @@ export function useExplorer() {
       const transport = transportRef.current!;
 
       const saved = await store.savePacket(communityId, rawBytes);
-      await refreshProjection(communityId);
+      const nextProj = await refreshProjection(communityId);
+      await refreshWorkshops(communityId, nextProj);
 
       const cleanRelays = normalizeRelayList(relays);
       if (cleanRelays.length === 0) {
@@ -404,7 +581,82 @@ export function useExplorer() {
         totalRelays: cleanRelays.length,
       };
     },
-    [identity, refreshProjection]
+    [identity, refreshProjection, refreshWorkshops]
+  );
+
+  const publishAndIngestChat = useCallback(
+    async (communityId: string, relays: readonly string[], rawBytes: Uint8Array) => {
+      if (!identity) {
+        throw new Error("Identidade local não inicializada.");
+      }
+      const store = storeRef.current!;
+      const transport = transportRef.current!;
+
+      const ingested = await store.ingestChatPacket(communityId, rawBytes);
+      await refreshWorkshops(communityId, projectionRef.current);
+
+      const cleanRelays = normalizeRelayList(relays);
+      if (cleanRelays.length > 0) {
+        await transport.publishPacket(
+          cleanRelays,
+          communityId,
+          rawBytes,
+          identity.privateKey
+        );
+      }
+      return ingested;
+    },
+    [identity, refreshWorkshops]
+  );
+
+  const getNextChatSeq = useCallback(
+    async (subjectScope: string, authorPubHex: string): Promise<number> => {
+      const workshop = workshopsByScope[subjectScope];
+      let maxSeq = 0;
+      if (workshop) {
+        for (const msg of workshop.messages) {
+          if (msg.authorPubHex === authorPubHex && msg.seq > maxSeq) {
+            maxSeq = msg.seq;
+          }
+        }
+        for (const draft of workshop.activeDrafts) {
+          if (draft.authorPubHex === authorPubHex && draft.seq > maxSeq) {
+            maxSeq = draft.seq;
+          }
+        }
+      }
+      const rawPackets = await storeRef.current!.getChatPacketsBySubject(subjectScope);
+      if (rawPackets.length > 0) {
+        const view = await projectSubjectWorkshop({
+          subjectScope,
+          rawChatPackets: rawPackets,
+          projection: null,
+        });
+        for (const msg of view.messages) {
+          if (msg.authorPubHex === authorPubHex && msg.seq > maxSeq) {
+            maxSeq = msg.seq;
+          }
+        }
+        for (const draft of view.activeDrafts) {
+          if (draft.authorPubHex === authorPubHex && draft.seq > maxSeq) {
+            maxSeq = draft.seq;
+          }
+        }
+        // Inclui possíveis tombstones DELETED armazenados no .chat
+        for (const pkt of rawPackets) {
+          try {
+            const doc = await unpackAndVerifyDocument(pkt);
+            if (bytesToHex(doc.authorPub) === authorPubHex && doc.seq > maxSeq) {
+              maxSeq = doc.seq;
+            }
+          } catch {
+            // ignora pacote inválido
+          }
+        }
+      }
+      return maxSeq + 1;
+    },
+    [workshopsByScope]
   );
 
   const runActionWithResult = useCallback(async <T>(fn: () => Promise<{ result: T; message?: string }>): Promise<T | null> => {
@@ -752,80 +1004,125 @@ export function useExplorer() {
     [identity, publishAndStore, runActionWithResult, selectedCommunity]
   );
 
+  const packAndPublishProposal = useCallback(
+    async (input: CreateProposalInput): Promise<string> => {
+      if (!identity || !selectedCommunity) {
+        throw new Error("Selecione uma comunidade.");
+      }
+      const structuredBlocks = buildStructuredFieldBlocks(input.fields);
+      const fallbackSummary = buildSummaryBody(input.body, input.fields);
+
+      const blocks: TLVBlock[] = [
+        createScopeBlock(input.subjectScope),
+        ...(input.parentHashHex
+          ? [createParentHashBlock(hexToBytes(input.parentHashHex))]
+          : []),
+        createTitleBlock(input.title.trim()),
+        ...(fallbackSummary.length > 0 ? [createBodyBlock(fallbackSummary)] : []),
+        ...structuredBlocks,
+        ...(input.deadlineUnixSeconds !== undefined
+          ? [createDeadlineBlock(input.deadlineUnixSeconds)]
+          : []),
+        createAuthorNameBlock(identity.displayName),
+        createTimestampBlock(Date.now()),
+      ];
+      const rawBytes = await packDocument(
+        {
+          docType: DocType.PROPOSAL,
+          authorPub: identity.publicKey,
+          seq: 1,
+          blocks,
+        },
+        identity.privateKey
+      );
+
+      const res = await publishAndStore(
+        selectedCommunity.communityId,
+        selectedCommunity.relays,
+        rawBytes
+      );
+      return res.docIdHex;
+    },
+    [identity, publishAndStore, selectedCommunity]
+  );
+
   const createProposal = useCallback(
     (input: CreateProposalInput) =>
+      runActionWithResult(async () => ({
+        result: await packAndPublishProposal(input),
+      })),
+    [packAndPublishProposal, runActionWithResult]
+  );
+
+  const packAndSendChatMessage = useCallback(
+    async (input: SendChatMessageInput): Promise<string> => {
+      if (!identity || !selectedCommunity) {
+        throw new Error("Selecione uma comunidade.");
+      }
+      const trimmedBody = input.body.trim();
+      if (!trimmedBody) {
+        throw new Error("Digite uma mensagem antes de enviar.");
+      }
+      const seq = await getNextChatSeq(input.subjectScope, identity.publicKeyHex);
+      const blocks: TLVBlock[] = [
+        createScopeBlock(input.subjectScope),
+        createBodyBlock(trimmedBody),
+        ...(input.referencedDraftId
+          ? [createDraftIdBlock(input.referencedDraftId)]
+          : []),
+        ...(input.referencedProposalDocIdHex
+          ? [createPickTargetBlock(hexToBytes(input.referencedProposalDocIdHex))]
+          : []),
+        createAuthorNameBlock(identity.displayName),
+        createTimestampBlock(Date.now()),
+      ];
+      const rawBytes = await packDocument(
+        {
+          docType: DocType.CHAT_MESSAGE,
+          authorPub: identity.publicKey,
+          seq,
+          blocks,
+        },
+        identity.privateKey
+      );
+      const res = await publishAndIngestChat(
+        selectedCommunity.communityId,
+        selectedCommunity.relays,
+        rawBytes
+      );
+      return res.docIdHex;
+    },
+    [getNextChatSeq, identity, publishAndIngestChat, selectedCommunity]
+  );
+
+  const sendChatMessage = useCallback(
+    (input: SendChatMessageInput) =>
+      runActionWithResult(async () => ({
+        result: await packAndSendChatMessage(input),
+      })),
+    [packAndSendChatMessage, runActionWithResult]
+  );
+
+  const publishSharedDraft = useCallback(
+    (input: PublishSharedDraftInput) =>
       runActionWithResult(async () => {
         if (!identity || !selectedCommunity) {
           throw new Error("Selecione uma comunidade.");
         }
-        const structuredBlocks: TLVBlock[] = [];
-        for (const field of input.fields ?? []) {
-          switch (field.kind) {
-            case "SUBTITLE":
-              structuredBlocks.push(
-                createFieldSubtitleBlock({ fieldId: field.fieldId, label: field.label })
-              );
-              break;
-            case "TEXT":
-              structuredBlocks.push(
-                createFieldTextBlock({
-                  fieldId: field.fieldId,
-                  label: field.label,
-                  text: field.text,
-                })
-              );
-              break;
-            case "VALUE":
-              structuredBlocks.push(
-                createFieldValueBlock({
-                  fieldId: field.fieldId,
-                  label: field.label,
-                  amountCents: field.amountCents,
-                  unit: field.unit,
-                })
-              );
-              break;
-            case "LINK":
-              structuredBlocks.push(
-                createFieldLinkBlock({
-                  fieldId: field.fieldId,
-                  label: field.label,
-                  url: field.url,
-                })
-              );
-              break;
-            case "TABLE":
-              structuredBlocks.push(
-                createFieldTableBlock({
-                  fieldId: field.fieldId,
-                  label: field.label,
-                  columns: field.columns,
-                  rows: field.rows,
-                })
-              );
-              break;
-            case "ARTICLE":
-              structuredBlocks.push(createLawArticleBlock(field.articleNum, field.text));
-              break;
-          }
-        }
-
-        const firstTextField = (input.fields ?? []).find((f) => f.kind === "TEXT");
-        const fallbackSummary =
-          input.body.trim() ||
-          (firstTextField && firstTextField.kind === "TEXT"
-            ? firstTextField.text.slice(0, 280).trim()
-            : "");
-
+        const seq = await getNextChatSeq(input.subjectScope, identity.publicKeyHex);
+        const structuredBlocks = buildStructuredFieldBlocks(input.fields);
+        const summaryBody = buildSummaryBody(input.body, input.fields);
         const blocks: TLVBlock[] = [
           createScopeBlock(input.subjectScope),
+          createDraftIdBlock(input.draftId),
+          createDraftStatusBlock(DraftStatus.ACTIVE),
           ...(input.parentHashHex
             ? [createParentHashBlock(hexToBytes(input.parentHashHex))]
             : []),
           createTitleBlock(input.title.trim()),
-          ...(fallbackSummary.length > 0 ? [createBodyBlock(fallbackSummary)] : []),
+          ...(summaryBody.length > 0 ? [createBodyBlock(summaryBody)] : []),
           ...structuredBlocks,
-          ...(input.deadlineUnixSeconds !== undefined
+          ...(input.deadlineUnixSeconds !== undefined && input.deadlineUnixSeconds !== null
             ? [createDeadlineBlock(input.deadlineUnixSeconds)]
             : []),
           createAuthorNameBlock(identity.displayName),
@@ -833,24 +1130,110 @@ export function useExplorer() {
         ];
         const rawBytes = await packDocument(
           {
-            docType: DocType.PROPOSAL,
+            docType: DocType.CHAT_DRAFT,
             authorPub: identity.publicKey,
-            seq: 1,
+            seq,
             blocks,
           },
           identity.privateKey
         );
-
-        const res = await publishAndStore(
+        const res = await publishAndIngestChat(
           selectedCommunity.communityId,
           selectedCommunity.relays,
           rawBytes
         );
         return {
           result: res.docIdHex,
+          message: "Rascunho atualizado na Oficina (.chat).",
         };
       }),
-    [identity, publishAndStore, runActionWithResult, selectedCommunity]
+    [getNextChatSeq, identity, publishAndIngestChat, runActionWithResult, selectedCommunity]
+  );
+
+  const packAndDeleteSharedDraft = useCallback(
+    async (subjectScope: string, draftId: string): Promise<void> => {
+      if (!identity || !selectedCommunity) {
+        throw new Error("Selecione uma comunidade.");
+      }
+      const seq = await getNextChatSeq(subjectScope, identity.publicKeyHex);
+      const rawBytes = await packDocument(
+        {
+          docType: DocType.CHAT_DRAFT,
+          authorPub: identity.publicKey,
+          seq,
+          blocks: [
+            createScopeBlock(subjectScope),
+            createDraftIdBlock(draftId),
+            createDraftStatusBlock(DraftStatus.DELETED),
+            createAuthorNameBlock(identity.displayName),
+            createTimestampBlock(Date.now()),
+          ],
+        },
+        identity.privateKey
+      );
+      await publishAndIngestChat(
+        selectedCommunity.communityId,
+        selectedCommunity.relays,
+        rawBytes
+      );
+    },
+    [getNextChatSeq, identity, publishAndIngestChat, selectedCommunity]
+  );
+
+  const deleteSharedDraft = useCallback(
+    (subjectScope: string, draftId: string) =>
+      runAction(async () => {
+        await packAndDeleteSharedDraft(subjectScope, draftId);
+        return "Rascunho eliminado da Oficina.";
+      }),
+    [packAndDeleteSharedDraft, runAction]
+  );
+
+  const promoteSharedDraftToProposal = useCallback(
+    (params: { readonly draft: SharedDraftView }) =>
+      runActionWithResult(async () => {
+        if (!identity || !selectedCommunity) {
+          throw new Error("Selecione uma comunidade.");
+        }
+        const { draft } = params;
+        const createdProposalDocIdHex = await packAndPublishProposal({
+          subjectScope: draft.scope,
+          title: draft.title,
+          body: draft.body,
+          ...(draft.parentHashHex ? { parentHashHex: draft.parentHashHex } : {}),
+          ...(draft.deadlineUnixSeconds !== null
+            ? { deadlineUnixSeconds: draft.deadlineUnixSeconds }
+            : {}),
+          fields: draft.fields,
+        });
+
+        if (draft.authorPubHex === identity.publicKeyHex) {
+          await packAndDeleteSharedDraft(draft.scope, draft.draftId);
+        }
+
+        await packAndSendChatMessage({
+          subjectScope: draft.scope,
+          body: `Converteu o rascunho “${draft.title}” na Proposta Oficial.`,
+          referencedDraftId: draft.draftId,
+          referencedProposalDocIdHex: createdProposalDocIdHex,
+        });
+
+        return {
+          result: createdProposalDocIdHex,
+          message:
+            draft.authorPubHex === identity.publicKeyHex
+              ? "Proposta publicada em .stze e rascunho removido da Oficina."
+              : "Proposta publicada em .stze; rascunho original marcado como já convertido.",
+        };
+      }),
+    [
+      identity,
+      packAndDeleteSharedDraft,
+      packAndPublishProposal,
+      packAndSendChatMessage,
+      runActionWithResult,
+      selectedCommunity,
+    ]
   );
 
   const saveDraft = useCallback(
@@ -1007,6 +1390,11 @@ export function useExplorer() {
     return store.listAllPackets();
   }, []);
 
+  const listAllChatFiles = useCallback(async (): Promise<StoredChatFileRecord[]> => {
+    const store = storeRef.current!;
+    return store.listAllChatFiles();
+  }, []);
+
   const seedLargeDataset = useCallback(
     (scale: SeedScale = "large", preferredName?: string) =>
       runAction(async () => {
@@ -1034,6 +1422,12 @@ export function useExplorer() {
             );
             await store.saveCommunity(bundle.record);
             await store.savePacketsBatch(bundle.record.communityId, bundle.packets);
+            if (bundle.chatPackets.length > 0) {
+              await store.ingestChatPacketsBatch(
+                bundle.record.communityId,
+                bundle.chatPackets
+              );
+            }
           }
 
           const updatedCommunities = await store.listCommunities();
@@ -1041,15 +1435,16 @@ export function useExplorer() {
           const firstSeededId = bundles[0]?.record.communityId ?? null;
           if (firstSeededId) {
             setSelectedCommunityId(firstSeededId);
-            await refreshProjection(firstSeededId);
+            const nextProj = await refreshProjection(firstSeededId);
+            await refreshWorkshops(firstSeededId, nextProj);
           }
 
-          return `Seed (${scale}) concluído: ${stats.communities} comunidades, ${stats.members} membros, ${stats.categories} categorias, ${stats.subjects} assuntos, ${stats.proposals} propostas e ${stats.picks} apoios.`;
+          return `Seed (${scale}) concluído: ${stats.communities} comunidades, ${stats.members} membros, ${stats.categories} categorias, ${stats.subjects} assuntos, ${stats.proposals} propostas, ${stats.picks} apoios e ${stats.chatPackets} pacotes .chat.`;
         } finally {
           setSeedProgress(null);
         }
       }),
-    [identity, refreshProjection, runAction]
+    [identity, refreshProjection, refreshWorkshops, runAction]
   );
 
   const resetAllData = useCallback(
@@ -1063,6 +1458,8 @@ export function useExplorer() {
         setProjection(null);
         setDrafts([]);
         setHiddenDocs([]);
+        setChatFiles([]);
+        setWorkshopsByScope({});
         setGeneratedInviteCode(null);
         setSyncState("idle");
         return "Todos os dados locais (identidade, comunidades e pacotes) foram zerados.";
@@ -1095,6 +1492,8 @@ export function useExplorer() {
     drafts,
     hiddenDocs,
     hiddenDocIds,
+    chatFiles,
+    workshopsByScope,
     syncState,
     statusMessage,
     errorMessage,
@@ -1109,6 +1508,10 @@ export function useExplorer() {
     createCategory,
     createSubject,
     createProposal,
+    sendChatMessage,
+    publishSharedDraft,
+    deleteSharedDraft,
+    promoteSharedDraftToProposal,
     saveDraft,
     deleteDraft,
     hideDocument,
@@ -1118,6 +1521,7 @@ export function useExplorer() {
     updateRelays,
     resync,
     listAllStoredPackets,
+    listAllChatFiles,
     seedLargeDataset,
     resetAllData,
     notifyStatus,

@@ -23,6 +23,7 @@ export declare class LocalNostrRelay {
     start(): Promise<number>;
     stop(): Promise<void>;
     private log;
+    private insertVerifiedEvent;
     private loadFromDisk;
     private persistEvent;
     private handleHttp;

@@ -1,5 +1,5 @@
 import { SimplePool } from "nostr-tools";
-import { decodeAndVerifyNostrEvent, encodePacketToNostrEvent, SINTETIZE_NOSTR_KIND, } from "./nostr-codec.js";
+import { decodeAndVerifyNostrEvent, encodePacketToNostrEvent, SINTETIZE_CHAT_NOSTR_KIND, SINTETIZE_DRAFT_NOSTR_KIND, SINTETIZE_NOSTR_KIND, } from "./nostr-codec.js";
 export const DEFAULT_PUBLIC_NOSTR_RELAYS = [
     "wss://relay.damus.io",
     "wss://nos.lol",
@@ -76,8 +76,15 @@ export class NostrTransport {
         if (cleanRelays.length === 0) {
             return { close: () => { } };
         }
+        const kinds = [];
+        if (!options.universes || options.universes.some((u) => u !== "chat")) {
+            kinds.push(SINTETIZE_NOSTR_KIND);
+        }
+        if (!options.universes || options.universes.includes("chat")) {
+            kinds.push(SINTETIZE_CHAT_NOSTR_KIND, SINTETIZE_DRAFT_NOSTR_KIND);
+        }
         const filter = {
-            kinds: [SINTETIZE_NOSTR_KIND],
+            kinds,
             "#t": [options.communityId],
         };
         if (options.universes && options.universes.length > 0) {

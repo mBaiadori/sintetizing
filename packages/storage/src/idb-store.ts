@@ -2,8 +2,13 @@ import * as ed25519 from "@noble/ed25519";
 import { bytesToHex } from "@noble/hashes/utils";
 import {
   calculateDocId,
+  compactChatPackets,
+  decodeChatFile,
   DocUniverse,
+  encodeChatFile,
   getDocumentUniverse,
+  readUtf8Block,
+  Tag,
   unpackAndVerifyDocument,
 } from "@sintetizing/wire";
 import {
@@ -13,15 +18,17 @@ import {
   LocalStoreOptions,
   ProposalDraftRecord,
   SavePacketResult,
+  StoredChatFileRecord,
   StoredPacketRecord,
 } from "./types.js";
 
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_IDENTITY = "identity";
 const STORE_COMMUNITIES = "communities";
 const STORE_PACKETS = "packets";
 const STORE_DRAFTS = "drafts";
 const STORE_HIDDEN_DOCS = "hidden_docs";
+const STORE_CHAT_FILES = "chat_files";
 
 function awaitRequest<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -56,6 +63,13 @@ function normalizePacketRecord(record: StoredPacketRecord): StoredPacketRecord {
   };
 }
 
+function normalizeChatFileRecord(record: StoredChatFileRecord): StoredChatFileRecord {
+  return {
+    ...record,
+    rawChatBytes: new Uint8Array(record.rawChatBytes),
+  };
+}
+
 /**
  * Repositório Local-First enxuto em IndexedDB para identidade local,
  * lista de relays por comunidade e armazenamento verificado de pacotes TLV.
@@ -67,7 +81,7 @@ export class SintetizeLocalStore {
   private openingPromise: Promise<IDBDatabase> | null = null;
 
   constructor(options?: LocalStoreOptions) {
-    this.dbName = options?.dbName ?? "sintetize-nostr-v2";
+    this.dbName = options?.dbName ?? "sintetize-nostr-v3";
     this.idbFactory = options?.indexedDB ?? globalThis.indexedDB;
   }
 
@@ -85,6 +99,14 @@ export class SintetizeLocalStore {
 
     this.openingPromise = new Promise<IDBDatabase>((resolve, reject) => {
       const request = factory.open(this.dbName, DB_VERSION);
+      const timeoutId = globalThis.setTimeout(() => {
+        this.openingPromise = null;
+        reject(
+          new Error(
+            "Tempo esgotado ao abrir o IndexedDB. Feche outras abas ou limpe os dados do site."
+          )
+        );
+      }, 4000);
 
       request.onupgradeneeded = () => {
         const db = request.result;
@@ -113,15 +135,40 @@ export class SintetizeLocalStore {
           });
           hiddenStore.createIndex("by_community", "communityId", { unique: false });
         }
+        if (!db.objectStoreNames.contains(STORE_CHAT_FILES)) {
+          const chatStore = db.createObjectStore(STORE_CHAT_FILES, {
+            keyPath: "subjectScope",
+          });
+          chatStore.createIndex("by_community", "communityId", { unique: false });
+        }
       };
 
       request.onsuccess = () => {
-        this.db = request.result;
+        globalThis.clearTimeout(timeoutId);
+        const db = request.result;
+        db.onversionchange = () => {
+          db.close();
+          if (this.db === db) {
+            this.db = null;
+          }
+        };
+        this.db = db;
         this.openingPromise = null;
-        resolve(this.db);
+        resolve(db);
+      };
+
+      request.onblocked = () => {
+        globalThis.clearTimeout(timeoutId);
+        this.openingPromise = null;
+        reject(
+          new Error(
+            "Atualização do banco local IndexedDB bloqueada por outra aba aberta. Feche outras abas do Sintetize e recarregue."
+          )
+        );
       };
 
       request.onerror = () => {
+        globalThis.clearTimeout(timeoutId);
         this.openingPromise = null;
         reject(request.error ?? new Error("Não foi possível abrir o banco local."));
       };
@@ -322,7 +369,14 @@ export class SintetizeLocalStore {
   public async clearAll(): Promise<void> {
     const db = await this.open();
     const tx = db.transaction(
-      [STORE_IDENTITY, STORE_COMMUNITIES, STORE_PACKETS, STORE_DRAFTS, STORE_HIDDEN_DOCS],
+      [
+        STORE_IDENTITY,
+        STORE_COMMUNITIES,
+        STORE_PACKETS,
+        STORE_DRAFTS,
+        STORE_HIDDEN_DOCS,
+        STORE_CHAT_FILES,
+      ],
       "readwrite"
     );
     await Promise.all([
@@ -331,6 +385,7 @@ export class SintetizeLocalStore {
       awaitRequest(tx.objectStore(STORE_PACKETS).clear()),
       awaitRequest(tx.objectStore(STORE_DRAFTS).clear()),
       awaitRequest(tx.objectStore(STORE_HIDDEN_DOCS).clear()),
+      awaitRequest(tx.objectStore(STORE_CHAT_FILES).clear()),
     ]);
     await awaitTransaction(tx);
   }
@@ -432,5 +487,140 @@ export class SintetizeLocalStore {
       }
     }
     return maxSeq + 1;
+  }
+
+  private async upsertCompactedChatFile(
+    communityId: string,
+    subjectScope: string,
+    incomingPackets: readonly Uint8Array[],
+    nowMs: number
+  ): Promise<StoredChatFileRecord> {
+    const existing = await this.getChatFile(subjectScope);
+    const existingPackets = existing ? decodeChatFile(existing.rawChatBytes) : [];
+    const compacted = await compactChatPackets([...existingPackets, ...incomingPackets]);
+    const record: StoredChatFileRecord = {
+      subjectScope,
+      communityId,
+      rawChatBytes: encodeChatFile(compacted.packets),
+      messageCount: compacted.messageCount,
+      activeDraftCount: compacted.activeDraftCount,
+      updatedAtMs: nowMs,
+    };
+
+    const db = await this.open();
+    const tx = db.transaction(STORE_CHAT_FILES, "readwrite");
+    await awaitRequest(tx.objectStore(STORE_CHAT_FILES).put(record));
+    await awaitTransaction(tx);
+    return normalizeChatFileRecord(record);
+  }
+
+  public async ingestChatPacket(
+    communityId: string,
+    rawPacket: Uint8Array,
+    nowMs = Date.now()
+  ): Promise<{
+    readonly subjectScope: string;
+    readonly docIdHex: string;
+    readonly messageCount: number;
+    readonly activeDraftCount: number;
+  }> {
+    const doc = await unpackAndVerifyDocument(rawPacket);
+    if (getDocumentUniverse(doc) !== "chat") {
+      throw new Error("Pacote não pertence ao universo .chat.");
+    }
+    const scopeBlock = doc.blocks.find((b) => b.tag === Tag.SCOPE);
+    if (!scopeBlock) {
+      throw new Error("Pacote .chat inválido: tag SCOPE (1) ausente.");
+    }
+    const subjectScope = readUtf8Block(scopeBlock);
+    const docIdHex = bytesToHex(calculateDocId(rawPacket));
+    const saved = await this.upsertCompactedChatFile(
+      communityId,
+      subjectScope,
+      [rawPacket],
+      nowMs
+    );
+
+    return {
+      subjectScope,
+      docIdHex,
+      messageCount: saved.messageCount,
+      activeDraftCount: saved.activeDraftCount,
+    };
+  }
+
+  public async ingestChatPacketsBatch(
+    communityId: string,
+    rawPackets: readonly Uint8Array[],
+    nowMs = Date.now()
+  ): Promise<void> {
+    if (rawPackets.length === 0) {
+      return;
+    }
+    const byScope = new Map<string, Uint8Array[]>();
+    for (const rawPacket of rawPackets) {
+      const doc = await unpackAndVerifyDocument(rawPacket);
+      if (getDocumentUniverse(doc) !== "chat") {
+        continue;
+      }
+      const scopeBlock = doc.blocks.find((b) => b.tag === Tag.SCOPE);
+      if (!scopeBlock) {
+        continue;
+      }
+      const scope = readUtf8Block(scopeBlock);
+      const list = byScope.get(scope);
+      if (list) {
+        list.push(rawPacket);
+      } else {
+        byScope.set(scope, [rawPacket]);
+      }
+    }
+
+    for (const [scope, scopePackets] of byScope.entries()) {
+      await this.upsertCompactedChatFile(communityId, scope, scopePackets, nowMs);
+    }
+  }
+
+  public async getChatFile(subjectScope: string): Promise<StoredChatFileRecord | null> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_CHAT_FILES, "readonly");
+    const row = (await awaitRequest(
+      tx.objectStore(STORE_CHAT_FILES).get(subjectScope)
+    )) as StoredChatFileRecord | undefined;
+    await awaitTransaction(tx);
+    return row ? normalizeChatFileRecord(row) : null;
+  }
+
+  public async getChatPacketsBySubject(subjectScope: string): Promise<Uint8Array[]> {
+    const file = await this.getChatFile(subjectScope);
+    if (!file) {
+      return [];
+    }
+    return decodeChatFile(file.rawChatBytes);
+  }
+
+  public async listChatFilesByCommunity(
+    communityId: string
+  ): Promise<StoredChatFileRecord[]> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_CHAT_FILES, "readonly");
+    const idx = tx.objectStore(STORE_CHAT_FILES).index("by_community");
+    const rows = (await awaitRequest(idx.getAll(communityId))) as StoredChatFileRecord[];
+    await awaitTransaction(tx);
+    return rows
+      .map(normalizeChatFileRecord)
+      .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+  }
+
+  public async listAllChatFiles(): Promise<StoredChatFileRecord[]> {
+    const db = await this.open();
+    const tx = db.transaction(STORE_CHAT_FILES, "readonly");
+    const rows = (await awaitRequest(
+      tx.objectStore(STORE_CHAT_FILES).getAll()
+    )) as StoredChatFileRecord[];
+    await awaitTransaction(tx);
+    return rows
+      .map(normalizeChatFileRecord)
+      .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
   }
 }

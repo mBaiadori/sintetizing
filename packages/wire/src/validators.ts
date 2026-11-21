@@ -9,6 +9,8 @@ import {
   DeliberationModeValue,
   DocType,
   DocUniverse,
+  DraftStatus,
+  DraftStatusValue,
   InvitePolicy,
   InvitePolicyValue,
   StructuredLinkField,
@@ -46,6 +48,8 @@ const DOC_TYPE_NAMES: Readonly<Record<number, string>> = {
   [DocType.MEMB_JOIN]: "MEMB_JOIN",
   [DocType.MEMB_LEAVE]: "MEMB_LEAVE",
   [DocType.SNAPSHOT]: "SNAPSHOT",
+  [DocType.CHAT_MESSAGE]: "CHAT_MESSAGE",
+  [DocType.CHAT_DRAFT]: "CHAT_DRAFT",
 };
 
 function validateUtf8Range(value: Uint8Array, label: string, min: number, max: number): void {
@@ -248,6 +252,14 @@ export function validateBlock(block: TLVBlock): void {
       }
       break;
 
+    case Tag.DRAFT_ID:
+      validateUtf8Range(value, "DRAFT_ID (34)", 1, 64);
+      break;
+
+    case Tag.DRAFT_STATUS:
+      readDraftStatusBlock(block);
+      break;
+
     default:
       break;
   }
@@ -333,13 +345,33 @@ export function validateDocumentStructure(
       assertHasTag(blocks, Tag.ACTIVE_MEMBERS_TABLE, "Documento SNAPSHOT (7) requer a tag ACTIVE_MEMBERS_TABLE (32).");
       break;
 
+    case DocType.CHAT_MESSAGE:
+      assertPositiveSeq(docType, seq);
+      assertHasTag(blocks, Tag.SCOPE, "Documento CHAT_MESSAGE (8) requer a tag SCOPE (1).");
+      assertHasTag(blocks, Tag.BODY, "Documento CHAT_MESSAGE (8) requer a tag BODY (11).");
+      assertHasTag(blocks, Tag.TIMESTAMP, "Documento CHAT_MESSAGE (8) requer a tag TIMESTAMP (3).");
+      break;
+
+    case DocType.CHAT_DRAFT: {
+      assertPositiveSeq(docType, seq);
+      assertHasTag(blocks, Tag.SCOPE, "Documento CHAT_DRAFT (9) requer a tag SCOPE (1).");
+      assertHasTag(blocks, Tag.DRAFT_ID, "Documento CHAT_DRAFT (9) requer a tag DRAFT_ID (34).");
+      assertHasTag(blocks, Tag.DRAFT_STATUS, "Documento CHAT_DRAFT (9) requer a tag DRAFT_STATUS (35).");
+      assertHasTag(blocks, Tag.TIMESTAMP, "Documento CHAT_DRAFT (9) requer a tag TIMESTAMP (3).");
+      const statusBlock = blocks.find((b) => b.tag === Tag.DRAFT_STATUS);
+      if (statusBlock && readDraftStatusBlock(statusBlock) === DraftStatus.ACTIVE) {
+        assertHasTag(blocks, Tag.TITLE, "Documento CHAT_DRAFT (9) ativo requer a tag TITLE (10).");
+      }
+      break;
+    }
+
     default:
-      throw new Error(`Tipo de documento desconhecido: ${docType}. Esperado 0..7.`);
+      throw new Error(`Tipo de documento desconhecido: ${docType}. Esperado 0..9.`);
   }
 }
 
 /**
- * Classifica um documento verificado em um dos 4 universos lógicos (.cmnt, .memb, .stze, .snap).
+ * Classifica um documento verificado em um dos universos lógicos (.cmnt, .memb, .stze, .snap, .chat).
  */
 export function getDocumentUniverse(doc: BinaryDocument): DocUniverse {
   switch (doc.docType) {
@@ -358,6 +390,9 @@ export function getDocumentUniverse(doc: BinaryDocument): DocUniverse {
       return "memb";
     case DocType.SNAPSHOT:
       return "snap";
+    case DocType.CHAT_MESSAGE:
+    case DocType.CHAT_DRAFT:
+      return "chat";
     case DocType.PROPOSAL:
     case DocType.EXECUTION:
     default:
@@ -1079,4 +1114,31 @@ export function readFieldTableBlock(block: TLVBlock): StructuredTableField {
   }
 
   return { fieldId, label, columns, rows };
+}
+
+export function createDraftIdBlock(draftId: string): TLVBlock {
+  const bytes = textEncoder.encode(draftId.trim());
+  validateUtf8Range(bytes, "DRAFT_ID (34)", 1, 64);
+  return { tag: Tag.DRAFT_ID, value: bytes };
+}
+
+export function readDraftIdBlock(block: TLVBlock): string {
+  validateUtf8Range(block.value, "DRAFT_ID (34)", 1, 64);
+  return textDecoder.decode(block.value);
+}
+
+export function createDraftStatusBlock(status: DraftStatusValue): TLVBlock {
+  if (status !== DraftStatus.ACTIVE && status !== DraftStatus.DELETED) {
+    throw new Error(`DRAFT_STATUS inválido: ${String(status)}.`);
+  }
+  return { tag: Tag.DRAFT_STATUS, value: new Uint8Array([status]) };
+}
+
+export function readDraftStatusBlock(block: TLVBlock): DraftStatusValue {
+  assertExactBytes(block.value, 1, "DRAFT_STATUS (35)");
+  const status = block.value[0]!;
+  if (status !== DraftStatus.ACTIVE && status !== DraftStatus.DELETED) {
+    throw new Error(`Bloco DRAFT_STATUS corrompido: valor ${status} inválido.`);
+  }
+  return status;
 }
