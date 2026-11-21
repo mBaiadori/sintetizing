@@ -23,6 +23,7 @@ import {
   createFieldTextBlock,
   createFieldValueBlock,
   createInactivityDaysBlock,
+  createInviteEndorsementBlock,
   createInvitePolicyBlock,
   createInviteProofBlock,
   createLawArticleBlock,
@@ -38,6 +39,7 @@ import {
   DocType,
   DraftStatus,
   encodeChatFile,
+  endorseSignedInvite,
   getDocumentUniverse,
   InvitePolicy,
   packDocument,
@@ -52,10 +54,12 @@ import {
   readFieldTextBlock,
   readFieldValueBlock,
   readInactivityDaysBlock,
+  readInviteEndorsementBlock,
   readInvitePolicyBlock,
   readTimestampBlock,
   Tag,
   unpackAndVerifyDocument,
+  verifyInviteEndorsement,
   verifyInviteProof,
 } from "../src/index.js";
 
@@ -380,6 +384,72 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
         url: "javascript:alert(1)",
       })
     ).toThrow();
+  });
+
+  it("gera, verifica e empacota co-assinatura de convite (INVITE_ENDORSEMENT)", async () => {
+    const inviter = await makeKeyPair();
+    const endorser = await makeKeyPair();
+    const candidate = await makeKeyPair();
+    const communityId = "coletivo-antisybil-123";
+    const nowMs = 1_760_000_000_000;
+
+    const proof = await createSignedInvite({
+      communityId,
+      inviterPub: inviter.pub,
+      inviterPrivateKey: inviter.priv,
+      issuedAtMs: nowMs,
+      expiresAtMs: nowMs + 86_400_000,
+      nonce: 77,
+    });
+
+    await expect(
+      endorseSignedInvite({
+        communityId,
+        proofBytes: proof,
+        endorserPub: inviter.pub,
+        endorserPrivateKey: inviter.priv,
+      })
+    ).rejects.toThrow();
+
+    const endorsement = await endorseSignedInvite({
+      communityId,
+      proofBytes: proof,
+      endorserPub: endorser.pub,
+      endorserPrivateKey: endorser.priv,
+    });
+    expect(endorsement).toHaveLength(96);
+
+    const verified = await verifyInviteEndorsement(communityId, proof, endorsement);
+    expect(verified).not.toBeNull();
+    expect(verified?.endorserPub).toEqual(endorser.pub);
+
+    expect(await verifyInviteEndorsement("outra-comunidade", proof, endorsement)).toBeNull();
+
+    const tampered = new Uint8Array(endorsement);
+    tampered[40] = tampered[40]! ^ 0xff;
+    expect(await verifyInviteEndorsement(communityId, proof, tampered)).toBeNull();
+
+    const joinPacket = await packDocument(
+      {
+        docType: DocType.MEMB_JOIN,
+        authorPub: candidate.pub,
+        seq: 1,
+        blocks: [
+          createScopeBlock(communityId),
+          createInviteProofBlock(proof),
+          createInviteEndorsementBlock(endorsement),
+          createAuthorNameBlock("Candidato"),
+          createTimestampBlock(nowMs + 1000),
+        ],
+      },
+      candidate.priv
+    );
+
+    const unpacked = await unpackAndVerifyDocument(joinPacket);
+    expect(getDocumentUniverse(unpacked)).toBe("memb");
+    const endorsementBlock = unpacked.blocks.find((b) => b.tag === Tag.INVITE_ENDORSEMENT);
+    expect(endorsementBlock).toBeDefined();
+    expect(readInviteEndorsementBlock(endorsementBlock!)).toEqual(endorsement);
   });
 
   it("empacota .chat (CHAT_MESSAGE e CHAT_DRAFT), compacta edições e preserva tombstone DELETED", async () => {

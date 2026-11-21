@@ -1,4 +1,11 @@
+import { InvitePolicyValue } from "@sintetizing/wire";
 import { CommunityProjection, SubjectWorkshopView } from "./types.js";
+export declare const INVITE_BOOTSTRAP_MAX_MEMBERS = 5;
+/**
+ * Calcula a janela de rotação (cooldown) para padrinhos de convite.
+ * Durante o bootstrap (N <= 5) ou quando a política é FOUNDER_ONLY, retorna 0.
+ */
+export declare function computeInviteRotationWindow(activeMemberCount: number, invitePolicy: InvitePolicyValue): number;
 /**
  * Calcula quantos apoios são necessários para atingir o quórum percentual arredondado para cima.
  */

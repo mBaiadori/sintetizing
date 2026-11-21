@@ -1,6 +1,6 @@
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { calculateDocId, DocType, getDocumentUniverse, INVITE_PROOF_SIZE, parseInviteProof, readDraftIdBlock, readUtf8Block, Tag, unpackAndVerifyDocument, WIRE_CONSTANTS, } from "@sintetizing/wire";
+import { calculateDocId, DocType, getDocumentUniverse, INVITE_ENDORSEMENT_SIZE, INVITE_PROOF_SIZE, parseInviteEndorsement, parseInviteProof, readDraftIdBlock, readUtf8Block, Tag, unpackAndVerifyDocument, WIRE_CONSTANTS, } from "@sintetizing/wire";
 import { finalizeEvent, getPublicKey, verifyEvent, } from "nostr-tools";
 /**
  * Evento regular (imutável) reservado para pacotes TLV assinados de governança (.cmnt, .memb, .stze, .snap).
@@ -180,21 +180,26 @@ export function deriveNostrPubkeyHex(ed25519PrivateKey, communityId) {
     return getPublicKey(deriveNostrSecretKey(ed25519PrivateKey, communityId));
 }
 /**
- * Codifica um convite assinado (communityId + 116B INVITE_PROOF + relays) para compartilhamento fácil.
+ * Codifica um convite assinado (communityId + 116B INVITE_PROOF + 96B INVITE_ENDORSEMENT opcional + relays) para compartilhamento fácil.
  */
 export function encodeInviteCode(input) {
     if (input.proofBytes.length !== INVITE_PROOF_SIZE) {
         throw new Error(`proofBytes deve ter exatamente ${INVITE_PROOF_SIZE} bytes.`);
     }
+    if (input.endorsementBytes !== undefined &&
+        input.endorsementBytes.length !== INVITE_ENDORSEMENT_SIZE) {
+        throw new Error(`endorsementBytes deve ter exatamente ${INVITE_ENDORSEMENT_SIZE} bytes.`);
+    }
     const payloadJson = JSON.stringify({
         c: input.communityId,
         p: bytesToHex(input.proofBytes),
         r: input.relays,
+        ...(input.endorsementBytes ? { e: bytesToHex(input.endorsementBytes) } : {}),
     });
     return `${INVITE_PREFIX}${bytesToBase64Url(textEncoder.encode(payloadJson))}`;
 }
 /**
- * Decodifica uma string stze-inv:... validando estrutura e tamanho da prova binária.
+ * Decodifica uma string stze-inv:... validando estrutura e tamanho da prova binária (e endosso opcional).
  */
 export function decodeInviteCode(rawCode) {
     const trimmed = rawCode.trim();
@@ -210,6 +215,7 @@ export function decodeInviteCode(rawCode) {
     const record = parsedUnknown;
     const communityId = record["c"];
     const proofHex = record["p"];
+    const endorsementHex = record["e"];
     const relaysRaw = record["r"];
     if (typeof communityId !== "string" || communityId.length < 3 || communityId.length > 128) {
         throw new Error("Convite inválido: communityId ausente ou fora do padrão.");
@@ -219,6 +225,15 @@ export function decodeInviteCode(rawCode) {
     }
     const proofBytes = hexToBytes(proofHex);
     parseInviteProof(proofBytes);
+    let endorsementBytes;
+    if (endorsementHex !== undefined) {
+        if (typeof endorsementHex !== "string" ||
+            endorsementHex.length !== INVITE_ENDORSEMENT_SIZE * 2) {
+            throw new Error("Convite inválido: endosso binário com tamanho incorreto.");
+        }
+        endorsementBytes = hexToBytes(endorsementHex);
+        parseInviteEndorsement(endorsementBytes);
+    }
     const relays = [];
     if (Array.isArray(relaysRaw)) {
         for (const item of relaysRaw) {
@@ -227,6 +242,11 @@ export function decodeInviteCode(rawCode) {
             }
         }
     }
-    return { communityId, proofBytes, relays };
+    return {
+        communityId,
+        proofBytes,
+        relays,
+        ...(endorsementBytes ? { endorsementBytes } : {}),
+    };
 }
 //# sourceMappingURL=nostr-codec.js.map

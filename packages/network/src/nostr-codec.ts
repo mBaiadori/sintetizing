@@ -5,7 +5,9 @@ import {
   DocType,
   DocUniverse,
   getDocumentUniverse,
+  INVITE_ENDORSEMENT_SIZE,
   INVITE_PROOF_SIZE,
+  parseInviteEndorsement,
   parseInviteProof,
   readDraftIdBlock,
   readUtf8Block,
@@ -59,6 +61,7 @@ export interface InvitePayload {
   readonly communityId: string;
   readonly proofBytes: Uint8Array;
   readonly relays: readonly string[];
+  readonly endorsementBytes?: Uint8Array | undefined;
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
@@ -256,22 +259,29 @@ export function deriveNostrPubkeyHex(
 }
 
 /**
- * Codifica um convite assinado (communityId + 116B INVITE_PROOF + relays) para compartilhamento fácil.
+ * Codifica um convite assinado (communityId + 116B INVITE_PROOF + 96B INVITE_ENDORSEMENT opcional + relays) para compartilhamento fácil.
  */
 export function encodeInviteCode(input: InvitePayload): string {
   if (input.proofBytes.length !== INVITE_PROOF_SIZE) {
     throw new Error(`proofBytes deve ter exatamente ${INVITE_PROOF_SIZE} bytes.`);
   }
+  if (
+    input.endorsementBytes !== undefined &&
+    input.endorsementBytes.length !== INVITE_ENDORSEMENT_SIZE
+  ) {
+    throw new Error(`endorsementBytes deve ter exatamente ${INVITE_ENDORSEMENT_SIZE} bytes.`);
+  }
   const payloadJson = JSON.stringify({
     c: input.communityId,
     p: bytesToHex(input.proofBytes),
     r: input.relays,
+    ...(input.endorsementBytes ? { e: bytesToHex(input.endorsementBytes) } : {}),
   });
   return `${INVITE_PREFIX}${bytesToBase64Url(textEncoder.encode(payloadJson))}`;
 }
 
 /**
- * Decodifica uma string stze-inv:... validando estrutura e tamanho da prova binária.
+ * Decodifica uma string stze-inv:... validando estrutura e tamanho da prova binária (e endosso opcional).
  */
 export function decodeInviteCode(rawCode: string): InvitePayload {
   const trimmed = rawCode.trim();
@@ -288,6 +298,7 @@ export function decodeInviteCode(rawCode: string): InvitePayload {
   const record = parsedUnknown as Record<string, unknown>;
   const communityId = record["c"];
   const proofHex = record["p"];
+  const endorsementHex = record["e"];
   const relaysRaw = record["r"];
 
   if (typeof communityId !== "string" || communityId.length < 3 || communityId.length > 128) {
@@ -300,6 +311,18 @@ export function decodeInviteCode(rawCode: string): InvitePayload {
   const proofBytes = hexToBytes(proofHex);
   parseInviteProof(proofBytes);
 
+  let endorsementBytes: Uint8Array | undefined;
+  if (endorsementHex !== undefined) {
+    if (
+      typeof endorsementHex !== "string" ||
+      endorsementHex.length !== INVITE_ENDORSEMENT_SIZE * 2
+    ) {
+      throw new Error("Convite inválido: endosso binário com tamanho incorreto.");
+    }
+    endorsementBytes = hexToBytes(endorsementHex);
+    parseInviteEndorsement(endorsementBytes);
+  }
+
   const relays: string[] = [];
   if (Array.isArray(relaysRaw)) {
     for (const item of relaysRaw) {
@@ -309,5 +332,10 @@ export function decodeInviteCode(rawCode: string): InvitePayload {
     }
   }
 
-  return { communityId, proofBytes, relays };
+  return {
+    communityId,
+    proofBytes,
+    relays,
+    ...(endorsementBytes ? { endorsementBytes } : {}),
+  };
 }

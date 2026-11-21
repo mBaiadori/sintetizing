@@ -92,6 +92,7 @@ export const Tag = {
   COSIGNATURES: 33,
   DRAFT_ID: 34,
   DRAFT_STATUS: 35,
+  INVITE_ENDORSEMENT: 36,
 } as const;
 
 export type TagValue = (typeof Tag)[keyof typeof Tag] | number;

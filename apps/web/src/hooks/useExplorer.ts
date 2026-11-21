@@ -45,6 +45,7 @@ import {
   createFieldTextBlock,
   createFieldValueBlock,
   createInactivityDaysBlock,
+  createInviteEndorsementBlock,
   createInvitePolicyBlock,
   createInviteProofBlock,
   createLawArticleBlock,
@@ -59,11 +60,13 @@ import {
   DeliberationMode,
   DocType,
   DraftStatus,
+  endorseSignedInvite,
   InvitePolicy,
   InvitePolicyValue,
   packDocument,
   TLVBlock,
   unpackAndVerifyDocument,
+  verifyInviteProof,
 } from "@sintetizing/wire";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GENERAL_CATEGORY_ID } from "../utils/format.js";
@@ -818,6 +821,13 @@ export function useExplorer() {
         if (!identity || !selectedCommunity) {
           throw new Error("Selecione uma comunidade primeiro.");
         }
+        if (
+          projection?.inviteRules.cooldownInviterPubs.includes(identity.publicKeyHex)
+        ) {
+          throw new Error(
+            "Você está em espera na rotação de convites. Aguarde outro membro apadrinhar antes de gerar um novo convite."
+          );
+        }
         const nowMs = Date.now();
         const nonceBytes = crypto.getRandomValues(new Uint8Array(4));
         const nonceView = new DataView(nonceBytes.buffer);
@@ -836,7 +846,61 @@ export function useExplorer() {
         });
         setGeneratedInviteCode(code);
       }),
-    [identity, runAction, selectedCommunity]
+    [identity, projection, runAction, selectedCommunity]
+  );
+
+  const endorseInvite = useCallback(
+    (rawInviteCode: string) =>
+      runAction(async () => {
+        if (!identity || !selectedCommunity) {
+          throw new Error("Selecione uma comunidade primeiro.");
+        }
+        const myMember = projection?.members.find(
+          (m) => m.pubHex === identity.publicKeyHex
+        );
+        if (!myMember || myMember.status !== "ACTIVE") {
+          throw new Error("Apenas membros ativos da comunidade podem endossar convites.");
+        }
+        const decoded = decodeInviteCode(rawInviteCode);
+        if (decoded.communityId !== selectedCommunity.communityId) {
+          throw new Error(
+            `Este convite pertence à comunidade "${decoded.communityId}", não à comunidade selecionada.`
+          );
+        }
+        const verifiedProof = await verifyInviteProof(
+          decoded.communityId,
+          decoded.proofBytes
+        );
+        if (!verifiedProof) {
+          throw new Error("Convite inválido ou assinatura do padrinho corrompida.");
+        }
+        if (verifiedProof.expiresAtMs < Date.now()) {
+          throw new Error("Este convite já expirou.");
+        }
+        if (bytesToHex(verifiedProof.inviterPub) === identity.publicKeyHex) {
+          throw new Error(
+            "O endosso deve ser assinado por outro membro ativo distinto do padrinho."
+          );
+        }
+
+        const endorsementBytes = await endorseSignedInvite({
+          communityId: decoded.communityId,
+          proofBytes: decoded.proofBytes,
+          endorserPub: identity.publicKey,
+          endorserPrivateKey: identity.privateKey,
+        });
+
+        const endorsedCode = encodeInviteCode({
+          communityId: decoded.communityId,
+          proofBytes: decoded.proofBytes,
+          relays:
+            decoded.relays.length > 0 ? decoded.relays : selectedCommunity.relays,
+          endorsementBytes,
+        });
+        setGeneratedInviteCode(endorsedCode);
+        return "Convite co-assinado (endossado) com sucesso! Envie o novo código ao convidado.";
+      }),
+    [identity, projection, runAction, selectedCommunity]
   );
 
   const joinWithInvite = useCallback(
@@ -860,6 +924,9 @@ export function useExplorer() {
             blocks: [
               createScopeBlock(decoded.communityId),
               createInviteProofBlock(decoded.proofBytes),
+              ...(decoded.endorsementBytes
+                ? [createInviteEndorsementBlock(decoded.endorsementBytes)]
+                : []),
               createAuthorNameBlock(identity.displayName),
               createTimestampBlock(nowMs),
             ],
@@ -1503,6 +1570,7 @@ export function useExplorer() {
     proposeConfigVersion,
     supportConfigVersion,
     generateInvite,
+    endorseInvite,
     joinWithInvite,
     leaveCommunity,
     createCategory,

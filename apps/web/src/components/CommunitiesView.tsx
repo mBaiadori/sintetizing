@@ -1,5 +1,8 @@
 import type { CommunityProjection } from "@sintetizing/domain";
-import { DEFAULT_PUBLIC_NOSTR_RELAYS } from "@sintetizing/network";
+import {
+  decodeInviteCode,
+  DEFAULT_PUBLIC_NOSTR_RELAYS,
+} from "@sintetizing/network";
 import type { CommunityRecord } from "@sintetizing/storage";
 import { InvitePolicy, InvitePolicyValue } from "@sintetizing/wire";
 import { FormEvent, useEffect, useState } from "react";
@@ -9,7 +12,7 @@ import type {
 } from "../hooks/useExplorer.js";
 import { getInitialDefaultRelays } from "../hooks/useExplorer.js";
 import type { SeedScale } from "../utils/seed-generator.js";
-import { formatDateMs, getInitials } from "../utils/format.js";
+import { formatDateMs, getInitials, shortHex } from "../utils/format.js";
 import { MaterialIcon } from "./MaterialIcon.js";
 
 export type CommunitiesTab = "overview" | "members" | "relays" | "add";
@@ -30,6 +33,7 @@ export interface CommunitiesViewProps {
   readonly onProposeConfigVersion: (input: ProposeConfigVersionInput) => Promise<void>;
   readonly onSupportConfigVersion: (targetDocIdHex: string) => Promise<void>;
   readonly onGenerateInvite: () => Promise<void>;
+  readonly onEndorseInvite: (inviteCode: string) => Promise<void>;
   readonly onLeaveCommunity: () => Promise<void>;
   readonly onSeedDataset: (scale: SeedScale) => Promise<void>;
 }
@@ -50,6 +54,7 @@ export function CommunitiesView({
   onProposeConfigVersion,
   onSupportConfigVersion,
   onGenerateInvite,
+  onEndorseInvite,
   onLeaveCommunity,
   onSeedDataset,
 }: CommunitiesViewProps) {
@@ -65,6 +70,7 @@ export function CommunitiesView({
   );
 
   const [inviteInput, setInviteInput] = useState("");
+  const [endorseInput, setEndorseInput] = useState("");
   const [relaysDraft, setRelaysDraft] = useState("");
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
@@ -120,6 +126,37 @@ export function CommunitiesView({
     await onJoinWithInvite(inviteInput);
     setInviteInput("");
   };
+
+  const handleEndorseInvite = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!endorseInput.trim()) {
+      return;
+    }
+    await onEndorseInvite(endorseInput);
+    setEndorseInput("");
+  };
+
+  const invitePreview:
+    | { valid: true; communityId: string; hasEndorsement: boolean }
+    | { valid: false; error: string }
+    | null = (() => {
+    if (inviteInput.trim().length === 0) {
+      return null;
+    }
+    try {
+      const parsed = decodeInviteCode(inviteInput);
+      return {
+        valid: true,
+        communityId: parsed.communityId,
+        hasEndorsement: parsed.endorsementBytes !== undefined,
+      };
+    } catch (err: unknown) {
+      return {
+        valid: false,
+        error: err instanceof Error ? err.message : "Código de convite inválido.",
+      };
+    }
+  })();
 
   const handleSaveRelays = async (e: FormEvent) => {
     e.preventDefault();
@@ -289,10 +326,32 @@ export function CommunitiesView({
                   placeholder="Cole aqui o código de convite recebido"
                 />
               </div>
+
+              {invitePreview && (
+                <div
+                  className={
+                    invitePreview.valid ? "banner banner--info" : "banner banner--error"
+                  }
+                  role="status"
+                  style={{ marginBottom: 14 }}
+                >
+                  <MaterialIcon
+                    name={invitePreview.valid ? "verified_user" : "warning"}
+                  />
+                  <span>
+                    {invitePreview.valid
+                      ? invitePreview.hasEndorsement
+                        ? `Comunidade "${invitePreview.communityId}" · 2 assinaturas verificadas (Padrinho + Endossante).`
+                        : `Comunidade "${invitePreview.communityId}" · 1 assinatura (Padrinho). Se a comunidade tiver mais de 5 membros ativos, peça o endosso de outro membro.`
+                      : invitePreview.error}
+                  </span>
+                </div>
+              )}
+
               <button
                 type="submit"
                 className="btn btn--primary"
-                disabled={busy}
+                disabled={busy || (invitePreview !== null && !invitePreview.valid)}
               >
                 <MaterialIcon name="person_add" />
                 <span>Entrar na comunidade</span>
@@ -619,157 +678,296 @@ export function CommunitiesView({
       )}
 
       {/* Aba 2: Membros & Convites */}
-      {activeTab === "members" && (
-        <section className="card">
-          <div className="card__header">
-            <div>
-              <h2 className="md-title-large">
-                Membros ({projection?.members.length ?? 0})
-              </h2>
-              <p className="md-body-medium">
-                {activeMembersCount} ativo(s) contabilizado(s) para quórum
-              </p>
-            </div>
+      {activeTab === "members" && (() => {
+        const inviteRules = projection?.inviteRules;
+        const myMember = projection?.members.find((m) => m.pubHex === myPubHex) ?? null;
+        const isMyMemberActive = myMember?.status === "ACTIVE";
+        const isFounderOnly =
+          projection?.activeConfig?.invitePolicy === InvitePolicy.FOUNDER_ONLY;
+        const isFounderBlocked = Boolean(isFounderOnly && !myMember?.isFounder);
+        const isInCooldown =
+          inviteRules?.cooldownInviterPubs.includes(myPubHex) ?? false;
+        const canGenerateInvite = Boolean(
+          projection && isMyMemberActive && !isFounderBlocked && !isInCooldown
+        );
+        const cooldownNames = (inviteRules?.cooldownInviterPubs ?? []).map(
+          (hex) =>
+            projection?.members.find((m) => m.pubHex === hex)?.displayName ??
+            shortHex(hex)
+        );
+        const generatedHasEndorsement = (() => {
+          if (!generatedInviteCode) {
+            return false;
+          }
+          try {
+            return decodeInviteCode(generatedInviteCode).endorsementBytes !== undefined;
+          } catch {
+            return false;
+          }
+        })();
 
-            <div className="btn-row">
-              <button
-                type="button"
-                className="btn btn--sm btn--primary"
-                onClick={() => void onGenerateInvite()}
-                disabled={busy}
-              >
-                <MaterialIcon name="link" />
-                <span>Gerar convite</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn--sm btn--danger"
-                onClick={() => void onLeaveCommunity()}
-                disabled={busy}
-              >
-                <MaterialIcon name="logout" />
-                <span>Sair da comunidade</span>
-              </button>
-            </div>
-          </div>
+        return (
+          <section className="card">
+            <div className="card__header">
+              <div>
+                <h2 className="md-title-large">
+                  Membros ({projection?.members.length ?? 0})
+                </h2>
+                <p className="md-body-medium">
+                  {activeMembersCount} ativo(s) contabilizado(s) para quórum
+                </p>
+              </div>
 
-          {generatedInviteCode && (
-            <div className="inline-form" style={{ marginTop: 0 }}>
-              <div className="card__header">
-                <span className="md-title-medium">Convite assinado pronto</span>
+              <div className="btn-row">
                 <button
                   type="button"
-                  className="btn btn--sm btn--tonal"
-                  onClick={() => copyText(generatedInviteCode)}
+                  className="btn btn--sm btn--primary"
+                  onClick={() => void onGenerateInvite()}
+                  disabled={busy || !canGenerateInvite}
+                  title={
+                    isInCooldown
+                      ? "Aguardando rotação: outro membro precisa convidar antes de você."
+                      : isFounderBlocked
+                        ? "A política atual permite convites somente do fundador."
+                        : undefined
+                  }
                 >
-                  <MaterialIcon name="content_copy" />
-                  <span>Copiar código</span>
+                  <MaterialIcon name="link" />
+                  <span>Gerar convite</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--sm btn--danger"
+                  onClick={() => void onLeaveCommunity()}
+                  disabled={busy}
+                >
+                  <MaterialIcon name="logout" />
+                  <span>Sair da comunidade</span>
                 </button>
               </div>
-              <p className="mono">{generatedInviteCode}</p>
             </div>
-          )}
 
-          {!projection || projection.members.length === 0 ? (
-            <p className="md-body-medium">Nenhum membro registrado ainda.</p>
-          ) : (() => {
-            const normalizedMemberQuery = memberSearchQuery.trim().toLowerCase();
-            const filteredMembers = normalizedMemberQuery
-              ? projection.members.filter((m) => {
-                  const name = (m.displayName ?? "Membro").toLowerCase();
-                  return (
-                    name.includes(normalizedMemberQuery) ||
-                    m.pubHex.toLowerCase().includes(normalizedMemberQuery)
-                  );
-                })
-              : projection.members;
-
-            return (
-              <>
-                <div className="feed-search" style={{ marginBottom: 12 }}>
-                  <MaterialIcon name="search" />
-                  <input
-                    type="search"
-                    className="feed-search__input"
-                    value={memberSearchQuery}
-                    onChange={(e) => setMemberSearchQuery(e.target.value)}
-                    placeholder="Buscar membro por nome ou chave..."
-                    aria-label="Buscar membro"
-                  />
-                  {memberSearchQuery && (
-                    <button
-                      type="button"
-                      className="icon-btn icon-btn--xs"
-                      onClick={() => setMemberSearchQuery("")}
-                      aria-label="Limpar busca de membros"
-                    >
-                      <MaterialIcon name="close" />
-                    </button>
+            {projection && inviteRules && (
+              <div className="kv-grid" style={{ marginBottom: 16 }}>
+                <div className="kv-box">
+                  <span className="md-label-medium">Segurança de convites</span>
+                  <strong className="md-title-medium">
+                    {isFounderOnly
+                      ? "Somente fundador"
+                      : inviteRules.requiresEndorsement
+                        ? `Protegida (N > ${inviteRules.bootstrapMaxMembers}) · Padrinho + Endossante`
+                        : `Bootstrap (${activeMembersCount}/${inviteRules.bootstrapMaxMembers}) · 1 assinatura`}
+                  </strong>
+                  {inviteRules.requiresEndorsement && (
+                    <span className="md-label-medium" style={{ marginTop: 4 }}>
+                      Janela de rotação: {inviteRules.rotationWindowSize} ingresso(s)
+                      {cooldownNames.length > 0
+                        ? ` · Em espera: ${cooldownNames.join(", ")}`
+                        : ""}
+                    </span>
                   )}
                 </div>
 
-                {filteredMembers.length === 0 ? (
-                  <p className="md-body-medium">
-                    Nenhum membro encontrado para &ldquo;{memberSearchQuery}&rdquo;.
-                  </p>
-                ) : (
-                  <div className="member-list">
-                    {filteredMembers.map((m) => {
-                      const inviterName = m.invitedByPubHex
-                        ? projection.members.find((x) => x.pubHex === m.invitedByPubHex)
-                            ?.displayName
-                        : null;
-                      const displayName = m.displayName ?? "Membro";
+                <div className="kv-box">
+                  <span className="md-label-medium">Sua elegibilidade</span>
+                  <strong className="md-title-medium">
+                    {!isMyMemberActive
+                      ? "Apenas membros ativos podem convidar"
+                      : isFounderBlocked
+                        ? "Restrito ao fundador"
+                        : isInCooldown
+                          ? "Em espera na rotação"
+                          : "Elegível para apadrinhar"}
+                  </strong>
+                  <span className="md-label-medium" style={{ marginTop: 4 }}>
+                    {isInCooldown
+                      ? "Aguarde outro membro convidar ou co-assine um convite abaixo."
+                      : inviteRules.requiresEndorsement
+                        ? "Após gerar, outro membro ativo deve co-assinar o código."
+                        : "Convite pronto após 1 assinatura."}
+                  </span>
+                </div>
+              </div>
+            )}
 
-                      return (
-                        <article key={m.pubHex} className="member-row">
-                          <div className="member-row__left">
-                            <span className="author-avatar">
-                              {getInitials(displayName, "M")}
-                            </span>
-                            <div className="member-row__text">
-                              <div className="btn-row">
-                                <strong className="md-title-medium">{displayName}</strong>
-                                <span
-                                  className={
-                                    m.status === "ACTIVE"
-                                      ? "chip chip--memb"
+            {generatedInviteCode && (
+              <div className="inline-form" style={{ marginTop: 0, marginBottom: 16 }}>
+                <div className="card__header">
+                  <span className="md-title-medium">
+                    {generatedHasEndorsement
+                      ? "Convite endossado (2 assinaturas) pronto"
+                      : inviteRules?.requiresEndorsement
+                        ? "Convite gerado (1 de 2 assinaturas) — envie para outro membro endossar"
+                        : "Convite assinado pronto"}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn--sm btn--tonal"
+                    onClick={() => copyText(generatedInviteCode)}
+                  >
+                    <MaterialIcon name="content_copy" />
+                    <span>Copiar código</span>
+                  </button>
+                </div>
+                <p className="mono">{generatedInviteCode}</p>
+              </div>
+            )}
+
+            {projection && isMyMemberActive && !isFounderOnly && (
+              <form
+                className="inline-form"
+                style={{ marginTop: 0, marginBottom: 16 }}
+                onSubmit={(e) => void handleEndorseInvite(e)}
+              >
+                <div className="field" style={{ marginBottom: 10 }}>
+                  <label htmlFor="endorse-invite-code">
+                    Endossar convite de outro membro
+                  </label>
+                  <p className="md-label-medium" style={{ marginBottom: 6 }}>
+                    Quando a comunidade passa de 5 membros ativos, cole o código{" "}
+                    <span className="mono">stze-inv:...</span> gerado pelo padrinho para
+                    co-assiná-lo com sua chave.
+                  </p>
+                  <textarea
+                    id="endorse-invite-code"
+                    className="textarea mono"
+                    value={endorseInput}
+                    onChange={(e) => setEndorseInput(e.target.value)}
+                    placeholder="Cole aqui o código stze-inv:... enviado pelo padrinho"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn--sm btn--tonal"
+                  disabled={busy || !endorseInput.trim()}
+                >
+                  <MaterialIcon name="verified_user" />
+                  <span>Co-assinar convite</span>
+                </button>
+              </form>
+            )}
+
+            {!projection || projection.members.length === 0 ? (
+              <p className="md-body-medium">Nenhum membro registrado ainda.</p>
+            ) : (() => {
+              const normalizedMemberQuery = memberSearchQuery.trim().toLowerCase();
+              const filteredMembers = normalizedMemberQuery
+                ? projection.members.filter((m) => {
+                    const name = (m.displayName ?? "Membro").toLowerCase();
+                    return (
+                      name.includes(normalizedMemberQuery) ||
+                      m.pubHex.toLowerCase().includes(normalizedMemberQuery)
+                    );
+                  })
+                : projection.members;
+
+              return (
+                <>
+                  <div className="feed-search" style={{ marginBottom: 12 }}>
+                    <MaterialIcon name="search" />
+                    <input
+                      type="search"
+                      className="feed-search__input"
+                      value={memberSearchQuery}
+                      onChange={(e) => setMemberSearchQuery(e.target.value)}
+                      placeholder="Buscar membro por nome ou chave..."
+                      aria-label="Buscar membro"
+                    />
+                    {memberSearchQuery && (
+                      <button
+                        type="button"
+                        className="icon-btn icon-btn--xs"
+                        onClick={() => setMemberSearchQuery("")}
+                        aria-label="Limpar busca de membros"
+                      >
+                        <MaterialIcon name="close" />
+                      </button>
+                    )}
+                  </div>
+
+                  {filteredMembers.length === 0 ? (
+                    <p className="md-body-medium">
+                      Nenhum membro encontrado para &ldquo;{memberSearchQuery}&rdquo;.
+                    </p>
+                  ) : (
+                    <div className="member-list">
+                      {filteredMembers.map((m) => {
+                        const inviterName = m.invitedByPubHex
+                          ? (projection.members.find(
+                              (x) => x.pubHex === m.invitedByPubHex
+                            )?.displayName ?? shortHex(m.invitedByPubHex))
+                          : null;
+                        const endorserName = m.endorsedByPubHex
+                          ? (projection.members.find(
+                              (x) => x.pubHex === m.endorsedByPubHex
+                            )?.displayName ?? shortHex(m.endorsedByPubHex))
+                          : null;
+                        const isMemberInCooldown =
+                          inviteRules?.cooldownInviterPubs.includes(m.pubHex) ?? false;
+                        const displayName = m.displayName ?? "Membro";
+
+                        return (
+                          <article key={m.pubHex} className="member-row">
+                            <div className="member-row__left">
+                              <span className="author-avatar">
+                                {getInitials(displayName, "M")}
+                              </span>
+                              <div className="member-row__text">
+                                <div className="btn-row">
+                                  <strong className="md-title-medium">{displayName}</strong>
+                                  <span
+                                    className={
+                                      m.status === "ACTIVE"
+                                        ? "chip chip--memb"
+                                        : m.status === "LEFT"
+                                          ? "chip chip--left"
+                                          : "chip chip--stze"
+                                    }
+                                  >
+                                    {m.status === "ACTIVE"
+                                      ? "Ativo"
                                       : m.status === "LEFT"
-                                        ? "chip chip--left"
-                                        : "chip chip--stze"
-                                  }
-                                >
-                                  {m.status === "ACTIVE"
-                                    ? "Ativo"
-                                    : m.status === "LEFT"
-                                      ? "Saiu"
-                                      : "Inativo"}
-                                </span>
-                                <span className="chip">
-                                  {m.isFounder
-                                    ? "Fundador"
-                                    : inviterName
-                                      ? `Convidado por ${inviterName}`
-                                      : "Convidado"}
+                                        ? "Saiu"
+                                        : "Inativo"}
+                                  </span>
+                                  <span className="chip">
+                                    {m.isFounder
+                                      ? "Fundador"
+                                      : inviterName
+                                        ? `Convidado por ${inviterName}`
+                                        : "Convidado"}
+                                  </span>
+                                  {endorserName && (
+                                    <span className="chip">
+                                      Endossado por {endorserName}
+                                    </span>
+                                  )}
+                                  {isMemberInCooldown && (
+                                    <span className="chip chip--stze">
+                                      Em espera (rotação)
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="md-label-medium">
+                                  Última atividade: {formatDateMs(m.lastActivityMs)}
                                 </span>
                               </div>
-                              <span className="md-label-medium">
-                                Última atividade: {formatDateMs(m.lastActivityMs)}
-                              </span>
                             </div>
-                          </div>
 
-                          <span className="chip gov-tabular">{m.pickCount} apoio(s)</span>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </section>
-      )}
+                            <span className="chip gov-tabular">
+                              {m.pickCount} apoio(s)
+                            </span>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </section>
+        );
+      })()}
 
       {/* Aba 3: Relays de Sincronização */}
       {activeTab === "relays" && (

@@ -1,5 +1,5 @@
 import { bytesToHex } from "@noble/hashes/utils";
-import { calculateDocId, ConfigKind, DeliberationMode, DraftStatus, getDocTypeName, getDocumentUniverse, InvitePolicy, parseInviteProof, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readDraftIdBlock, readDraftStatusBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readQuorumPctBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, } from "@sintetizing/wire";
+import { calculateDocId, ConfigKind, DeliberationMode, DraftStatus, getDocTypeName, getDocumentUniverse, InvitePolicy, parseInviteEndorsement, parseInviteProof, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readDraftIdBlock, readDraftStatusBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readQuorumPctBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, } from "@sintetizing/wire";
 const TAG_NAMES = {
     [Tag.SCOPE]: "SCOPE",
     [Tag.PARENT_HASH]: "PARENT_HASH",
@@ -30,6 +30,7 @@ const TAG_NAMES = {
     [Tag.COSIGNATURES]: "COSIGNATURES",
     [Tag.DRAFT_ID]: "DRAFT_ID",
     [Tag.DRAFT_STATUS]: "DRAFT_STATUS",
+    [Tag.INVITE_ENDORSEMENT]: "INVITE_ENDORSEMENT",
 };
 function shortHex(hex) {
     return hex.length > 16 ? `${hex.slice(0, 12)}...${hex.slice(-4)}` : hex;
@@ -151,6 +152,11 @@ function decodeBlockForDisplay(block) {
         case Tag.DRAFT_STATUS: {
             const status = readDraftStatusBlock(block);
             displayValue = status === DraftStatus.DELETED ? "DELETED (2)" : "ACTIVE (1)";
+            break;
+        }
+        case Tag.INVITE_ENDORSEMENT: {
+            const parsed = parseInviteEndorsement(block.value);
+            displayValue = `endossante=${shortHex(bytesToHex(parsed.endorserPub))}`;
             break;
         }
         default:

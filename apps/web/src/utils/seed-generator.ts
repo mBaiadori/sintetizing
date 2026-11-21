@@ -17,6 +17,7 @@ import {
   createFieldTextBlock,
   createFieldValueBlock,
   createInactivityDaysBlock,
+  createInviteEndorsementBlock,
   createInvitePolicyBlock,
   createInviteProofBlock,
   createLawArticleBlock,
@@ -30,6 +31,7 @@ import {
   DeliberationMode,
   DocType,
   DraftStatus,
+  endorseSignedInvite,
   generateEd25519Keypair,
   InvitePolicy,
   packDocument,
@@ -298,14 +300,26 @@ export async function generateSeedDataset(params: {
       const displayName = `${firstName} ${lastName}`;
       const joinTs = commCreatedAt + mIdx * 60_000;
 
+      const inviter = simMembers[(mIdx - 1) % simMembers.length]!;
       const proofBytes = await createSignedInvite({
         communityId,
-        inviterPub: localMember.publicKey,
-        inviterPrivateKey: localMember.privateKey,
+        inviterPub: inviter.publicKey,
+        inviterPrivateKey: inviter.privateKey,
         issuedAtMs: commCreatedAt + 1_000,
         expiresAtMs: baseNow + 30 * 86_400_000,
         nonce: cIdx * 10_000 + mIdx,
       });
+
+      let endorsementBytes: Uint8Array | null = null;
+      if (simMembers.length > 5) {
+        const endorser = simMembers[mIdx % simMembers.length]!;
+        endorsementBytes = await endorseSignedInvite({
+          communityId,
+          proofBytes,
+          endorserPub: endorser.publicKey,
+          endorserPrivateKey: endorser.privateKey,
+        });
+      }
 
       const joinBytes = await packDocument(
         {
@@ -315,6 +329,7 @@ export async function generateSeedDataset(params: {
           blocks: [
             createScopeBlock(communityId),
             createInviteProofBlock(proofBytes),
+            ...(endorsementBytes ? [createInviteEndorsementBlock(endorsementBytes)] : []),
             createAuthorNameBlock(displayName),
             createTimestampBlock(joinTs),
           ],

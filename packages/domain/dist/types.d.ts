@@ -79,11 +79,18 @@ export interface MemberView {
     readonly displayName: string | null;
     readonly isFounder: boolean;
     readonly invitedByPubHex: string | null;
+    readonly endorsedByPubHex: string | null;
     readonly joinedAtMs: number;
     readonly lastActivityMs: number;
     readonly status: MemberStatus;
     readonly pickCount: number;
     readonly joinDocIdHex: string;
+}
+export interface InvitePolicyRulesView {
+    readonly bootstrapMaxMembers: number;
+    readonly requiresEndorsement: boolean;
+    readonly rotationWindowSize: number;
+    readonly cooldownInviterPubs: readonly string[];
 }
 export interface CategorySummaryView {
     readonly docIdHex: string;
@@ -154,6 +161,7 @@ export interface CommunityProjection {
     readonly configVersions: readonly CommunityConfigVersion[];
     readonly members: readonly MemberView[];
     readonly activeMemberCount: number;
+    readonly inviteRules: InvitePolicyRulesView;
     readonly categories: readonly CategorySummaryView[];
     readonly subjects: readonly SubjectSummaryView[];
     readonly proposals: readonly ProposalSummaryView[];

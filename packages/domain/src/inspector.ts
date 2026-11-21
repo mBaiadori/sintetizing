@@ -8,6 +8,7 @@ import {
   getDocTypeName,
   getDocumentUniverse,
   InvitePolicy,
+  parseInviteEndorsement,
   parseInviteProof,
   readActiveMembersTableBlock,
   readConfigKindBlock,
@@ -65,6 +66,7 @@ const TAG_NAMES: Readonly<Record<number, string>> = {
   [Tag.COSIGNATURES]: "COSIGNATURES",
   [Tag.DRAFT_ID]: "DRAFT_ID",
   [Tag.DRAFT_STATUS]: "DRAFT_STATUS",
+  [Tag.INVITE_ENDORSEMENT]: "INVITE_ENDORSEMENT",
 };
 
 function shortHex(hex: string): string {
@@ -210,6 +212,12 @@ function decodeBlockForDisplay(block: TLVBlock): DecodedBlockView {
     case Tag.DRAFT_STATUS: {
       const status = readDraftStatusBlock(block);
       displayValue = status === DraftStatus.DELETED ? "DELETED (2)" : "ACTIVE (1)";
+      break;
+    }
+
+    case Tag.INVITE_ENDORSEMENT: {
+      const parsed = parseInviteEndorsement(block.value);
+      displayValue = `endossante=${shortHex(bytesToHex(parsed.endorserPub))}`;
       break;
     }
 

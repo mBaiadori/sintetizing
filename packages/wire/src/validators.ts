@@ -1,4 +1,4 @@
-import { INVITE_PROOF_SIZE } from "./invite.js";
+import { INVITE_ENDORSEMENT_SIZE, INVITE_PROOF_SIZE } from "./invite.js";
 import {
   ActiveMemberSnapshotRow,
   BinaryDocument,
@@ -258,6 +258,10 @@ export function validateBlock(block: TLVBlock): void {
 
     case Tag.DRAFT_STATUS:
       readDraftStatusBlock(block);
+      break;
+
+    case Tag.INVITE_ENDORSEMENT:
+      assertExactBytes(value, INVITE_ENDORSEMENT_SIZE, "INVITE_ENDORSEMENT (36)");
       break;
 
     default:
@@ -556,6 +560,20 @@ export function createInviteProofBlock(proofBytes: Uint8Array): TLVBlock {
     );
   }
   return { tag: Tag.INVITE_PROOF, value: new Uint8Array(proofBytes) };
+}
+
+export function createInviteEndorsementBlock(endorsementBytes: Uint8Array): TLVBlock {
+  if (endorsementBytes.length !== INVITE_ENDORSEMENT_SIZE) {
+    throw new Error(
+      `INVITE_ENDORSEMENT deve ter ${INVITE_ENDORSEMENT_SIZE} bytes. Recebido: ${endorsementBytes.length}.`
+    );
+  }
+  return { tag: Tag.INVITE_ENDORSEMENT, value: new Uint8Array(endorsementBytes) };
+}
+
+export function readInviteEndorsementBlock(block: TLVBlock): Uint8Array {
+  assertExactBytes(block.value, INVITE_ENDORSEMENT_SIZE, "INVITE_ENDORSEMENT (36)");
+  return block.value.slice();
 }
 
 export function createCutoffHashBlock(hash: Uint8Array): TLVBlock {

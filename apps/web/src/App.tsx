@@ -627,6 +627,7 @@ export function App() {
                     onProposeConfigVersion={explorer.proposeConfigVersion}
                     onSupportConfigVersion={explorer.supportConfigVersion}
                     onGenerateInvite={() => explorer.generateInvite()}
+                    onEndorseInvite={explorer.endorseInvite}
                     onLeaveCommunity={explorer.leaveCommunity}
                     onSeedDataset={(scale) => explorer.seedLargeDataset(scale)}
                   />

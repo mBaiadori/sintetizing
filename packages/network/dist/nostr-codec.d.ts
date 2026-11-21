@@ -30,6 +30,7 @@ export interface InvitePayload {
     readonly communityId: string;
     readonly proofBytes: Uint8Array;
     readonly relays: readonly string[];
+    readonly endorsementBytes?: Uint8Array | undefined;
 }
 export declare function bytesToBase64(bytes: Uint8Array): string;
 export declare function base64ToBytes(b64: string): Uint8Array;
@@ -48,11 +49,11 @@ export declare function encodePacketToNostrEvent(rawPacket: Uint8Array, communit
 export declare function decodeAndVerifyNostrEvent(event: Event): Promise<DecodedNostrPacket | null>;
 export declare function deriveNostrPubkeyHex(ed25519PrivateKey: Uint8Array, communityId: string): string;
 /**
- * Codifica um convite assinado (communityId + 116B INVITE_PROOF + relays) para compartilhamento fácil.
+ * Codifica um convite assinado (communityId + 116B INVITE_PROOF + 96B INVITE_ENDORSEMENT opcional + relays) para compartilhamento fácil.
  */
 export declare function encodeInviteCode(input: InvitePayload): string;
 /**
- * Decodifica uma string stze-inv:... validando estrutura e tamanho da prova binária.
+ * Decodifica uma string stze-inv:... validando estrutura e tamanho da prova binária (e endosso opcional).
  */
 export declare function decodeInviteCode(rawCode: string): InvitePayload;
 //# sourceMappingURL=nostr-codec.d.ts.map

@@ -30,6 +30,7 @@ import {
   readUtf8Block,
   Tag,
   unpackAndVerifyDocument,
+  verifyInviteEndorsement,
   verifyInviteProof,
 } from "@sintetizing/wire";
 import { buildInspectedDocument } from "./inspector.js";
@@ -41,6 +42,7 @@ import {
   ConfigVersionStatus,
   DeliberationModeKind,
   InspectedDocument,
+  InvitePolicyRulesView,
   MemberStatus,
   MemberView,
   PickHistoryEntry,
@@ -54,6 +56,25 @@ import {
 } from "./types.js";
 
 const DAY_MS = 86_400_000;
+
+export const INVITE_BOOTSTRAP_MAX_MEMBERS = 5;
+
+/**
+ * Calcula a janela de rotação (cooldown) para padrinhos de convite.
+ * Durante o bootstrap (N <= 5) ou quando a política é FOUNDER_ONLY, retorna 0.
+ */
+export function computeInviteRotationWindow(
+  activeMemberCount: number,
+  invitePolicy: InvitePolicyValue
+): number {
+  if (
+    invitePolicy === InvitePolicy.FOUNDER_ONLY ||
+    activeMemberCount <= INVITE_BOOTSTRAP_MAX_MEMBERS
+  ) {
+    return 0;
+  }
+  return Math.max(1, Math.min(3, Math.floor((activeMemberCount - 1) / 3)));
+}
 
 interface VerifiedEnvelope {
   readonly docIdHex: string;
@@ -90,6 +111,7 @@ interface MutableMemberState {
   displayNameTs: number;
   isFounder: boolean;
   invitedByPubHex: string | null;
+  endorsedByPubHex: string | null;
   joinedAtMs: number;
   lastActivityMs: number;
   activityTimestamps: number[];
@@ -98,6 +120,67 @@ interface MutableMemberState {
   leftAtMs: number | null;
   leftSeq: number | null;
   pickCount: number;
+}
+
+interface AcceptedJoinRecord {
+  readonly inviterHex: string;
+  readonly memberPubHex: string;
+}
+
+function getActiveMembersAtJoin(
+  membersMap: ReadonlyMap<string, MutableMemberState>,
+  activityByPub: ReadonlyMap<string, readonly number[]>,
+  leavesByPub: ReadonlyMap<string, readonly number[]>,
+  inactivityDays: number,
+  targetMs: number
+): Set<string> {
+  const active = new Set<string>();
+  const cutoffMs = inactivityDays * DAY_MS;
+  for (const member of membersMap.values()) {
+    if (member.joinedAtMs > targetMs) {
+      continue;
+    }
+    const leaves = leavesByPub.get(member.pubHex);
+    if (leaves?.some((ts) => ts >= member.joinedAtMs && ts <= targetMs)) {
+      continue;
+    }
+    let lastTs = member.joinedAtMs;
+    const acts = activityByPub.get(member.pubHex);
+    if (acts) {
+      for (const ts of acts) {
+        if (ts >= member.joinedAtMs && ts <= targetMs && ts > lastTs) {
+          lastTs = ts;
+        }
+      }
+    }
+    if (lastTs <= 0 || targetMs - lastTs <= cutoffMs) {
+      active.add(member.pubHex);
+    }
+  }
+  return active;
+}
+
+function computeCooldownInviters(
+  acceptedJoins: readonly AcceptedJoinRecord[],
+  activeMembersSet: ReadonlySet<string>,
+  windowSize: number
+): string[] {
+  if (windowSize <= 0) {
+    return [];
+  }
+  const cooldown: string[] = [];
+  let counted = 0;
+  for (let i = acceptedJoins.length - 1; i >= 0 && counted < windowSize; i -= 1) {
+    const entry = acceptedJoins[i]!;
+    if (!activeMembersSet.has(entry.memberPubHex)) {
+      continue;
+    }
+    counted += 1;
+    if (!cooldown.includes(entry.inviterHex)) {
+      cooldown.push(entry.inviterHex);
+    }
+  }
+  return cooldown;
 }
 
 interface PickEventRecord {
@@ -723,6 +806,12 @@ export async function projectCommunityState(
       configVersions: [],
       members: [],
       activeMemberCount: 0,
+      inviteRules: {
+        bootstrapMaxMembers: INVITE_BOOTSTRAP_MAX_MEMBERS,
+        requiresEndorsement: false,
+        rotationWindowSize: 0,
+        cooldownInviterPubs: [],
+      },
       categories: contentWithoutGenesis.categories,
       subjects: contentWithoutGenesis.subjects,
       proposals: contentWithoutGenesis.proposals,
@@ -741,6 +830,7 @@ export async function projectCommunityState(
     displayNameTs: -1,
     isFounder: true,
     invitedByPubHex: null,
+    endorsedByPubHex: null,
     joinedAtMs: genesis.timestampMs,
     lastActivityMs: genesis.timestampMs,
     activityTimestamps: [genesis.timestampMs],
@@ -751,10 +841,27 @@ export async function projectCommunityState(
     pickCount: 0,
   });
 
+  // Pré-indexa atividades e saídas para avaliar com precisão quem está ativo durante a validação de MEMB_JOIN
+  const activityByPub = new Map<string, number[]>();
+  const leavesByPub = new Map<string, number[]>();
+  for (const env of sortedVerified) {
+    if (env.doc.docType === DocType.MEMB_LEAVE && env.scope === communityId) {
+      const leaves = leavesByPub.get(env.authorPubHex) ?? [];
+      leaves.push(env.timestampMs);
+      leavesByPub.set(env.authorPubHex, leaves);
+    } else if (env.doc.docType !== DocType.MEMB_JOIN && env.timestampMs > 0) {
+      const acts = activityByPub.get(env.authorPubHex) ?? [];
+      acts.push(env.timestampMs);
+      activityByPub.set(env.authorPubHex, acts);
+    }
+  }
+
   // Processa entradas MEMB_JOIN por convite assinado em ordem cronológica
   const joinPackets = verified
     .filter((v) => v.doc.docType === DocType.MEMB_JOIN && v.scope === communityId)
     .sort(compareChronological);
+
+  const acceptedJoins: AcceptedJoinRecord[] = [];
 
   for (const joinEnv of joinPackets) {
     const inviteBlock = joinEnv.doc.blocks.find((b) => b.tag === Tag.INVITE_PROOF);
@@ -770,15 +877,74 @@ export async function projectCommunityState(
       continue;
     }
     const inviterHex = bytesToHex(proof.inviterPub);
+    if (inviterHex === joinEnv.authorPubHex) {
+      continue;
+    }
     const inviter = membersMap.get(inviterHex);
-    if (!inviter || (inviter.leftAtMs !== null && inviter.leftAtMs < proof.issuedAtMs)) {
+    if (!inviter) {
       continue;
     }
     if (genesis.invitePolicy === InvitePolicy.FOUNDER_ONLY && inviterHex !== genesis.authorPubHex) {
       continue;
     }
 
+    const activeAtJoin = getActiveMembersAtJoin(
+      membersMap,
+      activityByPub,
+      leavesByPub,
+      genesis.inactivityDays,
+      joinTs
+    );
+    if (!activeAtJoin.has(inviterHex)) {
+      continue;
+    }
+
+    const requiresEndorsement =
+      genesis.invitePolicy !== InvitePolicy.FOUNDER_ONLY &&
+      activeAtJoin.size > INVITE_BOOTSTRAP_MAX_MEMBERS;
+
+    if (requiresEndorsement) {
+      const windowSize = computeInviteRotationWindow(activeAtJoin.size, genesis.invitePolicy);
+      const cooldownInviters = computeCooldownInviters(acceptedJoins, activeAtJoin, windowSize);
+      if (cooldownInviters.includes(inviterHex)) {
+        continue;
+      }
+    }
+
+    let endorsedByPubHex: string | null = null;
+    const endorsementBlock = joinEnv.doc.blocks.find(
+      (b) => b.tag === Tag.INVITE_ENDORSEMENT
+    );
+    if (endorsementBlock) {
+      const verifiedEndorsement = await verifyInviteEndorsement(
+        communityId,
+        inviteBlock.value,
+        endorsementBlock.value
+      );
+      if (verifiedEndorsement) {
+        const endorserHex = bytesToHex(verifiedEndorsement.endorserPub);
+        if (
+          endorserHex !== inviterHex &&
+          endorserHex !== joinEnv.authorPubHex &&
+          activeAtJoin.has(endorserHex)
+        ) {
+          endorsedByPubHex = endorserHex;
+        }
+      }
+    }
+
+    if (requiresEndorsement && !endorsedByPubHex) {
+      continue;
+    }
+
     const existing = membersMap.get(joinEnv.authorPubHex);
+    const hasLeftBeforeJoin =
+      existing !== undefined &&
+      (leavesByPub
+        .get(joinEnv.authorPubHex)
+        ?.some((ts) => ts >= existing.joinedAtMs && ts <= joinTs) ??
+        false);
+
     if (!existing) {
       membersMap.set(joinEnv.authorPubHex, {
         pubHex: joinEnv.authorPubHex,
@@ -786,6 +952,7 @@ export async function projectCommunityState(
         displayNameTs: -1,
         isFounder: false,
         invitedByPubHex: inviterHex,
+        endorsedByPubHex,
         joinedAtMs: joinTs,
         lastActivityMs: joinTs,
         activityTimestamps: [joinTs],
@@ -795,15 +962,24 @@ export async function projectCommunityState(
         leftSeq: null,
         pickCount: 0,
       });
-    } else if (existing.leftAtMs !== null && joinTs >= existing.leftAtMs) {
+      acceptedJoins.push({ inviterHex, memberPubHex: joinEnv.authorPubHex });
+    } else if (hasLeftBeforeJoin) {
       existing.leftAtMs = null;
       existing.leftSeq = null;
       existing.invitedByPubHex = inviterHex;
+      existing.endorsedByPubHex = endorsedByPubHex;
       existing.joinedAtMs = joinTs;
       existing.lastActivityMs = Math.max(existing.lastActivityMs, joinTs);
       existing.activityTimestamps.push(joinTs);
       existing.joinSeq = joinEnv.doc.seq;
       existing.joinDocIdHex = joinEnv.docIdHex;
+      const prevJoinIdx = acceptedJoins.findIndex(
+        (j) => j.memberPubHex === joinEnv.authorPubHex
+      );
+      if (prevJoinIdx >= 0) {
+        acceptedJoins.splice(prevJoinIdx, 1);
+      }
+      acceptedJoins.push({ inviterHex, memberPubHex: joinEnv.authorPubHex });
     }
   }
 
@@ -1026,6 +1202,7 @@ export async function projectCommunityState(
         displayName: m.displayName,
         isFounder: m.isFounder,
         invitedByPubHex: m.invitedByPubHex,
+        endorsedByPubHex: m.endorsedByPubHex,
         joinedAtMs: m.joinedAtMs,
         lastActivityMs: m.lastActivityMs,
         status,
@@ -1034,6 +1211,23 @@ export async function projectCommunityState(
       };
     })
     .sort((a, b) => a.joinedAtMs - b.joinedAtMs || a.pubHex.localeCompare(b.pubHex));
+
+  const rotationWindowSize = computeInviteRotationWindow(
+    activeMembersFinalSet.size,
+    currentActive.invitePolicy
+  );
+  const inviteRules: InvitePolicyRulesView = {
+    bootstrapMaxMembers: INVITE_BOOTSTRAP_MAX_MEMBERS,
+    requiresEndorsement:
+      currentActive.invitePolicy !== InvitePolicy.FOUNDER_ONLY &&
+      activeMembersFinalSet.size > INVITE_BOOTSTRAP_MAX_MEMBERS,
+    rotationWindowSize,
+    cooldownInviterPubs: computeCooldownInviters(
+      acceptedJoins,
+      activeMembersFinalSet,
+      rotationWindowSize
+    ),
+  };
 
   const requiredForNext = computeQuorumRequired(
     activeMembersFinalSet.size,
@@ -1093,6 +1287,7 @@ export async function projectCommunityState(
     configVersions,
     members,
     activeMemberCount: activeMembersFinalSet.size,
+    inviteRules,
     categories: content.categories,
     subjects: content.subjects,
     proposals: content.proposals,
