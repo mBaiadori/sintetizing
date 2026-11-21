@@ -370,36 +370,7 @@ export function LocalStorageView({
               const decodeError = decodeErrorByDocId[pkt.docIdHex];
               const commTitle = communityTitleById.get(pkt.communityId) ?? pkt.communityId;
 
-              const handleToggleInspectChatFile = async (chatFile: StoredChatFileRecord) => {
-    if (expandedChatScope === chatFile.subjectScope) {
-      setExpandedChatScope(null);
-      return;
-    }
-    setExpandedChatScope(chatFile.subjectScope);
-    if (decodedChatByScope[chatFile.subjectScope]) {
-      return;
-    }
-    const rawList = decodeChatFile(chatFile.rawChatBytes);
-    const inspectedList: InspectedDocument[] = [];
-    for (const raw of rawList) {
-      try {
-        inspectedList.push(await inspectBinaryPacket(raw));
-      } catch {
-        // ignora pacote inválido
-      }
-    }
-    setDecodedChatByScope((prev) => ({
-      ...prev,
-      [chatFile.subjectScope]: inspectedList,
-    }));
-  };
-
-  const totalChatBytes = useMemo(
-    () => chatFiles.reduce((sum, f) => sum + f.rawChatBytes.length, 0),
-    [chatFiles]
-  );
-
-  return (
+              return (
                 <article
                   key={pkt.docIdHex}
                   className="member-row"
