@@ -37,7 +37,7 @@ import {
   packDocument,
 } from "@sintetizing/wire";
 
-export type SeedScale = "medium" | "large" | "stress";
+export type SeedScale = "medium" | "large" | "stress" | "many_proposals";
 
 export interface SeedScaleConfig {
   readonly label: string;
@@ -48,13 +48,14 @@ export interface SeedScaleConfig {
   readonly subjectsPerCategory: number;
   readonly generalSubjects: number;
   readonly proposalsPerSubject: number;
+  readonly firstSubjectProposals?: number;
   readonly maxPicksPerProposalRatio: number;
 }
 
 export const SEED_SCALE_CONFIGS: Readonly<Record<SeedScale, SeedScaleConfig>> = {
   medium: {
     label: "Médio",
-    description: "2 comunidades, 15 membros/comunidade, 4 categorias, 24 assuntos, ~72 propostas",
+    description: "2 comunidades, 15 membros/comunidade, 4 categorias, 20 assuntos, ~60 propostas",
     communities: 2,
     membersPerCommunity: 15,
     categoriesPerCommunity: 4,
@@ -65,13 +66,14 @@ export const SEED_SCALE_CONFIGS: Readonly<Record<SeedScale, SeedScaleConfig>> = 
   },
   large: {
     label: "Grande Porte",
-    description: "4 comunidades, 35 membros/comunidade, 6 categorias, 96 assuntos, ~320 propostas",
+    description: "4 comunidades, 35 membros/comunidade, 6 categorias, 96 assuntos, ~300+ propostas",
     communities: 4,
     membersPerCommunity: 35,
     categoriesPerCommunity: 6,
     subjectsPerCategory: 3,
     generalSubjects: 6,
     proposalsPerSubject: 3,
+    firstSubjectProposals: 10,
     maxPicksPerProposalRatio: 0.55,
   },
   stress: {
@@ -83,7 +85,20 @@ export const SEED_SCALE_CONFIGS: Readonly<Record<SeedScale, SeedScaleConfig>> = 
     subjectsPerCategory: 4,
     generalSubjects: 8,
     proposalsPerSubject: 3,
+    firstSubjectProposals: 15,
     maxPicksPerProposalRatio: 0.5,
+  },
+  many_proposals: {
+    label: "Muitas Propostas Iniciais",
+    description: "1 comunidade, 20 membros, 2 categorias, 4 assuntos (1 assunto com 18 propostas iniciais)",
+    communities: 1,
+    membersPerCommunity: 20,
+    categoriesPerCommunity: 2,
+    subjectsPerCategory: 1,
+    generalSubjects: 2,
+    proposalsPerSubject: 3,
+    firstSubjectProposals: 18,
+    maxPicksPerProposalRatio: 0.45,
   },
 };
 
@@ -443,14 +458,19 @@ export async function generateSeedDataset(params: {
     for (let sIdx = 0; sIdx < subjects.length; sIdx += 1) {
       const subj = subjects[sIdx]!;
       const subjectProposalIds: Uint8Array[] = [];
+      const isManyInitialSubject =
+        cIdx === 0 && sIdx === 0 && config.firstSubjectProposals !== undefined;
+      const proposalCount = isManyInitialSubject
+        ? config.firstSubjectProposals!
+        : config.proposalsPerSubject;
 
-      for (let pIdx = 0; pIdx < config.proposalsPerSubject; pIdx += 1) {
+      for (let pIdx = 0; pIdx < proposalCount; pIdx += 1) {
         const author = deterministicPick(simMembers, sIdx * 3 + pIdx + 1);
         const propTs = subj.ts + 120_000 + pIdx * 90_000;
         const prefix = deterministicPick(PROPOSAL_PREFIXES, pIdx + sIdx);
         const propTitle = `${prefix} — Opção ${pIdx + 1}`;
         const parentHash =
-          pIdx > 0 && pIdx === config.proposalsPerSubject - 1
+          !isManyInitialSubject && pIdx > 0 && pIdx === proposalCount - 1
             ? subjectProposalIds[0]
             : undefined;
 

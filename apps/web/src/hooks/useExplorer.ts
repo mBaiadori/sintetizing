@@ -662,13 +662,25 @@ export function useExplorer() {
     [workshopsByScope]
   );
 
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notifyStatus = useCallback((msg: string) => {
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+    }
+    setStatusMessage(msg);
+    statusTimerRef.current = setTimeout(() => {
+      setStatusMessage(null);
+      statusTimerRef.current = null;
+    }, 3000);
+  }, []);
+
   const runActionWithResult = useCallback(async <T>(fn: () => Promise<{ result: T; message?: string }>): Promise<T | null> => {
     setBusy(true);
     setErrorMessage(null);
     try {
       const { result, message } = await fn();
       if (message) {
-        setStatusMessage(message);
+        notifyStatus(message);
       }
       return result;
     } catch (err: unknown) {
@@ -677,7 +689,7 @@ export function useExplorer() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [notifyStatus]);
 
   const runAction = useCallback(
     async (fn: () => Promise<string | void>) => {
@@ -1533,18 +1545,6 @@ export function useExplorer() {
       }),
     [runAction]
   );
-
-  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const notifyStatus = useCallback((msg: string) => {
-    if (statusTimerRef.current) {
-      clearTimeout(statusTimerRef.current);
-    }
-    setStatusMessage(msg);
-    statusTimerRef.current = setTimeout(() => {
-      setStatusMessage(null);
-      statusTimerRef.current = null;
-    }, 3000);
-  }, []);
 
   return {
     loading,
