@@ -611,6 +611,7 @@ export async function projectCommunityState(packets, communityId, nowMs) {
         .filter((v) => v.doc.docType === DocType.MEMB_JOIN && v.scope === communityId)
         .sort(compareChronological);
     const acceptedJoins = [];
+    const usedInviteKeys = new Set();
     for (const joinEnv of joinPackets) {
         const inviteBlock = joinEnv.doc.blocks.find((b) => b.tag === Tag.INVITE_PROOF);
         if (!inviteBlock) {
@@ -626,6 +627,10 @@ export async function projectCommunityState(packets, communityId, nowMs) {
         }
         const inviterHex = bytesToHex(proof.inviterPub);
         if (inviterHex === joinEnv.authorPubHex) {
+            continue;
+        }
+        const inviteKey = `${inviterHex}:${proof.nonce}`;
+        if (usedInviteKeys.has(inviteKey)) {
             continue;
         }
         const inviter = membersMap.get(inviterHex);
@@ -687,6 +692,7 @@ export async function projectCommunityState(packets, communityId, nowMs) {
                 leftSeq: null,
                 pickCount: 0,
             });
+            usedInviteKeys.add(inviteKey);
             acceptedJoins.push({ inviterHex, memberPubHex: joinEnv.authorPubHex });
         }
         else if (hasLeftBeforeJoin) {
@@ -699,6 +705,7 @@ export async function projectCommunityState(packets, communityId, nowMs) {
             existing.activityTimestamps.push(joinTs);
             existing.joinSeq = joinEnv.doc.seq;
             existing.joinDocIdHex = joinEnv.docIdHex;
+            usedInviteKeys.add(inviteKey);
             const prevJoinIdx = acceptedJoins.findIndex((j) => j.memberPubHex === joinEnv.authorPubHex);
             if (prevJoinIdx >= 0) {
                 acceptedJoins.splice(prevJoinIdx, 1);
