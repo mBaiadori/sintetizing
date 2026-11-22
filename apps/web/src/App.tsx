@@ -1,9 +1,15 @@
-import type { ProposalSummaryView } from "@sintetizing/domain";
+import {
+  BUILTIN_TEMPLATE_CATEGORIES,
+  type ProposalFieldView,
+  type ProposalSummaryView,
+  type ProposalTemplateSummaryView,
+} from "@sintetizing/domain";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppLink } from "./components/AppLink.js";
 import { CommunitiesTab, CommunitiesView } from "./components/CommunitiesView.js";
 import { CommunityFeedView } from "./components/CommunityFeedView.js";
 import { CommunityGraphView } from "./components/CommunityGraphView.js";
+import { CommunityTemplatesView } from "./components/CommunityTemplatesView.js";
 import { LocalStorageView } from "./components/LocalStorageView.js";
 import { MaterialIcon } from "./components/MaterialIcon.js";
 import { AppViewMode, NavigationRail } from "./components/NavigationRail.js";
@@ -35,6 +41,11 @@ export function App() {
   const [newCatError, setNewCatError] = useState<string | null>(null);
   const [newCatTitle, setNewCatTitle] = useState("");
   const [newCatBody, setNewCatBody] = useState("");
+  const [pendingTemplateLaunch, setPendingTemplateLaunch] = useState<{
+    readonly subjectScope: string;
+    readonly fields: readonly ProposalFieldView[];
+    readonly titleHint: string;
+  } | null>(null);
 
   const routeCommunityId = "communityId" in route ? route.communityId : null;
   const prevSelectedCommunityIdRef = useRef<string | null>(explorer.selectedCommunityId);
@@ -126,13 +137,15 @@ export function App() {
       ? "graph"
       : route.kind === "workspace"
         ? "workspace"
-        : route.kind === "community-settings" || route.kind === "add-community"
-          ? "communities"
-          : route.kind === "profile"
-            ? "profile"
-            : route.kind === "storage"
-              ? "storage"
-              : "feed";
+        : route.kind === "templates"
+          ? "templates"
+          : route.kind === "community-settings" || route.kind === "add-community"
+            ? "communities"
+            : route.kind === "profile"
+              ? "profile"
+              : route.kind === "storage"
+                ? "storage"
+                : "feed";
 
   const communitiesTab: CommunitiesTab =
     route.kind === "add-community"
@@ -179,6 +192,9 @@ export function App() {
         break;
       case "workspace":
         document.title = `Assuntos${commSuffix} — Sintetize`;
+        break;
+      case "templates":
+        document.title = `Modelos${commSuffix} — Sintetize`;
         break;
       default:
         document.title = communityTitle
@@ -715,7 +731,10 @@ export function App() {
             </div>
           )}
 
-          {(activeView === "feed" || activeView === "graph" || activeView === "workspace") &&
+          {(activeView === "feed" ||
+            activeView === "graph" ||
+            activeView === "workspace" ||
+            activeView === "templates") &&
             (!explorer.selectedCommunity || routeCommunityMissing) && (
               <div className="subview-frame">
                 <header className="channel-topbar">
@@ -819,6 +838,71 @@ export function App() {
               />
             )}
 
+          {activeView === "templates" &&
+            explorer.selectedCommunity &&
+            !routeCommunityMissing &&
+            route.kind === "templates" && (
+              <CommunityTemplatesView
+                myPubHex={myPubHex}
+                communityTitle={communityTitle ?? explorer.selectedCommunity.title}
+                projection={projection}
+                selectedCategoryId={route.categoryId}
+                selectedTemplateId={route.templateId}
+                sidebarCollapsed={sidebarCollapsed}
+                busy={explorer.busy}
+                onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
+                onSelectCategory={(categoryId) => {
+                  if (explorer.selectedCommunityId) {
+                    navigate({
+                      kind: "templates",
+                      communityId: explorer.selectedCommunityId,
+                      categoryId,
+                      templateId: null,
+                    });
+                  }
+                }}
+                onSelectTemplate={(templateId) => {
+                  if (explorer.selectedCommunityId) {
+                    navigate({
+                      kind: "templates",
+                      communityId: explorer.selectedCommunityId,
+                      categoryId: route.categoryId,
+                      templateId,
+                    });
+                  }
+                }}
+                onCreateTemplateCategory={explorer.createTemplateCategory}
+                onCreateProposalTemplate={explorer.createProposalTemplate}
+                onPickTemplate={explorer.pickProposalTemplate}
+                onUseTemplateInSubject={(
+                  template: ProposalTemplateSummaryView,
+                  subjectScope: string
+                ) => {
+                  if (!explorer.selectedCommunityId) {
+                    return;
+                  }
+                  const subj = allSubjects.find((s) => s.scope === subjectScope);
+                  const resolvedCatId =
+                    subj?.categoryHashHex && knownCategoryIds.has(subj.categoryHashHex)
+                      ? subj.categoryHashHex
+                      : GENERAL_CATEGORY_ID;
+                  setPendingTemplateLaunch({
+                    subjectScope,
+                    fields: template.fields,
+                    titleHint: template.title,
+                  });
+                  navigateAndClose({
+                    kind: "workspace",
+                    communityId: explorer.selectedCommunityId,
+                    categoryId: resolvedCatId,
+                    subjectScope,
+                    proposalId: null,
+                    newSubject: false,
+                  });
+                }}
+              />
+            )}
+
           {activeView === "workspace" &&
             explorer.selectedCommunity &&
             !routeCommunityMissing && (
@@ -833,6 +917,11 @@ export function App() {
                 selectedSubject={selectedSubject}
                 proposals={allProposals}
                 selectedProposalId={selectedProposalId}
+                templateCategories={
+                  projection?.templateCategories ?? BUILTIN_TEMPLATE_CATEGORIES
+                }
+                templates={projection?.templates ?? []}
+                pendingTemplateLaunch={pendingTemplateLaunch}
                 drafts={explorer.drafts}
                 hiddenDocIds={explorer.hiddenDocIds}
                 workshop={
@@ -851,6 +940,7 @@ export function App() {
                 showNewSubjectForm={showNewSubjectForm}
                 busy={explorer.busy}
                 onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
+                onClearPendingTemplateLaunch={() => setPendingTemplateLaunch(null)}
                 onOpenNewSubjectForm={() => {
                   if (explorer.selectedCommunityId) {
                     navigate({
@@ -890,6 +980,7 @@ export function App() {
                 }}
                 onCreateSubject={explorer.createSubject}
                 onCreateProposal={explorer.createProposal}
+                onCreateProposalTemplate={explorer.createProposalTemplate}
                 onSendChatMessage={explorer.sendChatMessage}
                 onPublishSharedDraft={explorer.publishSharedDraft}
                 onDeleteSharedDraft={explorer.deleteSharedDraft}

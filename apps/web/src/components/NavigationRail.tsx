@@ -10,6 +10,7 @@ export type AppViewMode =
   | "feed"
   | "graph"
   | "workspace"
+  | "templates"
   | "communities"
   | "profile"
   | "storage";
@@ -279,6 +280,28 @@ export function NavigationRail({
                     filled={activeView === "graph"}
                   />
                   <span className="tree-channel__title">Grafo</span>
+                </AppLink>
+
+                <AppLink
+                  to={{
+                    kind: "templates",
+                    communityId: selectedCommunityId,
+                    categoryId: null,
+                    templateId: null,
+                  }}
+                  onNavigate={onNavigate}
+                  className={
+                    activeView === "templates"
+                      ? "sidebar-feed-btn sidebar-feed-btn--active"
+                      : "sidebar-feed-btn"
+                  }
+                  aria-current={activeView === "templates" ? "page" : undefined}
+                >
+                  <MaterialIcon
+                    name="edit_note"
+                    filled={activeView === "templates"}
+                  />
+                  <span className="tree-channel__title">Modelos</span>
                 </AppLink>
 
                 <div className="sidebar-section-header">

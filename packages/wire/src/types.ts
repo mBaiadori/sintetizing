@@ -29,6 +29,7 @@ export const DocType = {
   SNAPSHOT: 7,
   CHAT_MESSAGE: 8,
   CHAT_DRAFT: 9,
+  PROPOSAL_TEMPLATE: 10,
 } as const;
 
 export type DocTypeValue = (typeof DocType)[keyof typeof DocType];
@@ -44,6 +45,7 @@ export const ConfigKind = {
   COMMUNITY: 1,
   SUBJECT: 2,
   CATEGORY: 3,
+  TEMPLATE_CATEGORY: 4,
 } as const;
 
 export type ConfigKindValue = (typeof ConfigKind)[keyof typeof ConfigKind];

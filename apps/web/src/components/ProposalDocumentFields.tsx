@@ -230,6 +230,9 @@ export interface ProposalDocumentComposerProps {
   readonly busy: boolean;
   readonly skipConfirm?: boolean | undefined;
   readonly hideLocalDraftActions?: boolean | undefined;
+  readonly hideDeadlineInput?: boolean | undefined;
+  readonly titleLabel?: string | undefined;
+  readonly titlePlaceholder?: string | undefined;
   readonly onChangeTitle: (value: string) => void;
   readonly onChangeDeadlineInput: (value: string) => void;
   readonly onChangeFields: (fields: readonly ProposalFieldView[]) => void;
@@ -261,6 +264,9 @@ export function ProposalDocumentComposer({
   busy,
   skipConfirm = false,
   hideLocalDraftActions = false,
+  hideDeadlineInput = false,
+  titleLabel = "Título da proposta (mín. 5 caracteres)",
+  titlePlaceholder = "Ex.: Instalar 12 luminárias LED",
   onChangeTitle,
   onChangeDeadlineInput,
   onChangeFields,
@@ -505,11 +511,9 @@ export function ProposalDocumentComposer({
         </div>
       )}
 
-      <div className="row-2">
+      <div className={hideDeadlineInput ? "stack" : "row-2"}>
         <div className="field">
-          <label htmlFor={`prop-title-${draftId}`}>
-            Título da proposta (mín. 5 caracteres)
-          </label>
+          <label htmlFor={`prop-title-${draftId}`}>{titleLabel}</label>
           <input
             id={`prop-title-${draftId}`}
             className="input"
@@ -518,22 +522,24 @@ export function ProposalDocumentComposer({
             autoFocus
             value={title}
             onChange={(e) => onChangeTitle(e.target.value)}
-            placeholder="Ex.: Instalar 12 luminárias LED"
+            placeholder={titlePlaceholder}
           />
         </div>
 
-        <div className="field">
-          <label htmlFor={`prop-deadline-${draftId}`}>
-            Prazo limite da proposta (opcional)
-          </label>
-          <input
-            id={`prop-deadline-${draftId}`}
-            type="datetime-local"
-            className="input"
-            value={deadlineInput}
-            onChange={(e) => onChangeDeadlineInput(e.target.value)}
-          />
-        </div>
+        {!hideDeadlineInput && (
+          <div className="field">
+            <label htmlFor={`prop-deadline-${draftId}`}>
+              Prazo limite da proposta (opcional)
+            </label>
+            <input
+              id={`prop-deadline-${draftId}`}
+              type="datetime-local"
+              className="input"
+              value={deadlineInput}
+              onChange={(e) => onChangeDeadlineInput(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="composer-blocks-header">

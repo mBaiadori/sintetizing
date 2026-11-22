@@ -50,6 +50,7 @@ const DOC_TYPE_NAMES: Readonly<Record<number, string>> = {
   [DocType.SNAPSHOT]: "SNAPSHOT",
   [DocType.CHAT_MESSAGE]: "CHAT_MESSAGE",
   [DocType.CHAT_DRAFT]: "CHAT_DRAFT",
+  [DocType.PROPOSAL_TEMPLATE]: "PROPOSAL_TEMPLATE",
 };
 
 function validateUtf8Range(value: Uint8Array, label: string, min: number, max: number): void {
@@ -152,10 +153,11 @@ export function validateBlock(block: TLVBlock): void {
       if (
         kind !== ConfigKind.COMMUNITY &&
         kind !== ConfigKind.SUBJECT &&
-        kind !== ConfigKind.CATEGORY
+        kind !== ConfigKind.CATEGORY &&
+        kind !== ConfigKind.TEMPLATE_CATEGORY
       ) {
         throw new Error(
-          `Tag CONFIG_KIND (17) inválida: tipo ${kind} desconhecido. Esperado 1 (COMMUNITY), 2 (SUBJECT) ou 3 (CATEGORY).`
+          `Tag CONFIG_KIND (17) inválida: tipo ${kind} desconhecido. Esperado 1 (COMMUNITY), 2 (SUBJECT), 3 (CATEGORY) ou 4 (TEMPLATE_CATEGORY).`
         );
       }
       break;
@@ -308,6 +310,14 @@ export function validateDocumentStructure(
       assertHasTag(blocks, Tag.TITLE, "Documento PROPOSTA (1) requer a tag TITLE (10).");
       break;
 
+    case DocType.PROPOSAL_TEMPLATE:
+      if (seq !== 1) {
+        throw new Error(`Documento PROPOSAL_TEMPLATE (10) deve ter seq = 1. Recebido: ${seq}.`);
+      }
+      assertHasTag(blocks, Tag.SCOPE, "Documento PROPOSAL_TEMPLATE (10) requer a tag SCOPE (1).");
+      assertHasTag(blocks, Tag.TITLE, "Documento PROPOSAL_TEMPLATE (10) requer a tag TITLE (10).");
+      break;
+
     case DocType.PICK: {
       assertPositiveSeq(docType, seq);
       const targets = blocks.filter((b) => b.tag === Tag.PICK_TARGET);
@@ -370,7 +380,7 @@ export function validateDocumentStructure(
     }
 
     default:
-      throw new Error(`Tipo de documento desconhecido: ${docType}. Esperado 0..9.`);
+      throw new Error(`Tipo de documento desconhecido: ${docType}. Esperado 0..10.`);
   }
 }
 
@@ -382,7 +392,11 @@ export function getDocumentUniverse(doc: BinaryDocument): DocUniverse {
     case DocType.CONFIG: {
       const kindBlock = doc.blocks.find((b) => b.tag === Tag.CONFIG_KIND);
       const kind = kindBlock ? readConfigKindBlock(kindBlock) : ConfigKind.COMMUNITY;
-      if (kind === ConfigKind.SUBJECT || kind === ConfigKind.CATEGORY) {
+      if (
+        kind === ConfigKind.SUBJECT ||
+        kind === ConfigKind.CATEGORY ||
+        kind === ConfigKind.TEMPLATE_CATEGORY
+      ) {
         return "stze";
       }
       return "cmnt";
@@ -399,6 +413,7 @@ export function getDocumentUniverse(doc: BinaryDocument): DocUniverse {
       return "chat";
     case DocType.PROPOSAL:
     case DocType.EXECUTION:
+    case DocType.PROPOSAL_TEMPLATE:
     default:
       return "stze";
   }
@@ -497,10 +512,11 @@ export function createConfigKindBlock(kind: ConfigKindValue): TLVBlock {
   if (
     kind !== ConfigKind.COMMUNITY &&
     kind !== ConfigKind.SUBJECT &&
-    kind !== ConfigKind.CATEGORY
+    kind !== ConfigKind.CATEGORY &&
+    kind !== ConfigKind.TEMPLATE_CATEGORY
   ) {
     throw new Error(
-      `Tipo de configuração inválido: ${String(kind)}. Esperado 1 (COMMUNITY), 2 (SUBJECT) ou 3 (CATEGORY).`
+      `Tipo de configuração inválido: ${String(kind)}. Esperado 1 (COMMUNITY), 2 (SUBJECT), 3 (CATEGORY) ou 4 (TEMPLATE_CATEGORY).`
     );
   }
   return { tag: Tag.CONFIG_KIND, value: new Uint8Array([kind]) };
@@ -930,7 +946,8 @@ export function readConfigKindBlock(block: TLVBlock): ConfigKindValue {
   if (
     kind !== ConfigKind.COMMUNITY &&
     kind !== ConfigKind.SUBJECT &&
-    kind !== ConfigKind.CATEGORY
+    kind !== ConfigKind.CATEGORY &&
+    kind !== ConfigKind.TEMPLATE_CATEGORY
   ) {
     throw new Error(`Bloco CONFIG_KIND corrompido: tipo ${kind} inválido.`);
   }

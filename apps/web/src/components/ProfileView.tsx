@@ -142,14 +142,25 @@ export function ProfileView({
                   <div className="member-row__left">
                     <span
                       className={
-                        pick.kind === "PROPOSAL" ? "chip chip--stze" : "chip chip--cmnt"
+                        pick.kind === "PROPOSAL"
+                          ? "chip chip--stze"
+                          : pick.kind === "TEMPLATE"
+                            ? "chip chip--memb"
+                            : "chip chip--cmnt"
                       }
                     >
-                      {pick.kind === "PROPOSAL" ? "Proposta" : "Regras"}
+                      {pick.kind === "PROPOSAL"
+                        ? "Proposta"
+                        : pick.kind === "TEMPLATE"
+                          ? "Modelo"
+                          : "Regras"}
                     </span>
                     <div className="member-row__text">
                       <strong className="md-title-medium">
-                        {pick.targetTitle ?? "Alteração de regras"}
+                        {pick.targetTitle ??
+                          (pick.kind === "TEMPLATE"
+                            ? "Modelo de proposta"
+                            : "Alteração de regras")}
                       </strong>
                       <span className="md-label-medium">
                         {formatDateMs(pick.timestampMs)}

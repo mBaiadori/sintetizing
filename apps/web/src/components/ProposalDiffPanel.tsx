@@ -31,10 +31,12 @@ export function ProposalDiffPanel({
   targetProposal,
   candidates,
   defaultBaseId,
+  itemNoun = "proposta",
 }: {
   readonly targetProposal: ProposalSummaryView;
   readonly candidates: readonly ProposalSummaryView[];
   readonly defaultBaseId: string | null;
+  readonly itemNoun?: string | undefined;
 }) {
   const otherCandidates = candidates.filter(
     (c) => c.docIdHex !== targetProposal.docIdHex
@@ -61,7 +63,9 @@ export function ProposalDiffPanel({
     return (
       <div className="empty-box">
         <p className="md-body-medium">
-          Nenhuma outra proposta neste assunto para comparar.
+          {itemNoun === "modelo"
+            ? "Nenhum outro modelo nesta categoria para comparar."
+            : "Nenhuma outra proposta neste assunto para comparar."}
         </p>
       </div>
     );
@@ -78,7 +82,11 @@ export function ProposalDiffPanel({
     <div className="diff-panel stack">
       <div className="diff-panel__controls">
         <label className="field">
-          <span>Comparar esta proposta com:</span>
+          <span>
+            {itemNoun === "modelo"
+              ? "Comparar este modelo com:"
+              : "Comparar esta proposta com:"}
+          </span>
           <select
             className="input"
             value={baseProposal.docIdHex}

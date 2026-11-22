@@ -35,6 +35,12 @@ import {
 } from "@sintetizing/wire";
 import { buildInspectedDocument } from "./inspector.js";
 import {
+  BUILTIN_PROPOSAL_TEMPLATES,
+  BUILTIN_TEMPLATE_CATEGORIES,
+  getTemplatePickScope,
+  parseTemplateCategoryFromScope,
+} from "./proposal-templates.js";
+import {
   CategorySummaryView,
   ChatMessageView,
   CommunityConfigVersion,
@@ -49,10 +55,12 @@ import {
   ProposalFieldView,
   ProposalStatus,
   ProposalSummaryView,
+  ProposalTemplateSummaryView,
   SharedDraftView,
   SnapshotSummaryView,
   SubjectSummaryView,
   SubjectWorkshopView,
+  TemplateCategorySummaryView,
 } from "./types.js";
 
 const DAY_MS = 86_400_000;
@@ -406,6 +414,7 @@ function extractProposalFields(doc: BinaryDocument, rawBody: string): ProposalFi
 }
 
 function buildContentViews(
+  communityId: string,
   sortedVerified: readonly VerifiedEnvelope[],
   subjectPicksRaw: readonly PickEventRecord[],
   membersMap: ReadonlyMap<string, MutableMemberState>,
@@ -415,6 +424,8 @@ function buildContentViews(
   readonly categories: CategorySummaryView[];
   readonly subjects: SubjectSummaryView[];
   readonly proposals: ProposalSummaryView[];
+  readonly templateCategories: TemplateCategorySummaryView[];
+  readonly templates: ProposalTemplateSummaryView[];
   readonly snapshots: SnapshotSummaryView[];
 } {
   const picksByScope = new Map<string, PickEventRecord[]>();
@@ -675,23 +686,157 @@ function buildContentViews(
     });
   }
 
+  // 4. Categorias e Templates de Proposta (built-in + comunitários) com deliberação por Pick
+  const networkTemplateCategories: TemplateCategorySummaryView[] = [];
+  for (const env of sortedVerified) {
+    if (env.doc.docType !== DocType.CONFIG) {
+      continue;
+    }
+    const kindBlock = env.doc.blocks.find((b) => b.tag === Tag.CONFIG_KIND);
+    if (!kindBlock || readConfigKindBlock(kindBlock) !== ConfigKind.TEMPLATE_CATEGORY) {
+      continue;
+    }
+    const titleBlock = env.doc.blocks.find((b) => b.tag === Tag.TITLE);
+    const bodyBlock = env.doc.blocks.find((b) => b.tag === Tag.BODY);
+    networkTemplateCategories.push({
+      docIdHex: env.docIdHex,
+      scope: env.scope,
+      title: titleBlock ? readUtf8Block(titleBlock) : "Modelos",
+      body: bodyBlock ? readUtf8Block(bodyBlock) : "",
+      authorPubHex: env.authorPubHex,
+      timestampMs: env.timestampMs,
+      templateCount: 0,
+      isBuiltIn: false,
+    });
+  }
+
+  const cmntAtNow = getConfigActiveAt(timeline, nowMs);
+  const activeSetAtNow =
+    timeline.length > 0
+      ? getActiveMembersSetAt(membersMap, cmntAtNow.inactivityDays, nowMs)
+      : new Set<string>();
+
+  const computeTemplateSupporters = (categoryId: string, docIdHex: string): string[] => {
+    const scopePicks = getLatestPicksAt(getTemplatePickScope(communityId, categoryId), nowMs);
+    const supporterPubs: string[] = [];
+    for (const [authorHex, pick] of scopePicks.entries()) {
+      if (activeSetAtNow.has(authorHex) && pick.targetHex === docIdHex) {
+        supporterPubs.push(authorHex);
+      }
+    }
+    return supporterPubs;
+  };
+
+  const rawTemplates: ProposalTemplateSummaryView[] = [];
+  for (const builtin of BUILTIN_PROPOSAL_TEMPLATES) {
+    const supporterPubs = computeTemplateSupporters(builtin.categoryId, builtin.docIdHex);
+    rawTemplates.push({
+      ...builtin,
+      scope: getTemplatePickScope(communityId, builtin.categoryId),
+      pickCount: supporterPubs.length,
+      supporterPubs,
+      isTopInCategory: false,
+    });
+  }
+
+  const defaultCatId = BUILTIN_TEMPLATE_CATEGORIES[0]!.docIdHex;
+  for (const env of sortedVerified) {
+    if (env.doc.docType !== DocType.PROPOSAL_TEMPLATE) {
+      continue;
+    }
+    const titleBlock = env.doc.blocks.find((b) => b.tag === Tag.TITLE);
+    const bodyBlock = env.doc.blocks.find((b) => b.tag === Tag.BODY);
+    const authorNameBlock = env.doc.blocks.find((b) => b.tag === Tag.AUTHOR_NAME);
+    const parentBlock = env.doc.blocks.find((b) => b.tag === Tag.PARENT_HASH);
+    const categoryBlock = env.doc.blocks.find((b) => b.tag === Tag.CATEGORY_HASH);
+
+    const categoryHashHex = categoryBlock ? bytesToHex(categoryBlock.value) : null;
+    const categoryId =
+      categoryHashHex ??
+      parseTemplateCategoryFromScope(communityId, env.scope) ??
+      defaultCatId;
+
+    const rawBody = bodyBlock ? readUtf8Block(bodyBlock) : "";
+    const fields = extractProposalFields(env.doc, rawBody);
+    const supporterPubs = computeTemplateSupporters(categoryId, env.docIdHex);
+
+    rawTemplates.push({
+      docIdHex: env.docIdHex,
+      scope: getTemplatePickScope(communityId, categoryId),
+      categoryId,
+      categoryHashHex,
+      title: titleBlock ? readUtf8Block(titleBlock) : "Modelo de Proposta",
+      body: rawBody,
+      fields,
+      authorPubHex: env.authorPubHex,
+      authorName: authorNameBlock ? readUtf8Block(authorNameBlock) : null,
+      parentHashHex: parentBlock ? bytesToHex(parentBlock.value) : null,
+      timestampMs: env.timestampMs,
+      pickCount: supporterPubs.length,
+      supporterPubs,
+      isTopInCategory: false,
+      isBuiltIn: false,
+    });
+  }
+
+  rawTemplates.sort(
+    (a, b) =>
+      b.pickCount - a.pickCount ||
+      Number(a.isBuiltIn) - Number(b.isBuiltIn) ||
+      b.timestampMs - a.timestampMs ||
+      a.docIdHex.localeCompare(b.docIdHex)
+  );
+
+  const topDocByCategory = new Map<string, string>();
+  const templateCountByCategory = new Map<string, number>();
+  for (const tpl of rawTemplates) {
+    templateCountByCategory.set(
+      tpl.categoryId,
+      (templateCountByCategory.get(tpl.categoryId) ?? 0) + 1
+    );
+    if (tpl.pickCount > 0 && !topDocByCategory.has(tpl.categoryId)) {
+      topDocByCategory.set(tpl.categoryId, tpl.docIdHex);
+    }
+  }
+
+  const templates: ProposalTemplateSummaryView[] = rawTemplates.map((tpl) => ({
+    ...tpl,
+    isTopInCategory: topDocByCategory.get(tpl.categoryId) === tpl.docIdHex,
+  }));
+
+  const templateCategories: TemplateCategorySummaryView[] = [
+    ...BUILTIN_TEMPLATE_CATEGORIES,
+    ...networkTemplateCategories,
+  ].map((cat) => ({
+    ...cat,
+    templateCount: templateCountByCategory.get(cat.docIdHex) ?? 0,
+  }));
+
   return {
     categories,
     subjects: subjects.reverse(),
     proposals: proposalsRaw.reverse(),
+    templateCategories,
+    templates,
     snapshots: snapshots.reverse(),
   };
 }
 
 function buildPickHistory(
+  communityId: string,
   subjectPicksRaw: readonly PickEventRecord[],
   communityPicksRaw: readonly PickEventRecord[],
   proposals: readonly ProposalSummaryView[],
+  templates: readonly ProposalTemplateSummaryView[],
   configVersions: readonly CommunityConfigVersion[]
 ): PickHistoryEntry[] {
   const proposalTitles = new Map<string, string>();
   for (const prop of proposals) {
     proposalTitles.set(prop.docIdHex, prop.title);
+  }
+  const templateTitles = new Map<string, string>();
+  for (const tpl of templates) {
+    templateTitles.set(tpl.docIdHex, tpl.title);
   }
   const configTitles = new Map<string, string>();
   for (const cfg of configVersions) {
@@ -699,16 +844,22 @@ function buildPickHistory(
   }
 
   const entries: PickHistoryEntry[] = [
-    ...subjectPicksRaw.map((p) => ({
-      docIdHex: p.docIdHex,
-      kind: "PROPOSAL" as const,
-      scope: p.scope,
-      authorPubHex: p.authorPubHex,
-      targetHashHex: p.targetHex,
-      targetTitle: proposalTitles.get(p.targetHex) ?? null,
-      seq: p.seq,
-      timestampMs: p.timestampMs,
-    })),
+    ...subjectPicksRaw.map((p) => {
+      const isTemplate =
+        p.scope.startsWith(`${communityId}/tpl/`) || templateTitles.has(p.targetHex);
+      return {
+        docIdHex: p.docIdHex,
+        kind: isTemplate ? ("TEMPLATE" as const) : ("PROPOSAL" as const),
+        scope: p.scope,
+        authorPubHex: p.authorPubHex,
+        targetHashHex: p.targetHex,
+        targetTitle: isTemplate
+          ? (templateTitles.get(p.targetHex) ?? null)
+          : (proposalTitles.get(p.targetHex) ?? null),
+        seq: p.seq,
+        timestampMs: p.timestampMs,
+      };
+    }),
     ...communityPicksRaw.map((p) => ({
       docIdHex: p.docIdHex,
       kind: "COMMUNITY" as const,
@@ -794,6 +945,7 @@ export async function projectCommunityState(
   const genesis = cmntDrafts.find((d) => d.parentHashHex === null);
   if (!genesis) {
     const contentWithoutGenesis = buildContentViews(
+      communityId,
       sortedVerified,
       [],
       new Map(),
@@ -815,6 +967,8 @@ export async function projectCommunityState(
       categories: contentWithoutGenesis.categories,
       subjects: contentWithoutGenesis.subjects,
       proposals: contentWithoutGenesis.proposals,
+      templateCategories: contentWithoutGenesis.templateCategories,
+      templates: contentWithoutGenesis.templates,
       snapshots: contentWithoutGenesis.snapshots,
       pickHistory: [],
       documents,
@@ -1275,6 +1429,7 @@ export async function projectCommunityState(
     configVersions.find((v) => v.docIdHex === currentActive.docIdHex) ?? null;
 
   const content = buildContentViews(
+    communityId,
     sortedVerified,
     subjectPicksRaw,
     membersMap,
@@ -1282,9 +1437,11 @@ export async function projectCommunityState(
     nowMs
   );
   const pickHistory = buildPickHistory(
+    communityId,
     subjectPicksRaw,
     communityPicksRaw,
     content.proposals,
+    content.templates,
     configVersions
   );
 
@@ -1298,6 +1455,8 @@ export async function projectCommunityState(
     categories: content.categories,
     subjects: content.subjects,
     proposals: content.proposals,
+    templateCategories: content.templateCategories,
+    templates: content.templates,
     snapshots: content.snapshots,
     pickHistory,
     documents,

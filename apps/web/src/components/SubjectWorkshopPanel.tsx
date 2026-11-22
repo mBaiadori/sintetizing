@@ -1,9 +1,12 @@
-import type {
-  MemberView,
-  ProposalFieldView,
-  SharedDraftView,
-  SubjectSummaryView,
-  SubjectWorkshopView,
+import {
+  instantiateTemplateFields,
+  type MemberView,
+  type ProposalFieldView,
+  type ProposalTemplateSummaryView,
+  type SharedDraftView,
+  type SubjectSummaryView,
+  type SubjectWorkshopView,
+  type TemplateCategorySummaryView,
 } from "@sintetizing/domain";
 import type { StoredChatFileRecord } from "@sintetizing/storage";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -16,6 +19,7 @@ import {
   ProposalFieldsRenderer,
   unixSecondsToLocalInput,
 } from "./ProposalDocumentFields.js";
+import { TemplateSelectorBar } from "./TemplateSelectorBar.js";
 
 export interface SubjectWorkshopPanelProps {
   readonly myPubHex: string;
@@ -23,6 +27,8 @@ export interface SubjectWorkshopPanelProps {
   readonly members: readonly MemberView[];
   readonly workshop: SubjectWorkshopView | null;
   readonly chatFileRecord: StoredChatFileRecord | null;
+  readonly templateCategories: readonly TemplateCategorySummaryView[];
+  readonly templates: readonly ProposalTemplateSummaryView[];
   readonly busy: boolean;
   readonly onSendChatMessage: (input: SendChatMessageInput) => Promise<string | null>;
   readonly onPublishSharedDraft: (input: PublishSharedDraftInput) => Promise<string | null>;
@@ -52,6 +58,8 @@ export function SubjectWorkshopPanel({
   members,
   workshop,
   chatFileRecord,
+  templateCategories,
+  templates,
   busy,
   onSendChatMessage,
   onPublishSharedDraft,
@@ -309,6 +317,18 @@ export function SubjectWorkshopPanel({
                   <MaterialIcon name="close" />
                 </button>
               </div>
+
+              {!editingDraftId && (
+                <TemplateSelectorBar
+                  templateCategories={templateCategories}
+                  templates={templates}
+                  onApplyTemplate={(tpl, clearExamples) =>
+                    setDraftFields(
+                      instantiateTemplateFields(tpl.fields, clearExamples)
+                    )
+                  }
+                />
+              )}
 
               <ProposalDocumentComposer
                 modeLabel="Rascunho (.chat)"

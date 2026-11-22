@@ -1,15 +1,21 @@
-import type {
-  MemberView,
-  ProposalFieldView,
-  ProposalSummaryView,
-  SharedDraftView,
-  SubjectSummaryView,
-  SubjectWorkshopView,
+import {
+  BUILTIN_TEMPLATE_CATEGORIES,
+  convertProposalFieldsToTemplateExamples,
+  instantiateTemplateFields,
+  type MemberView,
+  type ProposalFieldView,
+  type ProposalSummaryView,
+  type ProposalTemplateSummaryView,
+  type SharedDraftView,
+  type SubjectSummaryView,
+  type SubjectWorkshopView,
+  type TemplateCategorySummaryView,
 } from "@sintetizing/domain";
 import type { ProposalDraftRecord, StoredChatFileRecord } from "@sintetizing/storage";
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import type {
   CreateProposalInput,
+  CreateProposalTemplateInput,
   CreateSubjectInput,
   PublishSharedDraftInput,
   SaveDraftInput,
@@ -35,6 +41,7 @@ import {
 } from "./ProposalDocumentFields.js";
 import { SubjectWorkshopPanel } from "./SubjectWorkshopPanel.js";
 import { SupportersCollapsible } from "./SupportersCollapsible.js";
+import { TemplateSelectorBar } from "./TemplateSelectorBar.js";
 
 export interface WorkspaceColumnsProps {
   readonly myPubHex: string;
@@ -47,6 +54,13 @@ export interface WorkspaceColumnsProps {
   readonly selectedSubject: SubjectSummaryView | null;
   readonly proposals: readonly ProposalSummaryView[];
   readonly selectedProposalId: string | null;
+  readonly templateCategories: readonly TemplateCategorySummaryView[];
+  readonly templates: readonly ProposalTemplateSummaryView[];
+  readonly pendingTemplateLaunch?: {
+    readonly subjectScope: string;
+    readonly fields: readonly ProposalFieldView[];
+    readonly titleHint: string;
+  } | null | undefined;
   readonly drafts: readonly ProposalDraftRecord[];
   readonly hiddenDocIds: ReadonlySet<string>;
   readonly workshop: SubjectWorkshopView | null;
@@ -59,11 +73,15 @@ export interface WorkspaceColumnsProps {
   readonly onCloseNewSubjectForm: () => void;
   readonly onSelectSubject: (scope: string) => void;
   readonly onSelectProposal: (docIdHex: string | null) => void;
+  readonly onClearPendingTemplateLaunch?: (() => void) | undefined;
   readonly onCreateSubject: (
     input: CreateSubjectInput,
   ) => Promise<string | null>;
   readonly onCreateProposal: (
     input: CreateProposalInput,
+  ) => Promise<string | null>;
+  readonly onCreateProposalTemplate: (
+    input: CreateProposalTemplateInput,
   ) => Promise<string | null>;
   readonly onSendChatMessage: (input: SendChatMessageInput) => Promise<string | null>;
   readonly onPublishSharedDraft: (input: PublishSharedDraftInput) => Promise<string | null>;
@@ -110,6 +128,9 @@ export function WorkspaceColumns({
   selectedSubject,
   proposals,
   selectedProposalId,
+  templateCategories,
+  templates,
+  pendingTemplateLaunch,
   drafts,
   hiddenDocIds,
   workshop,
@@ -122,8 +143,10 @@ export function WorkspaceColumns({
   onCloseNewSubjectForm,
   onSelectSubject,
   onSelectProposal,
+  onClearPendingTemplateLaunch,
   onCreateSubject,
   onCreateProposal,
+  onCreateProposalTemplate,
   onSendChatMessage,
   onPublishSharedDraft,
   onDeleteSharedDraft,
@@ -163,6 +186,17 @@ export function WorkspaceColumns({
   const [showSuperseded, setShowSuperseded] = useState(false);
   const [subjectTab, setSubjectTab] = useState<SubjectStageTab>("proposals");
 
+  const [convertProposalTarget, setConvertProposalTarget] =
+    useState<ProposalSummaryView | null>(null);
+  const [convertTplCategoryId, setConvertTplCategoryId] = useState<string>(
+    () =>
+      templateCategories[0]?.docIdHex ??
+      BUILTIN_TEMPLATE_CATEGORIES[0]!.docIdHex,
+  );
+  const [convertTplTitle, setConvertTplTitle] = useState("");
+  const [convertTplBody, setConvertTplBody] = useState("");
+  const [convertUseExamples, setConvertUseExamples] = useState(true);
+
   useEffect(() => {
     setDrawerMode("closed");
     setForkTargetId(null);
@@ -170,6 +204,31 @@ export function WorkspaceColumns({
     setShowSuperseded(false);
     setSubjectTab("proposals");
   }, [selectedSubject?.scope]);
+
+  useEffect(() => {
+    if (
+      pendingTemplateLaunch &&
+      selectedSubject &&
+      pendingTemplateLaunch.subjectScope === selectedSubject.scope
+    ) {
+      onSelectProposal(null);
+      setForkTargetId(null);
+      setPropTitle("");
+      setPropDeadlineInput(
+        unixSecondsToLocalInput(selectedSubject.deadlineUnixSeconds ?? null),
+      );
+      setPropFields(
+        instantiateTemplateFields(pendingTemplateLaunch.fields, false),
+      );
+      setDrawerMode("new-proposal");
+      onClearPendingTemplateLaunch?.();
+    }
+  }, [
+    onClearPendingTemplateLaunch,
+    onSelectProposal,
+    pendingTemplateLaunch,
+    selectedSubject,
+  ]);
 
   const visibleSubjects = subjects.filter((s) => !hiddenDocIds.has(s.docIdHex));
   const hiddenSubjects = subjects.filter((s) => hiddenDocIds.has(s.docIdHex));
@@ -1001,6 +1060,8 @@ export function WorkspaceColumns({
                     members={members}
                     workshop={workshop}
                     chatFileRecord={chatFileRecord}
+                    templateCategories={templateCategories}
+                    templates={templates}
                     busy={busy}
                     onSendChatMessage={onSendChatMessage}
                     onPublishSharedDraft={onPublishSharedDraft}
@@ -1189,6 +1250,15 @@ export function WorkspaceColumns({
 
                 <div className="detail-drawer__body">
                   <div className="detail-drawer__reading">
+                    <TemplateSelectorBar
+                      templateCategories={templateCategories}
+                      templates={templates}
+                      onApplyTemplate={(tpl, clearExamples) =>
+                        setPropFields(
+                          instantiateTemplateFields(tpl.fields, clearExamples),
+                        )
+                      }
+                    />
                     <ProposalDocumentComposer
                       modeLabel="Nova Proposta"
                       submitLabel="publicar proposta"
@@ -1359,6 +1429,28 @@ export function WorkspaceColumns({
                             ? "Reexibir"
                             : "Ocultar"}
                         </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn--outlined btn--sm"
+                        disabled={busy}
+                        onClick={() => {
+                          setConvertProposalTarget(activeProposal);
+                          setConvertTplCategoryId(
+                            templateCategories[0]?.docIdHex ??
+                              BUILTIN_TEMPLATE_CATEGORIES[0]!.docIdHex,
+                          );
+                          setConvertTplTitle(`Modelo: ${activeProposal.title}`.slice(0, 140));
+                          setConvertTplBody(
+                            `Modelo criado a partir da estrutura da proposta "${activeProposal.title}".`,
+                          );
+                          setConvertUseExamples(true);
+                        }}
+                        title="Copiar a estrutura desta proposta para criar um modelo reutilizável"
+                      >
+                        <MaterialIcon name="edit_note" />
+                        <span>Virar Modelo</span>
                       </button>
 
                       <button
@@ -1632,6 +1724,133 @@ export function WorkspaceColumns({
               )
             )}
           </aside>
+        </div>
+      )}
+
+      {convertProposalTarget && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="convert-tpl-heading"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConvertProposalTarget(null);
+            }
+          }}
+        >
+          <form
+            className="modal-card"
+            onSubmit={(e: FormEvent) => {
+              e.preventDefault();
+              if (convertTplTitle.trim().length < 5) {
+                return;
+              }
+              const tplFields = convertUseExamples
+                ? convertProposalFieldsToTemplateExamples(
+                    convertProposalTarget.fields,
+                  )
+                : instantiateTemplateFields(
+                    convertProposalTarget.fields,
+                    false,
+                  );
+              void (async () => {
+                const createdId = await onCreateProposalTemplate({
+                  categoryId: convertTplCategoryId,
+                  title: convertTplTitle.trim(),
+                  body: convertTplBody.trim(),
+                  fields: tplFields,
+                });
+                if (createdId) {
+                  setConvertProposalTarget(null);
+                }
+              })();
+            }}
+          >
+            <div className="composer-card__header">
+              <h2 id="convert-tpl-heading" className="md-title-large">
+                Transformar Proposta em Modelo
+              </h2>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setConvertProposalTarget(null)}
+                aria-label="Fechar modal"
+              >
+                <MaterialIcon name="close" />
+              </button>
+            </div>
+
+            <div className="field">
+              <label htmlFor="convert-tpl-cat">Categoria do modelo</label>
+              <select
+                id="convert-tpl-cat"
+                className="select"
+                value={convertTplCategoryId}
+                onChange={(e) => setConvertTplCategoryId(e.target.value)}
+              >
+                {templateCategories.map((cat) => (
+                  <option key={cat.docIdHex} value={cat.docIdHex}>
+                    {cat.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="convert-tpl-title">
+                Nome do modelo (mín. 5 caracteres)
+              </label>
+              <input
+                id="convert-tpl-title"
+                className="input"
+                minLength={5}
+                maxLength={160}
+                required
+                value={convertTplTitle}
+                onChange={(e) => setConvertTplTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="convert-tpl-body">Quando usar este modelo</label>
+              <textarea
+                id="convert-tpl-body"
+                className="textarea"
+                value={convertTplBody}
+                onChange={(e) => setConvertTplBody(e.target.value)}
+              />
+            </div>
+
+            <label
+              className="btn-row"
+              style={{ marginBottom: 14, cursor: "pointer", fontSize: "0.875rem" }}
+            >
+              <input
+                type="checkbox"
+                checked={convertUseExamples}
+                onChange={(e) => setConvertUseExamples(e.target.checked)}
+              />
+              <span>
+                Converter dados reais desta proposta em exemplos genéricos ({" "}
+                {convertProposalTarget.fields.length} campo(s))
+              </span>
+            </label>
+
+            <div className="btn-row">
+              <button type="submit" className="btn btn--primary" disabled={busy}>
+                <MaterialIcon name="send" />
+                <span>Publicar modelo</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn--outlined"
+                onClick={() => setConvertProposalTarget(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

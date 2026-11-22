@@ -101,6 +101,33 @@ export interface CategorySummaryView {
     readonly timestampMs: number;
     readonly subjectCount: number;
 }
+export interface TemplateCategorySummaryView {
+    readonly docIdHex: string;
+    readonly scope: string;
+    readonly title: string;
+    readonly body: string;
+    readonly authorPubHex: string;
+    readonly timestampMs: number;
+    readonly templateCount: number;
+    readonly isBuiltIn: boolean;
+}
+export interface ProposalTemplateSummaryView {
+    readonly docIdHex: string;
+    readonly scope: string;
+    readonly categoryId: string;
+    readonly categoryHashHex: string | null;
+    readonly title: string;
+    readonly body: string;
+    readonly fields: readonly ProposalFieldView[];
+    readonly authorPubHex: string;
+    readonly authorName: string | null;
+    readonly parentHashHex: string | null;
+    readonly timestampMs: number;
+    readonly pickCount: number;
+    readonly supporterPubs: readonly string[];
+    readonly isTopInCategory: boolean;
+    readonly isBuiltIn: boolean;
+}
 export interface SubjectSummaryView {
     readonly scope: string;
     readonly docIdHex: string;
@@ -147,7 +174,7 @@ export interface SnapshotSummaryView {
 }
 export interface PickHistoryEntry {
     readonly docIdHex: string;
-    readonly kind: "PROPOSAL" | "COMMUNITY";
+    readonly kind: "PROPOSAL" | "COMMUNITY" | "TEMPLATE";
     readonly scope: string;
     readonly authorPubHex: string;
     readonly targetHashHex: string;
@@ -165,6 +192,8 @@ export interface CommunityProjection {
     readonly categories: readonly CategorySummaryView[];
     readonly subjects: readonly SubjectSummaryView[];
     readonly proposals: readonly ProposalSummaryView[];
+    readonly templateCategories: readonly TemplateCategorySummaryView[];
+    readonly templates: readonly ProposalTemplateSummaryView[];
     readonly snapshots: readonly SnapshotSummaryView[];
     readonly pickHistory: readonly PickHistoryEntry[];
     readonly documents: readonly InspectedDocument[];

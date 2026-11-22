@@ -21,6 +21,12 @@ export type AppRoute =
       readonly newSubject: boolean;
     }
   | {
+      readonly kind: "templates";
+      readonly communityId: string;
+      readonly categoryId: string | null;
+      readonly templateId: string | null;
+    }
+  | {
       readonly kind: "community-settings";
       readonly communityId: string;
       readonly tab?: CommunitySettingsTab;
@@ -85,6 +91,18 @@ export function buildRouteHref(route: AppRoute): string {
         return `/c/${c}/workspace/${cat}`;
       }
       return `/c/${c}/workspace`;
+    }
+    case "templates": {
+      const base = `/c/${encodeURIComponent(route.communityId)}/templates`;
+      const params = new URLSearchParams();
+      if (route.categoryId) {
+        params.set("cat", route.categoryId);
+      }
+      if (route.templateId) {
+        params.set("t", route.templateId);
+      }
+      const qs = params.toString();
+      return qs ? `${base}?${qs}` : base;
     }
   }
 }
@@ -155,6 +173,17 @@ export function parseRoute(pathname: string, search: string): AppRoute {
         communityId,
         categoryId,
         subjectScope,
+      };
+    }
+
+    if (section === "templates") {
+      const categoryId = params.get("cat");
+      const templateId = params.get("t");
+      return {
+        kind: "templates",
+        communityId,
+        categoryId,
+        templateId,
       };
     }
 

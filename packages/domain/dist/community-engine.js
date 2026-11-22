@@ -1,6 +1,7 @@
 import { bytesToHex } from "@noble/hashes/utils";
 import { calculateDocId, ConfigKind, DeliberationMode, DocType, DraftStatus, getDocumentUniverse, InvitePolicy, readActiveMembersTableBlock, readConfigKindBlock, readCosignaturesBlock, readCurrencyBlock, readDeadlineBlock, readDeliberationModeBlock, readDraftIdBlock, readDraftStatusBlock, readFieldLinkBlock, readFieldSubtitleBlock, readFieldTableBlock, readFieldTextBlock, readFieldValueBlock, readInactivityDaysBlock, readInvitePolicyBlock, readLawArticleBlock, readPickTargetBlock, readTimestampBlock, readUtf8Block, Tag, unpackAndVerifyDocument, verifyInviteEndorsement, verifyInviteProof, } from "@sintetizing/wire";
 import { buildInspectedDocument } from "./inspector.js";
+import { BUILTIN_PROPOSAL_TEMPLATES, BUILTIN_TEMPLATE_CATEGORIES, getTemplatePickScope, parseTemplateCategoryFromScope, } from "./proposal-templates.js";
 const DAY_MS = 86_400_000;
 export const INVITE_BOOTSTRAP_MAX_MEMBERS = 5;
 /**
@@ -242,7 +243,7 @@ function extractProposalFields(doc, rawBody) {
     }
     return fields;
 }
-function buildContentViews(sortedVerified, subjectPicksRaw, membersMap, timeline, nowMs) {
+function buildContentViews(communityId, sortedVerified, subjectPicksRaw, membersMap, timeline, nowMs) {
     const picksByScope = new Map();
     for (const pick of subjectPicksRaw) {
         const arr = picksByScope.get(pick.scope) ?? [];
@@ -455,33 +456,150 @@ function buildContentViews(sortedVerified, subjectPicksRaw, membersMap, timeline
             cosignatureCount: cosigBlock ? readCosignaturesBlock(cosigBlock).length : 0,
         });
     }
+    // 4. Categorias e Templates de Proposta (built-in + comunitários) com deliberação por Pick
+    const networkTemplateCategories = [];
+    for (const env of sortedVerified) {
+        if (env.doc.docType !== DocType.CONFIG) {
+            continue;
+        }
+        const kindBlock = env.doc.blocks.find((b) => b.tag === Tag.CONFIG_KIND);
+        if (!kindBlock || readConfigKindBlock(kindBlock) !== ConfigKind.TEMPLATE_CATEGORY) {
+            continue;
+        }
+        const titleBlock = env.doc.blocks.find((b) => b.tag === Tag.TITLE);
+        const bodyBlock = env.doc.blocks.find((b) => b.tag === Tag.BODY);
+        networkTemplateCategories.push({
+            docIdHex: env.docIdHex,
+            scope: env.scope,
+            title: titleBlock ? readUtf8Block(titleBlock) : "Modelos",
+            body: bodyBlock ? readUtf8Block(bodyBlock) : "",
+            authorPubHex: env.authorPubHex,
+            timestampMs: env.timestampMs,
+            templateCount: 0,
+            isBuiltIn: false,
+        });
+    }
+    const cmntAtNow = getConfigActiveAt(timeline, nowMs);
+    const activeSetAtNow = timeline.length > 0
+        ? getActiveMembersSetAt(membersMap, cmntAtNow.inactivityDays, nowMs)
+        : new Set();
+    const computeTemplateSupporters = (categoryId, docIdHex) => {
+        const scopePicks = getLatestPicksAt(getTemplatePickScope(communityId, categoryId), nowMs);
+        const supporterPubs = [];
+        for (const [authorHex, pick] of scopePicks.entries()) {
+            if (activeSetAtNow.has(authorHex) && pick.targetHex === docIdHex) {
+                supporterPubs.push(authorHex);
+            }
+        }
+        return supporterPubs;
+    };
+    const rawTemplates = [];
+    for (const builtin of BUILTIN_PROPOSAL_TEMPLATES) {
+        const supporterPubs = computeTemplateSupporters(builtin.categoryId, builtin.docIdHex);
+        rawTemplates.push({
+            ...builtin,
+            scope: getTemplatePickScope(communityId, builtin.categoryId),
+            pickCount: supporterPubs.length,
+            supporterPubs,
+            isTopInCategory: false,
+        });
+    }
+    const defaultCatId = BUILTIN_TEMPLATE_CATEGORIES[0].docIdHex;
+    for (const env of sortedVerified) {
+        if (env.doc.docType !== DocType.PROPOSAL_TEMPLATE) {
+            continue;
+        }
+        const titleBlock = env.doc.blocks.find((b) => b.tag === Tag.TITLE);
+        const bodyBlock = env.doc.blocks.find((b) => b.tag === Tag.BODY);
+        const authorNameBlock = env.doc.blocks.find((b) => b.tag === Tag.AUTHOR_NAME);
+        const parentBlock = env.doc.blocks.find((b) => b.tag === Tag.PARENT_HASH);
+        const categoryBlock = env.doc.blocks.find((b) => b.tag === Tag.CATEGORY_HASH);
+        const categoryHashHex = categoryBlock ? bytesToHex(categoryBlock.value) : null;
+        const categoryId = categoryHashHex ??
+            parseTemplateCategoryFromScope(communityId, env.scope) ??
+            defaultCatId;
+        const rawBody = bodyBlock ? readUtf8Block(bodyBlock) : "";
+        const fields = extractProposalFields(env.doc, rawBody);
+        const supporterPubs = computeTemplateSupporters(categoryId, env.docIdHex);
+        rawTemplates.push({
+            docIdHex: env.docIdHex,
+            scope: getTemplatePickScope(communityId, categoryId),
+            categoryId,
+            categoryHashHex,
+            title: titleBlock ? readUtf8Block(titleBlock) : "Modelo de Proposta",
+            body: rawBody,
+            fields,
+            authorPubHex: env.authorPubHex,
+            authorName: authorNameBlock ? readUtf8Block(authorNameBlock) : null,
+            parentHashHex: parentBlock ? bytesToHex(parentBlock.value) : null,
+            timestampMs: env.timestampMs,
+            pickCount: supporterPubs.length,
+            supporterPubs,
+            isTopInCategory: false,
+            isBuiltIn: false,
+        });
+    }
+    rawTemplates.sort((a, b) => b.pickCount - a.pickCount ||
+        Number(a.isBuiltIn) - Number(b.isBuiltIn) ||
+        b.timestampMs - a.timestampMs ||
+        a.docIdHex.localeCompare(b.docIdHex));
+    const topDocByCategory = new Map();
+    const templateCountByCategory = new Map();
+    for (const tpl of rawTemplates) {
+        templateCountByCategory.set(tpl.categoryId, (templateCountByCategory.get(tpl.categoryId) ?? 0) + 1);
+        if (tpl.pickCount > 0 && !topDocByCategory.has(tpl.categoryId)) {
+            topDocByCategory.set(tpl.categoryId, tpl.docIdHex);
+        }
+    }
+    const templates = rawTemplates.map((tpl) => ({
+        ...tpl,
+        isTopInCategory: topDocByCategory.get(tpl.categoryId) === tpl.docIdHex,
+    }));
+    const templateCategories = [
+        ...BUILTIN_TEMPLATE_CATEGORIES,
+        ...networkTemplateCategories,
+    ].map((cat) => ({
+        ...cat,
+        templateCount: templateCountByCategory.get(cat.docIdHex) ?? 0,
+    }));
     return {
         categories,
         subjects: subjects.reverse(),
         proposals: proposalsRaw.reverse(),
+        templateCategories,
+        templates,
         snapshots: snapshots.reverse(),
     };
 }
-function buildPickHistory(subjectPicksRaw, communityPicksRaw, proposals, configVersions) {
+function buildPickHistory(communityId, subjectPicksRaw, communityPicksRaw, proposals, templates, configVersions) {
     const proposalTitles = new Map();
     for (const prop of proposals) {
         proposalTitles.set(prop.docIdHex, prop.title);
+    }
+    const templateTitles = new Map();
+    for (const tpl of templates) {
+        templateTitles.set(tpl.docIdHex, tpl.title);
     }
     const configTitles = new Map();
     for (const cfg of configVersions) {
         configTitles.set(cfg.docIdHex, `${cfg.title} (v${cfg.versionIndex})`);
     }
     const entries = [
-        ...subjectPicksRaw.map((p) => ({
-            docIdHex: p.docIdHex,
-            kind: "PROPOSAL",
-            scope: p.scope,
-            authorPubHex: p.authorPubHex,
-            targetHashHex: p.targetHex,
-            targetTitle: proposalTitles.get(p.targetHex) ?? null,
-            seq: p.seq,
-            timestampMs: p.timestampMs,
-        })),
+        ...subjectPicksRaw.map((p) => {
+            const isTemplate = p.scope.startsWith(`${communityId}/tpl/`) || templateTitles.has(p.targetHex);
+            return {
+                docIdHex: p.docIdHex,
+                kind: isTemplate ? "TEMPLATE" : "PROPOSAL",
+                scope: p.scope,
+                authorPubHex: p.authorPubHex,
+                targetHashHex: p.targetHex,
+                targetTitle: isTemplate
+                    ? (templateTitles.get(p.targetHex) ?? null)
+                    : (proposalTitles.get(p.targetHex) ?? null),
+                seq: p.seq,
+                timestampMs: p.timestampMs,
+            };
+        }),
         ...communityPicksRaw.map((p) => ({
             docIdHex: p.docIdHex,
             kind: "COMMUNITY",
@@ -551,7 +669,7 @@ export async function projectCommunityState(packets, communityId, nowMs) {
     const sortedVerified = [...verified].sort(compareChronological);
     const genesis = cmntDrafts.find((d) => d.parentHashHex === null);
     if (!genesis) {
-        const contentWithoutGenesis = buildContentViews(sortedVerified, [], new Map(), [], nowMs);
+        const contentWithoutGenesis = buildContentViews(communityId, sortedVerified, [], new Map(), [], nowMs);
         return {
             communityId,
             activeConfig: null,
@@ -567,6 +685,8 @@ export async function projectCommunityState(packets, communityId, nowMs) {
             categories: contentWithoutGenesis.categories,
             subjects: contentWithoutGenesis.subjects,
             proposals: contentWithoutGenesis.proposals,
+            templateCategories: contentWithoutGenesis.templateCategories,
+            templates: contentWithoutGenesis.templates,
             snapshots: contentWithoutGenesis.snapshots,
             pickHistory: [],
             documents,
@@ -948,8 +1068,8 @@ export async function projectCommunityState(packets, communityId, nowMs) {
         };
     });
     const activeConfig = configVersions.find((v) => v.docIdHex === currentActive.docIdHex) ?? null;
-    const content = buildContentViews(sortedVerified, subjectPicksRaw, membersMap, timeline, nowMs);
-    const pickHistory = buildPickHistory(subjectPicksRaw, communityPicksRaw, content.proposals, configVersions);
+    const content = buildContentViews(communityId, sortedVerified, subjectPicksRaw, membersMap, timeline, nowMs);
+    const pickHistory = buildPickHistory(communityId, subjectPicksRaw, communityPicksRaw, content.proposals, content.templates, configVersions);
     return {
         communityId,
         activeConfig,
@@ -960,6 +1080,8 @@ export async function projectCommunityState(packets, communityId, nowMs) {
         categories: content.categories,
         subjects: content.subjects,
         proposals: content.proposals,
+        templateCategories: content.templateCategories,
+        templates: content.templates,
         snapshots: content.snapshots,
         pickHistory,
         documents,

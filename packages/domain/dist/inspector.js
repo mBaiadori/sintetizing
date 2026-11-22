@@ -82,7 +82,9 @@ function decodeBlockForDisplay(block) {
                     ? "COMMUNITY (1)"
                     : kind === ConfigKind.SUBJECT
                         ? "SUBJECT (2)"
-                        : "CATEGORY (3)";
+                        : kind === ConfigKind.TEMPLATE_CATEGORY
+                            ? "TEMPLATE_CATEGORY (4)"
+                            : "CATEGORY (3)";
             break;
         }
         case Tag.INACTIVITY_DAYS:

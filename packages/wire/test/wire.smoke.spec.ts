@@ -561,4 +561,123 @@ describe("Wire binary TLV smoke suite (.cmnt / .memb / .stze / .snap)", () => {
     const deletedArchive = decodeChatFile(encodeChatFile(compactedDeleted.packets));
     expect(deletedArchive).toHaveLength(2);
   });
+
+  it("empacota e valida ConfigKind.TEMPLATE_CATEGORY e DocType.PROPOSAL_TEMPLATE no universo stze", async () => {
+    const founder = await makeKeyPair();
+    const alice = await makeKeyPair();
+    const communityId = "bairro-centro-a1b2";
+    const nowMs = 1_760_000_200_000;
+
+    const tplCatBytes = await packDocument(
+      {
+        docType: DocType.CONFIG,
+        authorPub: founder.pub,
+        seq: 10,
+        blocks: [
+          createScopeBlock(communityId),
+          createConfigKindBlock(ConfigKind.TEMPLATE_CATEGORY),
+          createTitleBlock("Compras e Obras"),
+          createBodyBlock("Formulários padrão para contratações e obras."),
+          createTimestampBlock(nowMs),
+        ],
+      },
+      founder.priv
+    );
+    const tplCatDoc = await unpackAndVerifyDocument(tplCatBytes);
+    expect(getDocumentUniverse(tplCatDoc)).toBe("stze");
+    const tplCatId = calculateDocId(tplCatBytes);
+    const tplCatHex = Buffer.from(tplCatId).toString("hex");
+    const tplScope = `${communityId}/tpl/${tplCatHex}`;
+
+    const tplV1Bytes = await packDocument(
+      {
+        docType: DocType.PROPOSAL_TEMPLATE,
+        authorPub: founder.pub,
+        seq: 1,
+        blocks: [
+          createScopeBlock(tplScope),
+          createCategoryHashBlock(tplCatId),
+          createTitleBlock("Modelo de Obra Predial"),
+          createBodyBlock("Use este modelo para qualquer reforma ou manutenção."),
+          createFieldSubtitleBlock({ fieldId: "tpl-sub-1", label: "Escopo e Cotações" }),
+          createFieldTextBlock({
+            fieldId: "tpl-txt-1",
+            label: "Problema",
+            text: "Ex.: Descreva o local e o problema encontrado.",
+          }),
+          createFieldValueBlock({
+            fieldId: "tpl-val-1",
+            label: "Orçamento",
+            amountCents: 0,
+            unit: "BRL",
+          }),
+          createFieldTableBlock({
+            fieldId: "tpl-tbl-1",
+            label: "Fornecedores",
+            columns: ["Fornecedor", "Valor"],
+            rows: [["Ex.: Empresa A", "R$ 1.000,00"]],
+          }),
+          createAuthorNameBlock("Fundador"),
+          createTimestampBlock(nowMs + 1000),
+        ],
+      },
+      founder.priv
+    );
+
+    const tplV1Doc = await unpackAndVerifyDocument(tplV1Bytes);
+    expect(getDocumentUniverse(tplV1Doc)).toBe("stze");
+    expect(tplV1Doc.docType).toBe(DocType.PROPOSAL_TEMPLATE);
+
+    const tplV1Id = calculateDocId(tplV1Bytes);
+    const tplV2Bytes = await packDocument(
+      {
+        docType: DocType.PROPOSAL_TEMPLATE,
+        authorPub: alice.pub,
+        seq: 1,
+        blocks: [
+          createScopeBlock(tplScope),
+          createCategoryHashBlock(tplCatId),
+          createParentHashBlock(tplV1Id),
+          createTitleBlock("Modelo de Obra Predial com Garantia"),
+          createBodyBlock("Inclui campo obrigatório de garantia e laudo."),
+          createFieldTextBlock({
+            fieldId: "tpl-txt-1",
+            label: "Problema",
+            text: "Ex.: Descreva o local e o problema encontrado.",
+          }),
+          createFieldLinkBlock({
+            fieldId: "tpl-lnk-1",
+            label: "Laudo Técnico",
+            url: "https://exemplo.com/laudo.pdf",
+          }),
+          createAuthorNameBlock("Alice"),
+          createTimestampBlock(nowMs + 2000),
+        ],
+      },
+      alice.priv
+    );
+
+    const tplV2Doc = await unpackAndVerifyDocument(tplV2Bytes);
+    expect(getDocumentUniverse(tplV2Doc)).toBe("stze");
+    expect(readFieldLinkBlock(tplV2Doc.blocks.find((b) => b.tag === Tag.FIELD_LINK)!).url).toBe(
+      "https://exemplo.com/laudo.pdf"
+    );
+
+    const tplV2Id = calculateDocId(tplV2Bytes);
+    const pickTplBytes = await packDocument(
+      {
+        docType: DocType.PICK,
+        authorPub: alice.pub,
+        seq: 2,
+        blocks: [
+          createScopeBlock(tplScope),
+          createPickTargetBlock(tplV2Id),
+          createTimestampBlock(nowMs + 3000),
+        ],
+      },
+      alice.priv
+    );
+    const pickTplDoc = await unpackAndVerifyDocument(pickTplBytes);
+    expect(getDocumentUniverse(pickTplDoc)).toBe("memb");
+  });
 });

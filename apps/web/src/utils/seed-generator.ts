@@ -1,4 +1,8 @@
-import { bytesToHex } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import {
+  BUILTIN_TEMPLATE_CATEGORY_IDS,
+  getTemplatePickScope,
+} from "@sintetizing/domain";
 import type { CommunityRecord, LocalIdentity } from "@sintetizing/storage";
 import {
   calculateDocId,
@@ -657,6 +661,187 @@ export async function generateSeedDataset(params: {
           endorser.privateKey
         );
         packets.push(cPickBytes);
+        totalPicks += 1;
+      }
+    }
+
+    // 6.5. Categoria de modelos comunitária, templates com fork e Picks nos modelos
+    if (simMembers.length >= 3) {
+      const tplCatAuthor = simMembers[1]!;
+      tplCatAuthor.seq += 1;
+      const tplCatTs = commCreatedAt + 4_500_000;
+      const tplCatBytes = await packDocument(
+        {
+          docType: DocType.CONFIG,
+          authorPub: tplCatAuthor.publicKey,
+          seq: tplCatAuthor.seq,
+          blocks: [
+            createScopeBlock(`${communityId}/tpl-cat-prestacao`),
+            createConfigKindBlock(ConfigKind.TEMPLATE_CATEGORY),
+            createTitleBlock("Prestação de Contas e Manutenção"),
+            createBodyBlock("Formulários padrão definidos pela comunidade para auditoria e manutenção recorrente."),
+            createAuthorNameBlock(tplCatAuthor.displayName),
+            createTimestampBlock(tplCatTs),
+          ],
+        },
+        tplCatAuthor.privateKey
+      );
+      packets.push(tplCatBytes);
+      const tplCatIdBytes = calculateDocId(tplCatBytes);
+      const tplCatIdHex = bytesToHex(tplCatIdBytes);
+      const customTplScope = getTemplatePickScope(communityId, tplCatIdHex);
+
+      const tplAuthorA = simMembers[1]!;
+      const tplV1Bytes = await packDocument(
+        {
+          docType: DocType.PROPOSAL_TEMPLATE,
+          authorPub: tplAuthorA.publicKey,
+          seq: 1,
+          blocks: [
+            createScopeBlock(customTplScope),
+            createCategoryHashBlock(tplCatIdBytes),
+            createTitleBlock("Relatório de Manutenção Preventiva"),
+            createBodyBlock("Modelo padrão para registrar vistorias e custos mensais."),
+            createFieldTextBlock({
+              fieldId: "tpl-vistoria-resumo",
+              label: "Resumo da Vistoria",
+              text: "Ex.: Descreva os equipamentos inspecionados e pendências encontradas.",
+            }),
+            createFieldValueBlock({
+              fieldId: "tpl-vistoria-custo",
+              label: "Custo Total Mensal",
+              amountCents: 0,
+              unit: "BRL",
+            }),
+            createAuthorNameBlock(tplAuthorA.displayName),
+            createTimestampBlock(tplCatTs + 60_000),
+          ],
+        },
+        tplAuthorA.privateKey
+      );
+      packets.push(tplV1Bytes);
+      const tplV1Id = calculateDocId(tplV1Bytes);
+
+      const tplAuthorB = simMembers[2]!;
+      const tplV2Bytes = await packDocument(
+        {
+          docType: DocType.PROPOSAL_TEMPLATE,
+          authorPub: tplAuthorB.publicKey,
+          seq: 1,
+          blocks: [
+            createScopeBlock(customTplScope),
+            createCategoryHashBlock(tplCatIdBytes),
+            createParentHashBlock(tplV1Id),
+            createTitleBlock("Relatório de Manutenção com Notas e Checklist"),
+            createBodyBlock("Versão aprimorada com checklist de itens e link obrigatório para comprovantes."),
+            createFieldTextBlock({
+              fieldId: "tpl-vistoria-resumo",
+              label: "Resumo da Vistoria",
+              text: "Ex.: Descreva os equipamentos inspecionados e pendências encontradas.",
+            }),
+            createFieldTableBlock({
+              fieldId: "tpl-vistoria-checklist",
+              label: "Checklist de Itens",
+              columns: ["Item", "Status", "Observação"],
+              rows: [["Ex.: Bomba d'água", "OK / Reparo", "Ex.: Pressão normal"]],
+            }),
+            createFieldValueBlock({
+              fieldId: "tpl-vistoria-custo",
+              label: "Custo Total Mensal",
+              amountCents: 0,
+              unit: "BRL",
+            }),
+            createFieldLinkBlock({
+              fieldId: "tpl-vistoria-notas",
+              label: "Pasta com Notas Fiscais",
+              url: "https://exemplo.com/notas-fiscais",
+            }),
+            createAuthorNameBlock(tplAuthorB.displayName),
+            createTimestampBlock(tplCatTs + 120_000),
+          ],
+        },
+        tplAuthorB.privateKey
+      );
+      packets.push(tplV2Bytes);
+      const tplV2Id = calculateDocId(tplV2Bytes);
+
+      const procCatId = BUILTIN_TEMPLATE_CATEGORY_IDS.PROCUREMENT;
+      const procScope = getTemplatePickScope(communityId, procCatId);
+      const procCustomTplBytes = await packDocument(
+        {
+          docType: DocType.PROPOSAL_TEMPLATE,
+          authorPub: tplAuthorB.publicKey,
+          seq: 1,
+          blocks: [
+            createScopeBlock(procScope),
+            createCategoryHashBlock(hexToBytes(procCatId)),
+            createTitleBlock("Contratação Rápida (3 Cotações)"),
+            createBodyBlock("Modelo criado pela comunidade exigindo 3 orçamentos comparativos."),
+            createFieldTextBlock({
+              fieldId: "tpl-problema",
+              label: "Problema e Necessidade",
+              text: "Ex.: Descreva o serviço ou compra necessária e o impacto para a comunidade.",
+            }),
+            createFieldTableBlock({
+              fieldId: "tpl-cotacoes",
+              label: "Comparativo de 3 Cotações",
+              columns: ["Fornecedor", "Valor (BRL)", "Prazo", "Garantia"],
+              rows: [["Ex.: Fornecedor 1", "R$ 0,00", "7 dias", "12 meses"]],
+            }),
+            createFieldValueBlock({
+              fieldId: "tpl-orcamento",
+              label: "Teto Aprovado",
+              amountCents: 0,
+              unit: "BRL",
+            }),
+            createAuthorNameBlock(tplAuthorB.displayName),
+            createTimestampBlock(tplCatTs + 180_000),
+          ],
+        },
+        tplAuthorB.privateKey
+      );
+      packets.push(procCustomTplBytes);
+      const procCustomTplId = calculateDocId(procCustomTplBytes);
+
+      const pickLimit = Math.min(5, simMembers.length - 1);
+      for (let mIdx = 1; mIdx <= pickLimit; mIdx += 1) {
+        const voter = simMembers[mIdx]!;
+        voter.seq += 1;
+        packets.push(
+          await packDocument(
+            {
+              docType: DocType.PICK,
+              authorPub: voter.publicKey,
+              seq: voter.seq,
+              blocks: [
+                createScopeBlock(customTplScope),
+                createPickTargetBlock(mIdx === 1 ? tplV1Id : tplV2Id),
+                createAuthorNameBlock(voter.displayName),
+                createTimestampBlock(tplCatTs + 240_000 + mIdx * 5_000),
+              ],
+            },
+            voter.privateKey
+          )
+        );
+        totalPicks += 1;
+
+        voter.seq += 1;
+        packets.push(
+          await packDocument(
+            {
+              docType: DocType.PICK,
+              authorPub: voter.publicKey,
+              seq: voter.seq,
+              blocks: [
+                createScopeBlock(procScope),
+                createPickTargetBlock(procCustomTplId),
+                createAuthorNameBlock(voter.displayName),
+                createTimestampBlock(tplCatTs + 270_000 + mIdx * 5_000),
+              ],
+            },
+            voter.privateKey
+          )
+        );
         totalPicks += 1;
       }
     }

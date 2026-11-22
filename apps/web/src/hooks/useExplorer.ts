@@ -1,6 +1,7 @@
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import {
   CommunityProjection,
+  getTemplatePickScope,
   projectCommunityState,
   projectSubjectWorkshop,
   ProposalFieldView,
@@ -93,6 +94,19 @@ export interface ProposeConfigVersionInput {
 export interface CreateCategoryInput {
   readonly title: string;
   readonly body: string;
+}
+
+export interface CreateTemplateCategoryInput {
+  readonly title: string;
+  readonly body: string;
+}
+
+export interface CreateProposalTemplateInput {
+  readonly categoryId: string;
+  readonly title: string;
+  readonly body: string;
+  readonly parentHashHex?: string | undefined;
+  readonly fields?: readonly ProposalFieldView[] | undefined;
 }
 
 export interface CreateSubjectInput {
@@ -263,6 +277,19 @@ function slugifyCategory(communityId: string, title: string): string {
   const rand = crypto.getRandomValues(new Uint8Array(2));
   const suffix = Array.from(rand, (b) => b.toString(16).padStart(2, "0")).join("");
   return `${communityId}/cat-${base || "geral"}-${suffix}`;
+}
+
+function slugifyTemplateCategory(communityId: string, title: string): string {
+  const base = title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+  const rand = crypto.getRandomValues(new Uint8Array(2));
+  const suffix = Array.from(rand, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${communityId}/tpl-cat-${base || "modelos"}-${suffix}`;
 }
 
 function slugifySubject(communityId: string, title: string): string {
@@ -1133,6 +1160,92 @@ export function useExplorer() {
     [packAndPublishProposal, runActionWithResult]
   );
 
+  const createTemplateCategory = useCallback(
+    (input: CreateTemplateCategoryInput) =>
+      runActionWithResult(async () => {
+        if (!identity || !selectedCommunity) {
+          throw new Error("Selecione uma comunidade.");
+        }
+        const catScope = slugifyTemplateCategory(selectedCommunity.communityId, input.title);
+        const seq = await storeRef.current!.getNextSeq(
+          selectedCommunity.communityId,
+          identity.publicKeyHex
+        );
+        const rawBytes = await packDocument(
+          {
+            docType: DocType.CONFIG,
+            authorPub: identity.publicKey,
+            seq,
+            blocks: [
+              createScopeBlock(catScope),
+              createConfigKindBlock(ConfigKind.TEMPLATE_CATEGORY),
+              createTitleBlock(input.title.trim()),
+              createBodyBlock(input.body.trim() || "Categoria de modelos de proposta"),
+              createAuthorNameBlock(identity.displayName),
+              createTimestampBlock(Date.now()),
+            ],
+          },
+          identity.privateKey
+        );
+
+        const res = await publishAndStore(
+          selectedCommunity.communityId,
+          selectedCommunity.relays,
+          rawBytes
+        );
+        return {
+          result: res.docIdHex,
+          message: "Categoria de modelos publicada na comunidade.",
+        };
+      }),
+    [identity, publishAndStore, runActionWithResult, selectedCommunity]
+  );
+
+  const createProposalTemplate = useCallback(
+    (input: CreateProposalTemplateInput) =>
+      runActionWithResult(async () => {
+        if (!identity || !selectedCommunity) {
+          throw new Error("Selecione uma comunidade.");
+        }
+        const tplScope = getTemplatePickScope(selectedCommunity.communityId, input.categoryId);
+        const structuredBlocks = buildStructuredFieldBlocks(input.fields);
+        const fallbackSummary = buildSummaryBody(input.body, input.fields);
+
+        const blocks: TLVBlock[] = [
+          createScopeBlock(tplScope),
+          createCategoryHashBlock(hexToBytes(input.categoryId)),
+          ...(input.parentHashHex
+            ? [createParentHashBlock(hexToBytes(input.parentHashHex))]
+            : []),
+          createTitleBlock(input.title.trim()),
+          ...(fallbackSummary.length > 0 ? [createBodyBlock(fallbackSummary)] : []),
+          ...structuredBlocks,
+          createAuthorNameBlock(identity.displayName),
+          createTimestampBlock(Date.now()),
+        ];
+        const rawBytes = await packDocument(
+          {
+            docType: DocType.PROPOSAL_TEMPLATE,
+            authorPub: identity.publicKey,
+            seq: 1,
+            blocks,
+          },
+          identity.privateKey
+        );
+
+        const res = await publishAndStore(
+          selectedCommunity.communityId,
+          selectedCommunity.relays,
+          rawBytes
+        );
+        return {
+          result: res.docIdHex,
+          message: "Modelo de proposta publicado na comunidade.",
+        };
+      }),
+    [identity, publishAndStore, runActionWithResult, selectedCommunity]
+  );
+
   const packAndSendChatMessage = useCallback(
     async (input: SendChatMessageInput): Promise<string> => {
       if (!identity || !selectedCommunity) {
@@ -1402,6 +1515,41 @@ export function useExplorer() {
     [identity, publishAndStore, runAction, selectedCommunity]
   );
 
+  const pickProposalTemplate = useCallback(
+    (categoryId: string, templateDocIdHex: string) =>
+      runAction(async () => {
+        if (!identity || !selectedCommunity) {
+          throw new Error("Selecione uma comunidade.");
+        }
+        const tplScope = getTemplatePickScope(selectedCommunity.communityId, categoryId);
+        const seq = await storeRef.current!.getNextSeq(
+          selectedCommunity.communityId,
+          identity.publicKeyHex
+        );
+        const rawBytes = await packDocument(
+          {
+            docType: DocType.PICK,
+            authorPub: identity.publicKey,
+            seq,
+            blocks: [
+              createScopeBlock(tplScope),
+              createPickTargetBlock(hexToBytes(templateDocIdHex)),
+              createAuthorNameBlock(identity.displayName),
+              createTimestampBlock(Date.now()),
+            ],
+          },
+          identity.privateKey
+        );
+
+        await publishAndStore(
+          selectedCommunity.communityId,
+          selectedCommunity.relays,
+          rawBytes
+        );
+      }),
+    [identity, publishAndStore, runAction, selectedCommunity]
+  );
+
   const updateRelays = useCallback(
     (rawRelays: readonly string[]) =>
       runAction(async () => {
@@ -1576,6 +1724,8 @@ export function useExplorer() {
     createCategory,
     createSubject,
     createProposal,
+    createTemplateCategory,
+    createProposalTemplate,
     sendChatMessage,
     publishSharedDraft,
     deleteSharedDraft,
@@ -1585,6 +1735,7 @@ export function useExplorer() {
     hideDocument,
     unhideDocument,
     pickProposal,
+    pickProposalTemplate,
     createSnapshot,
     updateRelays,
     resync,
